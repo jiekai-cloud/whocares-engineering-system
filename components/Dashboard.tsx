@@ -1,11 +1,11 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie
 } from 'recharts';
-import { 
-  TrendingUp, CheckCircle2, Clock, Briefcase, Sparkles, ShieldAlert, 
+import {
+  TrendingUp, CheckCircle2, Clock, Briefcase, Sparkles, ShieldAlert,
   Zap, Layers, AlertTriangle, FileWarning, Timer, ArrowRight, User, RefreshCw,
   CalendarDays, FilterX, Target
 } from 'lucide-react';
@@ -49,7 +49,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
     const counts: Record<string, number> = {};
     let totalBudget = 0;
     let totalSpent = 0;
-    
+
     filteredProjects.forEach(p => {
       counts[p.status] = (counts[p.status] || 0) + 1;
       totalBudget += p.budget;
@@ -59,20 +59,31 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
     return { counts, totalBudget, totalSpent };
   }, [filteredProjects]);
 
-  // 3. 異常檢測：僅抓取前 5 個最緊急的案件
-  const criticalProjects = useMemo(() => {
+  // 3. 異常檢測：抓取滯留與「預算超支」案件
+  const riskProjects = useMemo(() => {
     const now = new Date();
-    const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
-    
-    return filteredProjects
+
+    // 時間風險
+    const timeRisks = filteredProjects
       .filter(p => (p.status === ProjectStatus.NEGOTIATING || p.status === ProjectStatus.QUOTING))
       .map(p => {
         const diff = now.getTime() - new Date(p.createdDate).getTime();
-        return { ...p, delayedDays: Math.floor(diff / (1000 * 60 * 60 * 24)) };
+        return { ...p, riskType: 'delay', riskValue: Math.floor(diff / (1000 * 60 * 60 * 24)) };
       })
-      .filter(p => p.delayedDays >= 5)
-      .sort((a, b) => b.delayedDays - a.delayedDays)
-      .slice(0, 5); // 僅顯示最嚴重的 5 件，避免視覺過載
+      .filter(p => p.riskValue >= 5);
+
+    // 財務風險
+    const financialRisks = filteredProjects
+      .filter(p => p.budget > 0)
+      .map(p => {
+        const ratio = p.spent / p.budget;
+        return { ...p, riskType: 'budget', riskValue: Math.round(ratio * 100) };
+      })
+      .filter(p => p.riskValue >= 80);
+
+    return [...timeRisks, ...financialRisks]
+      .sort((a, b) => b.riskValue - a.riskValue)
+      .slice(0, 6);
   }, [filteredProjects]);
 
   const statsCards = [
@@ -89,8 +100,8 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
           <div className="flex items-center gap-3">
             <h1 className="text-xl lg:text-2xl font-black text-stone-900 tracking-tight">生活品質 • 智慧指揮中心</h1>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-stone-900 text-white rounded-full">
-               <Sparkles size={12} className="text-orange-400" />
-               <span className="text-[10px] font-black uppercase tracking-widest">Scale Optimized</span>
+              <Sparkles size={12} className="text-orange-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Scale Optimized</span>
             </div>
           </div>
           <p className="text-stone-500 text-xs font-medium">數據規模：{projects.length} 案場 | 最後運算：{lastSync.toLocaleTimeString()}</p>
@@ -98,18 +109,18 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
 
         <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl border border-stone-200 shadow-sm">
           <div className="flex items-center gap-2 px-3 border-r border-stone-100">
-             <CalendarDays size={14} className="text-stone-400" />
-             <select className="bg-transparent text-xs font-bold outline-none cursor-pointer" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-               <option value="all">全年度</option>
-               {availableYears.map(year => <option key={year} value={year}>{year}年</option>)}
-             </select>
+            <CalendarDays size={14} className="text-stone-400" />
+            <select className="bg-transparent text-xs font-bold outline-none cursor-pointer" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+              <option value="all">全年度</option>
+              {availableYears.map(year => <option key={year} value={year}>{year}年</option>)}
+            </select>
           </div>
           <div className="flex items-center gap-2 px-3">
-             <Clock size={14} className="text-stone-400" />
-             <select className="bg-transparent text-xs font-bold outline-none cursor-pointer" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-               <option value="all">全月份</option>
-               {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-             </select>
+            <Clock size={14} className="text-stone-400" />
+            <select className="bg-transparent text-xs font-bold outline-none cursor-pointer" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+              <option value="all">全月份</option>
+              {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
           </div>
         </div>
       </header>
@@ -130,20 +141,22 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-6">
-          {criticalProjects.length > 0 && (
+          {riskProjects.length > 0 && (
             <div className="bg-white rounded-[2.5rem] border-2 border-rose-100 shadow-xl shadow-rose-50 overflow-hidden">
               <div className="bg-rose-500 px-8 py-4 flex items-center justify-between text-white">
                 <div className="flex items-center gap-3">
                   <AlertTriangle size={20} className="animate-pulse" />
-                  <h3 className="font-black text-sm uppercase tracking-widest">高風險滯留案件 (Top 5)</h3>
+                  <h3 className="font-black text-sm uppercase tracking-widest">營運與財務預警中心</h3>
                 </div>
               </div>
               <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                {criticalProjects.map(p => (
+                {riskProjects.map(p => (
                   <button key={p.id} onClick={() => onProjectClick(p)} className="flex items-center justify-between p-4 bg-rose-50/50 rounded-2xl border border-rose-100 hover:bg-rose-50 transition-all text-left group">
                     <div className="space-y-1">
                       <p className="text-xs font-black text-stone-900 group-hover:text-rose-600 truncate max-w-[150px]">{p.name}</p>
-                      <p className="text-[10px] text-rose-500 font-bold">已逾期報價 {p.delayedDays} 天</p>
+                      <p className={`text-[10px] font-bold ${p.riskType === 'budget' ? 'text-orange-600' : 'text-rose-500'}`}>
+                        {p.riskType === 'budget' ? `預算執行率已達 ${p.riskValue}%` : `報價已滯留 ${p.riskValue} 天`}
+                      </p>
                     </div>
                     <ArrowRight size={14} className="text-rose-300" />
                   </button>
@@ -167,23 +180,23 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
 
         <div className="space-y-6">
           <div className="bg-stone-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl">
-             <div className="relative z-10 space-y-6">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  <ShieldAlert size={18} className="text-orange-500" /> 營運效能分析
-                </h3>
-                <div className="space-y-4">
-                  <div className="p-5 bg-white/5 rounded-2xl border border-white/10">
-                    <p className="text-[10px] font-black text-blue-400 uppercase mb-2">預算消化率</p>
-                    <p className="text-2xl font-black">{stats.totalBudget > 0 ? Math.round((stats.totalSpent / stats.totalBudget) * 100) : 0}%</p>
-                    <p className="text-[10px] text-stone-400 mt-2 font-medium">當前選取範圍內總合約金額之執行狀況。</p>
-                  </div>
-                  <div className="p-5 bg-white/5 rounded-2xl border border-white/10">
-                    <p className="text-[10px] font-black text-emerald-400 uppercase mb-2">管理負載度</p>
-                    <p className="text-2xl font-black">{Math.ceil(filteredProjects.length / 50)} 案/人</p>
-                    <p className="text-[10px] text-stone-400 mt-2 font-medium">基於五十人團隊之平均分配量。</p>
-                  </div>
+            <div className="relative z-10 space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <ShieldAlert size={18} className="text-orange-500" /> 營運效能分析
+              </h3>
+              <div className="space-y-4">
+                <div className="p-5 bg-white/5 rounded-2xl border border-white/10">
+                  <p className="text-[10px] font-black text-blue-400 uppercase mb-2">預算消化率</p>
+                  <p className="text-2xl font-black">{stats.totalBudget > 0 ? Math.round((stats.totalSpent / stats.totalBudget) * 100) : 0}%</p>
+                  <p className="text-[10px] text-stone-400 mt-2 font-medium">當前選取範圍內總合約金額之執行狀況。</p>
                 </div>
-             </div>
+                <div className="p-5 bg-white/5 rounded-2xl border border-white/10">
+                  <p className="text-[10px] font-black text-emerald-400 uppercase mb-2">管理負載度</p>
+                  <p className="text-2xl font-black">{Math.ceil(filteredProjects.length / 50)} 案/人</p>
+                  <p className="text-[10px] text-stone-400 mt-2 font-medium">基於五十人團隊之平均分配量。</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

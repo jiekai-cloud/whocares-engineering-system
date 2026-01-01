@@ -100,6 +100,16 @@ export interface ActivityLog {
   type: 'project' | 'customer' | 'team' | 'system';
 }
 
+export interface DailyLogEntry {
+  id: string;
+  date: string;
+  content: string;
+  photoUrls: string[];
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+}
+
 export interface ProjectFile {
   id: string;
   url: string;
@@ -134,6 +144,7 @@ export interface Project {
   status: ProjectStatus;
   tasks: Task[];
   phases: ProjectPhase[];
+  dailyLogs?: DailyLogEntry[];
   financials: ProjectFinancials;
   location?: ProjectLocation;
   lossReason?: string;

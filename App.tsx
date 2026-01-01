@@ -81,7 +81,8 @@ const App: React.FC = () => {
           expenses: p.expenses || [],
           workAssignments: p.workAssignments || [],
           files: p.files || [],
-          phases: p.phases || []
+          phases: p.phases || [],
+          dailyLogs: p.dailyLogs || []
         })));
         setCustomers(JSON.parse(localStorage.getItem('bt_customers') || '[]'));
         setTeamMembers(JSON.parse(localStorage.getItem('bt_team') || '[]'));
@@ -253,6 +254,29 @@ const App: React.FC = () => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, comments: [newComment, ...(p.comments || [])] } : p));
   };
 
+  const handleAddDailyLog = (projectId: string, logData: { content: string, photoUrls: string[] }) => {
+    if (!user || user.role === 'Guest') return;
+    const project = projects.find(p => p.id === projectId);
+    const newLog: DailyLogEntry = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      content: logData.content,
+      photoUrls: logData.photoUrls,
+      authorId: user.employeeId || 'unknown',
+      authorName: user.name,
+      authorAvatar: user.picture
+    };
+
+    if (project) {
+      addActivityLog(`撰寫了施工日誌`, project.name, projectId, 'project');
+    }
+
+    setProjects(prev => prev.map(p => p.id === projectId ? {
+      ...p,
+      dailyLogs: [newLog, ...(p.dailyLogs || [])]
+    } : p));
+  };
+
   const handleLogout = () => {
     if (confirm('確定要安全登出生產系統嗎？')) {
       setUser(null);
@@ -391,6 +415,9 @@ const App: React.FC = () => {
               onDelete={(id) => { if (confirm('確定要刪除嗎？')) { setProjects(prev => prev.filter(p => p.id !== id)); setSelectedProjectId(null); } }}
               onUpdateStatus={(status) => handleUpdateStatus(selectedProject.id, status)}
               onAddComment={(text) => handleAddComment(selectedProject.id, text)}
+              onUpdateFiles={(files) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, files } : p))}
+              onUpdatePhases={(phases) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, phases } : p))}
+              onAddDailyLog={(log) => handleAddDailyLog(selectedProjectId, log)}
               onUpdateTasks={(tasks) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, tasks } : p))}
               onUpdateProgress={(progress) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, progress } : p))}
               onUpdateExpenses={(expenses) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, expenses } : p))}
