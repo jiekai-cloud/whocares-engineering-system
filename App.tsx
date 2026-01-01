@@ -369,23 +369,35 @@ const App: React.FC = () => {
       </main>
 
       {isModalOpen && user.role !== 'Guest' && <ProjectModal onClose={() => setIsModalOpen(false)} onConfirm={(data) => {
-        if (editingProject) {
-          setProjects(prev => prev.map(p => p.id === editingProject.id ? { ...p, ...data } : p));
-        } else {
-          // 案件編號產生規則: [來源代碼][年份(YY)][流水號(001)]
-          const sourcePrefixes: Record<string, string> = {
-            'BNI': 'BNI',
-            '台塑集團': 'FPC',
-            '士林電機': 'SE',
-            '信義居家': 'SY',
-            '企業': 'CORP',
-            '新建工程': 'NEW',
-            '網路客': 'OC',
-            '住宅': 'AB',
-            'JW': 'JW',
-            '台灣美光晶圓': 'MIC'
-          };
+        const sourcePrefixes: Record<string, string> = {
+          'BNI': 'BNI',
+          '台塑集團': 'FPC',
+          '士林電機': 'SE',
+          '信義居家': 'SY',
+          '企業': 'CORP',
+          '新建工程': 'NEW',
+          '網路客': 'OC',
+          '住宅': 'AB',
+          'JW': 'JW',
+          '台灣美光晶圓': 'MIC'
+        };
 
+        if (editingProject) {
+          setProjects(prev => prev.map(p => {
+            if (p.id === editingProject.id) {
+              let updatedId = p.id;
+              // 如果來源變更，更新 ID 的字首
+              if (data.source && data.source !== p.source) {
+                const oldPrefix = sourcePrefixes[p.source] || 'PJ';
+                const newPrefix = sourcePrefixes[data.source] || 'PJ';
+                updatedId = p.id.replace(oldPrefix, newPrefix);
+              }
+              return { ...p, ...data, id: updatedId };
+            }
+            return p;
+          }));
+        } else {
+          // 案件編號產生規則: [來源代碼][年份(YYYY)][流水號(001)]
           const prefix = sourcePrefixes[data.source || 'BNI'] || 'PJ';
           const year = new Date().getFullYear().toString();
 
