@@ -24,6 +24,7 @@ export type ProjectSource =
   | '新建工程'
   | '網路客'
   | '住宅'
+  | '台灣美光晶圓'
   | 'JW';
 
 export interface Expense {
