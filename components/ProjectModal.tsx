@@ -51,7 +51,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onConfirm, initial
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.budget) return;
+    if (!formData.name) return;
 
     // 模擬地址轉經緯度 (正式版會串接 Geocoding API)
     const mockLocation: ProjectLocation = {
