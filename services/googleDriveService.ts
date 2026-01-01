@@ -115,24 +115,31 @@ class GoogleDriveService {
     this.lastErrorStatus = null;
     try {
       const existingFile = await this.findBackupFile();
-      const metadata = { name: BACKUP_FILENAME, mimeType: 'application/json' };
+      const metadata = {
+        name: BACKUP_FILENAME,
+        mimeType: 'application/json'
+      };
       const fileContent = JSON.stringify({
         ...data,
         cloudSyncTimestamp: new Date().toISOString()
       });
 
       const boundary = '-------314159265358979323846';
-      const body = [
-        '--' + boundary,
-        'Content-Type: application/json; charset=UTF-8',
-        '',
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const close_delim = "\r\n--" + boundary + "--";
+
+      // 使用 Blob 構建 multipart body 以確保瀏覽器正確處理換行與編碼
+      const parts = [
+        delimiter,
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n',
         JSON.stringify(metadata),
-        '--' + boundary,
-        'Content-Type: application/json',
-        '',
+        delimiter,
+        'Content-Type: application/json\r\n\r\n',
         fileContent,
-        '--' + boundary + '--'
-      ].join('\r\n');
+        close_delim
+      ];
+
+      const body = new Blob(parts, { type: 'multipart/related; boundary=' + boundary });
 
       let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
       let method = 'POST';
@@ -142,29 +149,45 @@ class GoogleDriveService {
         method = 'PATCH';
       }
 
-      console.log(`Drive Sync Attempt: ${method} ${url}`);
+      console.log(`[Drive] Syncing: ${method} to ${BACKUP_FILENAME}`);
       const response = await this.fetchWithAuth(url, {
         method,
         body,
         headers: {
-          'Content-Type': 'multipart/related; boundary=' + boundary
+          // 注意：fetch 會自動處理 Blob 的 Content-Length，但我們需要手動設定 Content-Type 的 boundary
         }
       });
 
       if (!response.ok) {
         this.lastErrorStatus = `${response.status}`;
         const errorText = await response.text();
-        console.error('Drive Sync Failed:', response.status, response.statusText);
-        console.error('Error Body:', errorText);
+        console.error('Drive API Error:', response.status, errorText);
+
+        // 如果是 403，通常是授權或網域限制
+        if (response.status === 403) {
+          console.warn('權限不足(403): 請確認 Google Cloud Console 是否已將此網域加入「授權的 JavaScript 來源」。');
+        }
         return false;
       }
-      console.log('Drive Sync Success!');
+
+      console.log('[Drive] Sync Successful');
       return true;
     } catch (err) {
-      console.error('Save to Drive failed with exception:', err);
+      console.error('Google Drive Sync Exception:', err);
       this.lastErrorStatus = 'EXC';
       return false;
     }
+  }
+
+  // 匯出資料為 JSON 檔案供手動下載
+  exportAsFile(data: any) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   getLastErrorStatus() {
