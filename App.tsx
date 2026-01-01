@@ -353,6 +353,9 @@ const App: React.FC = () => {
                   }}
                   isCloudConnected={isCloudConnected}
                   onConnectCloud={handleConnectCloud}
+                  onDownloadBackup={() => {
+                    googleDriveService.exportAsFile({ projects, customers, teamMembers });
+                  }}
                   onDisconnectCloud={() => { setIsCloudConnected(false); localStorage.removeItem('bt_cloud_connected'); }}
                   lastSyncTime={lastCloudSync}
                 />

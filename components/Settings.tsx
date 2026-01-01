@@ -1,7 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
-import { 
-  User, ChevronRight, Download, ShieldCheck, 
+import React, { useState, useMemo, FC } from 'react';
+import {
+  User, ChevronRight, Download, ShieldCheck,
   Cloud, CloudOff, RefreshCw, Database, HardDrive, FileJson, UploadCloud, RotateCcw, Zap, Info, AlertTriangle, Github, Globe, Copy, Check, ShieldAlert
 } from 'lucide-react';
 import { Project, Customer, TeamMember, User as UserType } from '../types';
@@ -18,11 +18,13 @@ interface SettingsProps {
   onConnectCloud: () => void;
   onDisconnectCloud: () => void;
   lastSyncTime: string | null;
+  onDownloadBackup?: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ 
-  user, projects, customers, teamMembers, onResetData, 
-  isCloudConnected, onConnectCloud, onDisconnectCloud, lastSyncTime
+const Settings: FC<SettingsProps> = ({
+  user, projects, customers, teamMembers, onResetData,
+  isCloudConnected, onConnectCloud, onDisconnectCloud, lastSyncTime,
+  onDownloadBackup
 }) => {
   const [activeSection, setActiveSection] = useState('cloud');
   const [isExporting, setIsExporting] = useState(false);
@@ -79,11 +81,10 @@ const Settings: React.FC<SettingsProps> = ({
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
-              className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all ${
-                activeSection === section.id 
-                  ? 'bg-stone-900 text-white shadow-xl shadow-stone-200' 
-                  : 'text-stone-500 hover:bg-white hover:text-stone-900'
-              }`}
+              className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all ${activeSection === section.id
+                ? 'bg-stone-900 text-white shadow-xl shadow-stone-200'
+                : 'text-stone-500 hover:bg-white hover:text-stone-900'
+                }`}
             >
               <div className="flex items-center gap-3">
                 <section.icon size={18} className={activeSection === section.id ? 'text-orange-400' : 'text-stone-400'} />
@@ -96,7 +97,7 @@ const Settings: React.FC<SettingsProps> = ({
 
         <div className="flex-1 bg-white rounded-[2.5rem] border border-stone-200 shadow-sm overflow-hidden min-h-[550px]">
           <div className="p-6 lg:p-12">
-            
+
             {activeSection === 'deploy' && (
               <div className="space-y-8 animate-in slide-in-from-right-4">
                 <div className="flex items-center gap-5">
@@ -119,13 +120,13 @@ const Settings: React.FC<SettingsProps> = ({
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="pt-4 space-y-3">
                     <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">您的系統網址</p>
                     <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-orange-200 shadow-inner">
                       <Globe size={14} className="text-stone-400" />
                       <code className="text-xs font-black text-stone-900 flex-1 truncate">{currentUrl}</code>
-                      <button 
+                      <button
                         onClick={handleCopyUrl}
                         className="p-2 hover:bg-stone-50 rounded-lg text-orange-600 transition-all active:scale-90"
                       >
@@ -162,13 +163,13 @@ const Settings: React.FC<SettingsProps> = ({
                     {!isCloudConnected ? (
                       <div className="bg-stone-50 p-10 rounded-[2.5rem] border border-stone-200 text-center space-y-6">
                         <div className="mx-auto w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                            <Zap size={32} className="text-orange-500" />
+                          <Zap size={32} className="text-orange-500" />
                         </div>
                         <div>
-                            <h4 className="text-lg font-black text-stone-900 uppercase">啟動智慧同步</h4>
-                            <p className="text-sm text-stone-500 max-w-sm mx-auto mt-2">一旦啟用，您的所有更動都會立即加密儲存至您的 Google Drive 專屬檔案中。</p>
+                          <h4 className="text-lg font-black text-stone-900 uppercase">啟動智慧同步</h4>
+                          <p className="text-sm text-stone-500 max-w-sm mx-auto mt-2">一旦啟用，您的所有更動都會立即加密儲存至您的 Google Drive 專屬檔案中。</p>
                         </div>
-                        <button 
+                        <button
                           onClick={onConnectCloud}
                           className="w-full max-w-xs mx-auto bg-orange-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-orange-100 hover:bg-orange-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                         >
@@ -185,7 +186,7 @@ const Settings: React.FC<SettingsProps> = ({
                               <p className="text-xs text-emerald-600 font-bold">同步檔案：{BACKUP_FILENAME}</p>
                             </div>
                           </div>
-                          <button 
+                          <button
                             onClick={onDisconnectCloud}
                             className="text-xs font-black text-emerald-700 hover:text-rose-600 transition-colors underline underline-offset-4"
                           >
@@ -220,13 +221,16 @@ const Settings: React.FC<SettingsProps> = ({
                     <p className="text-[11px] text-stone-500 leading-relaxed font-bold">
                       將所有資料存為本地檔案，適合在無網路環境下進行遷移。
                     </p>
-                    <button 
-                      onClick={handleManualExport}
+                    <button
+                      onClick={() => {
+                        if (onDownloadBackup) onDownloadBackup();
+                        else handleManualExport();
+                      }}
                       disabled={isExporting}
-                      className="w-full bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-900 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                      className="w-full bg-stone-900 text-white hover:bg-stone-800 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-stone-100 transition-all active:scale-95"
                     >
-                      {isExporting ? <RefreshCw size={14} className="animate-spin" /> : <FileJson size={14} />}
-                      開始導出
+                      {isExporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={16} />}
+                      導出完整數據包 (.json)
                     </button>
                   </div>
 
@@ -239,7 +243,7 @@ const Settings: React.FC<SettingsProps> = ({
                       <p className="text-[11px] text-stone-500 leading-relaxed font-bold">
                         從現有的備份檔恢復數據。
                       </p>
-                      <button 
+                      <button
                         className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
                       >
                         <RotateCcw size={14} />
@@ -251,7 +255,7 @@ const Settings: React.FC<SettingsProps> = ({
 
                 {!isReadOnly && (
                   <div className="pt-4 flex justify-end">
-                    <button 
+                    <button
                       onClick={onResetData}
                       className="flex items-center gap-2 text-rose-600 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 px-4 py-2 rounded-xl transition-all"
                     >
