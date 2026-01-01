@@ -10,7 +10,6 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,10 +17,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setError(null);
 
-    if (!selectedDeptId) {
-      setError('請先選擇您所屬的部門');
-      return;
-    }
     if (!employeeId || !password) {
       setError('請輸入員工編號與密碼');
       return;
@@ -39,7 +34,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           email: "admin@lifequality.ai",
           picture: `https://ui-avatars.com/api/?name=Admin&background=ea580c&color=fff`,
           role: 'SuperAdmin'
-        }, selectedDeptId);
+        }, 'all');
         return;
       }
 
@@ -131,7 +126,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <form onSubmit={handleLogin} className="space-y-8 max-w-md mx-auto w-full">
             <div className="text-center lg:text-left space-y-2">
               <h2 className="text-3xl font-black text-white tracking-tight">系統登入</h2>
-              <p className="text-stone-500 text-sm">歡迎回來，請選擇部門並驗證您的身份。</p>
+              <p className="text-stone-500 text-sm">歡迎回來，請輸入帳號驗證您的身份。</p>
             </div>
 
             {error && (
@@ -141,40 +136,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
             )}
 
-            {/* 單位選擇 */}
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 text-stone-500 text-[10px] font-black uppercase tracking-[0.25em] pl-1">
-                <Layers size={14} className="text-orange-500" /> 選擇所屬單位 Department
-              </label>
-              <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto no-scrollbar pr-1">
-                {MOCK_DEPARTMENTS.map((dept) => (
-                  <button
-                    key={dept.id}
-                    type="button"
-                    onClick={() => setSelectedDeptId(dept.id)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-300 ${selectedDeptId === dept.id
-                        ? 'border-orange-600 bg-orange-600/10 shadow-[0_0_30px_-10px_rgba(234,88,12,0.3)]'
-                        : 'border-white/5 bg-white/5 hover:border-white/10'
-                      }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${selectedDeptId === dept.id ? 'bg-orange-600 text-white' : 'bg-stone-800 text-stone-500'
-                        }`}>
-                        {dept.id.split('-')[1]}
-                      </div>
-                      <span className={`text-sm font-bold transition-colors ${selectedDeptId === dept.id ? 'text-white' : 'text-stone-400'}`}>
-                        {dept.name}
-                      </span>
-                    </div>
-                    {selectedDeptId === dept.id && (
-                      <div className="w-5 h-5 bg-orange-600 rounded-full flex items-center justify-center">
-                        <Check size={12} className="text-white" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             {/* 帳號密碼 */}
             <div className="space-y-5">
@@ -211,8 +173,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 type="submit"
                 disabled={isLoading}
                 className={`w-full py-5 rounded-2xl flex items-center justify-center gap-3 font-black text-sm tracking-[0.2em] uppercase transition-all shadow-2xl active:scale-[0.98] ${isLoading
-                    ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
-                    : 'bg-orange-600 hover:bg-orange-500 text-white shadow-orange-900/20 hover:shadow-orange-600/30'
+                  ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
+                  : 'bg-orange-600 hover:bg-orange-500 text-white shadow-orange-900/20 hover:shadow-orange-600/30'
                   }`}
               >
                 {isLoading ? (
