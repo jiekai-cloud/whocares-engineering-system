@@ -13,7 +13,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
   const roles: TeamMember['role'][] = ['專案經理', '工務主管', '現場工程師', '行政助理', '設計師', '工頭', '外部協力'];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   const [formData, setFormData] = useState<Partial<TeamMember>>({
     employeeId: '',
     password: '',
@@ -103,21 +103,21 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
           {/* 大頭照與基本帳號資訊 */}
           <div className="flex flex-col md:flex-row items-center gap-8 mb-4">
             <div className="flex flex-col items-center">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
                 onChange={handleFileChange}
               />
-              <div 
+              <div
                 onClick={handleAvatarClick}
                 className="relative group cursor-pointer"
               >
-                <img 
-                  src={formData.avatar} 
-                  className={`w-28 h-28 rounded-3xl object-cover border-4 border-slate-100 shadow-md transition-opacity ${isUploading ? 'opacity-50' : 'opacity-100'}`} 
-                  alt="Avatar" 
+                <img
+                  src={formData.avatar}
+                  className={`w-28 h-28 rounded-3xl object-cover border-4 border-slate-100 shadow-md transition-opacity ${isUploading ? 'opacity-50' : 'opacity-100'}`}
+                  alt="Avatar"
                 />
                 <div className="absolute inset-0 bg-black/40 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   {isUploading ? <Loader2 size={24} className="text-white animate-spin" /> : <Camera size={24} className="text-white" />}
@@ -130,12 +130,12 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">員工編號 (登入帳號) *</label>
                 <div className="relative">
                   <Hash size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                  <input 
+                  <input
                     required
                     placeholder="例如: EMP001"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-sm font-black text-black outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                     value={formData.employeeId}
-                    onChange={e => setFormData({...formData, employeeId: e.target.value.toUpperCase()})}
+                    onChange={e => setFormData({ ...formData, employeeId: e.target.value.toUpperCase() })}
                   />
                 </div>
               </div>
@@ -143,12 +143,12 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">登入密碼</label>
                 <div className="relative">
                   <Key size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                  <input 
+                  <input
                     type="password"
                     placeholder={initialData ? "留空則不修改" : "請設定初始密碼"}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-sm font-black text-black outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                     value={formData.password}
-                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    onChange={e => setFormData({ ...formData, password: e.target.value })}
                   />
                 </div>
               </div>
@@ -160,23 +160,49 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">真實姓名 *</label>
               <div className="relative">
                 <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                <input 
+                <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold"
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">職稱角色</label>
-              <select 
+              <select
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
                 value={formData.role}
-                onChange={e => setFormData({...formData, role: e.target.value as any})}
+                onChange={e => setFormData({ ...formData, role: e.target.value as any })}
               >
                 {roles.map(role => <option key={role} value={role} className="text-black">{role}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">系統權限等級</label>
+              <select
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
+                value={formData.systemRole || 'Staff'}
+                onChange={e => setFormData({ ...formData, systemRole: e.target.value as any })}
+              >
+                <option value="Staff">一般成員 (僅查看所屬部門)</option>
+                <option value="DeptAdmin">部門主管 (管理部門專案)</option>
+                <option value="SuperAdmin">最高權限 (全公司資料)</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">所屬部門</label>
+              <select
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
+                value={formData.departmentId || 'DEPT-1'}
+                onChange={e => setFormData({ ...formData, departmentId: e.target.value })}
+              >
+                <option value="DEPT-1">營造一部 (Construction Dept 1)</option>
+                <option value="DEPT-2">設計二部 (Design Dept 2)</option>
+                <option value="DEPT-3">機電三部 (MEP Dept 3)</option>
               </select>
             </div>
 
@@ -184,11 +210,11 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">聯繫電話 *</label>
               <div className="relative">
                 <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                <input 
+                <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold font-mono"
                   value={formData.phone}
-                  onChange={e => setFormData({...formData, phone: e.target.value})}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
             </div>
@@ -197,11 +223,11 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">電子信箱</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                <input 
+                <input
                   type="email"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold"
                   value={formData.email}
-                  onChange={e => setFormData({...formData, email: e.target.value})}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
             </div>
@@ -210,7 +236,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">專長與證照 (Enter 新增)</label>
               <div className="relative">
                 <Award size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                <input 
+                <input
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold"
                   value={specialtyInput}
                   onChange={e => setSpecialtyInput(e.target.value)}
@@ -230,10 +256,10 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
 
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">人員狀態</label>
-              <select 
+              <select
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
                 value={formData.status}
-                onChange={e => setFormData({...formData, status: e.target.value as any})}
+                onChange={e => setFormData({ ...formData, status: e.target.value as any })}
               >
                 <option value="Available" className="text-black">待命/可用</option>
                 <option value="Busy" className="text-black">忙碌中</option>
@@ -243,14 +269,14 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
           </div>
 
           <div className="pt-8 flex gap-4">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={onClose}
               className="flex-1 py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors"
             >
               取消
             </button>
-            <button 
+            <button
               type="submit"
               disabled={isUploading}
               className="flex-[2] bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-bold py-4 rounded-2xl shadow-xl shadow-stone-200 transition-all active:scale-95 flex items-center justify-center gap-2"

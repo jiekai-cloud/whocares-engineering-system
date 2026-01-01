@@ -15,15 +15,15 @@ export enum ProjectStatus {
 
 export type ProjectCategory = '室內裝修' | '建築營造' | '水電機電' | '景觀工程' | '設計規劃' | '其他';
 
-export type ProjectSource = 
-  | 'BNI' 
-  | '台塑集團' 
-  | '士林電機' 
-  | '信義居家' 
-  | '企業' 
-  | '新建工程' 
-  | '網路客' 
-  | '住宅' 
+export type ProjectSource =
+  | 'BNI'
+  | '台塑集團'
+  | '士林電機'
+  | '信義居家'
+  | '企業'
+  | '新建工程'
+  | '網路客'
+  | '住宅'
   | 'JW';
 
 export interface Expense {
@@ -105,12 +105,12 @@ export interface ProjectLocation {
 
 export interface Project {
   id: string;
-  departmentId: string; 
+  departmentId: string;
   name: string;
   category: ProjectCategory;
-  source: ProjectSource; 
+  source: ProjectSource;
   client: string;
-  referrer: string; 
+  referrer: string;
   manager: string;
   startDate: string;
   endDate: string;
@@ -150,6 +150,7 @@ export interface TeamMember {
   departmentId: string;
   name: string;
   role: '專案經理' | '工務主管' | '現場工程師' | '行政助理' | '設計師' | '工頭' | '外部協力';
+  systemRole: 'SuperAdmin' | 'DeptAdmin' | 'Staff' | 'Guest'; // 新增系統權限
   phone: string;
   email: string;
   specialty: string[];
@@ -164,7 +165,7 @@ export interface User {
   email: string;
   picture: string;
   role: 'SuperAdmin' | 'DeptAdmin' | 'Staff' | 'Guest';
-  departmentId?: string; 
+  departmentId?: string;
 }
 
 export interface Message {
