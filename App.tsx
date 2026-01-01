@@ -341,8 +341,8 @@ const App: React.FC = () => {
                   lastSyncTime={lastCloudSync}
                 />
               )}
-              {activeTab === 'team' && <TeamList members={filteredData.teamMembers} onAddClick={() => setIsTeamModalOpen(true)} onEditClick={setEditingMember} onDeleteClick={(id) => { if (confirm('確定移除此成員？')) setTeamMembers(prev => prev.filter(m => m.id !== id)); }} />}
-              {activeTab === 'customers' && <CustomerList customers={filteredData.customers} onAddClick={() => setIsCustomerModalOpen(true)} onEditClick={setEditingCustomer} onDeleteClick={(id) => { if (confirm('確定移除此客戶？')) setCustomers(prev => prev.filter(c => c.id !== id)); }} />}
+              {activeTab === 'team' && <TeamList members={filteredData.teamMembers} onAddClick={() => { setEditingMember(null); setIsTeamModalOpen(true); }} onEditClick={(m) => { setEditingMember(m); setIsTeamModalOpen(true); }} onDeleteClick={(id) => { if (confirm('確定移除此成員？')) setTeamMembers(prev => prev.filter(m => m.id !== id)); }} />}
+              {activeTab === 'customers' && <CustomerList customers={filteredData.customers} onAddClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }} onEditClick={(c) => { setEditingCustomer(c); setIsCustomerModalOpen(true); }} onDeleteClick={(id) => { if (confirm('確定移除此客戶？')) setCustomers(prev => prev.filter(c => c.id !== id)); }} />}
               {activeTab === 'dispatch' && <DispatchManager projects={filteredData.projects} teamMembers={filteredData.teamMembers} onAddDispatch={(pid, ass) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: [ass, ...(p.workAssignments || [])] } : p))} onDeleteDispatch={(pid, aid) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: (p.workAssignments || []).filter(a => a.id !== aid) } : p))} />}
               {activeTab === 'analytics' && <Analytics projects={filteredData.projects} />}
               {activeTab === 'help' && <HelpCenter />}
