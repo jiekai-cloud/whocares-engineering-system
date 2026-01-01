@@ -151,7 +151,7 @@ export interface TeamMember {
   departmentId: string;
   departmentIds?: string[]; // 支持多部門 (最多三個)
   name: string;
-  role: '總經理' | '副總經理' | '總經理特助' | '經理' | '副經理' | '專案經理' | '工務主管' | '現場工程師' | '行政助理' | '設計師' | '工頭' | '外部協力';
+  role: '總經理' | '副總經理' | '總經理特助' | '經理' | '副經理' | '專案經理' | '工務主管' | '現場工程師' | '行政助理' | '助理' | '設計師' | '工頭' | '外部協力';
   systemRole: 'SuperAdmin' | 'DeptAdmin' | 'Staff' | 'Guest'; // 新增系統權限
   phone: string;
   email: string;
