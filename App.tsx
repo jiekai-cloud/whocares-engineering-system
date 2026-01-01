@@ -369,8 +369,39 @@ const App: React.FC = () => {
       </main>
 
       {isModalOpen && user.role !== 'Guest' && <ProjectModal onClose={() => setIsModalOpen(false)} onConfirm={(data) => {
-        if (editingProject) setProjects(prev => prev.map(p => p.id === editingProject.id ? { ...p, ...data } : p));
-        else setProjects(prev => [{ ...data, id: 'PJ' + Date.now().toString().slice(-6), status: ProjectStatus.NEGOTIATING, progress: 0, workAssignments: [], expenses: [], comments: [], files: [], phases: [] } as any, ...prev]);
+        if (editingProject) {
+          setProjects(prev => prev.map(p => p.id === editingProject.id ? { ...p, ...data } : p));
+        } else {
+          // 案件編號產生規則: [來源代碼][年份(YY)][流水號(001)]
+          const sourcePrefixes: Record<string, string> = {
+            'BNI': 'BNI',
+            '台塑集團': 'FPC',
+            '士林電機': 'SE',
+            '信義居家': 'SY',
+            '企業': 'CORP',
+            '新建工程': 'NEW',
+            '網路客': 'OC',
+            '住宅': 'AB',
+            'JW': 'JW',
+            '台灣美光晶圓': 'MIC'
+          };
+
+          const prefix = sourcePrefixes[data.source || 'BNI'] || 'PJ';
+          const year = new Date().getFullYear().toString().slice(-2);
+
+          // 找尋當年度同來源的最末流水號
+          const samePrefixYearProjects = projects.filter(p => p.id.startsWith(`${prefix}${year}`));
+          let sequence = 1;
+          if (samePrefixYearProjects.length > 0) {
+            const lastId = samePrefixYearProjects.map(p => p.id).sort().pop();
+            const lastSeq = parseInt(lastId?.replace(`${prefix}${year}`, '') || '0');
+            sequence = lastSeq + 1;
+          }
+
+          const newId = `${prefix}${year}${sequence.toString().padStart(3, '0')}`;
+
+          setProjects(prev => [{ ...data, id: newId, status: ProjectStatus.NEGOTIATING, progress: 0, workAssignments: [], expenses: [], comments: [], files: [], phases: [] } as any, ...prev]);
+        }
         setIsModalOpen(false);
       }} initialData={editingProject} />}
 
