@@ -4,19 +4,17 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie
 } from 'recharts';
-import {
-  TrendingUp, CheckCircle2, Clock, Briefcase, Sparkles, ShieldAlert,
-  Zap, Layers, AlertTriangle, FileWarning, Timer, ArrowRight, User, RefreshCw,
-  CalendarDays, FilterX, Target
-} from 'lucide-react';
-import { Project, ProjectStatus } from '../types';
+import { LayoutDashboard, FolderKanban, Users, BarChart3, TrendingUp, AlertCircle, Clock, CheckCircle2, DollarSign, ArrowUpRight, ArrowDownRight, Activity, ShieldAlert, Zap, ExternalLink, Sparkles, Phone, MapPin } from 'lucide-react';
+import { Project, ProjectStatus, Lead } from '../types';
 
 interface DashboardProps {
   projects: Project[];
-  onProjectClick: (project: Project) => void;
+  leads?: Lead[];
+  onConvertLead?: (leadId: string) => void;
+  onProjectClick: (projectId: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
+const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLead, onProjectClick }) => {
   const [lastSync, setLastSync] = useState(new Date());
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
@@ -90,7 +88,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
     { label: '案件總量', value: filteredProjects.length, icon: Layers, color: 'text-slate-600', bg: 'bg-slate-50' },
     { label: '報價滯留', value: (stats.counts[ProjectStatus.NEGOTIATING] || 0) + (stats.counts[ProjectStatus.QUOTING] || 0), icon: FileWarning, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: '施工進行中', value: stats.counts[ProjectStatus.CONSTRUCTING] || 0, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: '執行週轉率', value: `${filteredProjects.length > 0 ? Math.round(((stats.counts[ProjectStatus.COMPLETED] || 0) / filteredProjects.length) * 100) : 0}%`, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: '執行週轉率', value: `${filteredProjects.length > 0 ? Math.round(((stats.counts[ProjectStatus.COMPLETED] || 0) / filteredProjects.length) * 100) : 0}% `, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   return (
@@ -128,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {statsCards.map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4 transition-all hover:shadow-md">
-            <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+            <div className={`p - 3 rounded - xl ${stat.bg} ${stat.color} `}>
               <stat.icon size={20} />
             </div>
             <div className="text-center sm:text-left">
@@ -154,8 +152,8 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
                   <button key={p.id} onClick={() => onProjectClick(p)} className="flex items-center justify-between p-4 bg-rose-50/50 rounded-2xl border border-rose-100 hover:bg-rose-50 transition-all text-left group">
                     <div className="space-y-1">
                       <p className="text-xs font-black text-stone-900 group-hover:text-rose-600 truncate max-w-[150px]">{p.name}</p>
-                      <p className={`text-[10px] font-bold ${p.riskType === 'budget' ? 'text-orange-600' : 'text-rose-500'}`}>
-                        {p.riskType === 'budget' ? `預算執行率已達 ${p.riskValue}%` : `報價已滯留 ${p.riskValue} 天`}
+                      <p className={`text - [10px] font - bold ${p.riskType === 'budget' ? 'text-orange-600' : 'text-rose-500'} `}>
+                        {p.riskType === 'budget' ? `預算執行率已達 ${p.riskValue}% ` : `報價已滯留 ${p.riskValue} 天`}
                       </p>
                     </div>
                     <ArrowRight size={14} className="text-rose-300" />
@@ -178,7 +176,54 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, onProjectClick }) => {
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* 右側：會勘線索與異常預警 */}
+        <div className="xl:col-span-1 space-y-6">
+          {/* 會勘線索 (Tiiny Web App 串接) */}
+          <div className="bg-white rounded-[2rem] border border-stone-200 shadow-sm overflow-hidden flex flex-col h-fit">
+            <div className="px-6 py-5 border-b border-stone-100 bg-gradient-to-r from-indigo-50/50 to-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-indigo-600" />
+                <h3 className="font-black text-[10px] uppercase tracking-widest text-stone-900">最新會勘線索 (WEB)</h3>
+              </div>
+              <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[8px] font-black animate-pulse">LIVE</span>
+            </div>
+            <div className="p-4 space-y-3">
+              {leads.filter(l => l.status === 'new').length > 0 ? leads.filter(l => l.status === 'new').map(lead => (
+                <div key={lead.id} className="p-4 rounded-2xl bg-indigo-50/30 border border-indigo-100 hover:border-indigo-300 transition-all group">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-xs font-black text-stone-900">{lead.customerName}</p>
+                    <span className="text-[8px] font-bold text-stone-400">{lead.timestamp}</span>
+                  </div>
+                  <div className="space-y-1.5 mb-4">
+                    <div className="flex items-center gap-2 text-[10px] text-stone-500 font-medium">
+                      <Phone size={10} /> {lead.phone}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-stone-500 font-medium">
+                      <MapPin size={10} /> {lead.address}
+                    </div>
+                    <div className="mt-2 text-[10px] font-bold text-indigo-700 bg-indigo-100/50 p-2 rounded-lg leading-relaxed line-clamp-2">
+                      AI 診斷：{lead.diagnosis}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onConvertLead?.(lead.id)}
+                    className="w-full bg-indigo-600 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 group-hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    轉為專案洽談 <ArrowUpRight size={12} />
+                  </button>
+                </div>
+              )) : (
+                <div className="py-12 flex flex-col items-center justify-center text-stone-300 opacity-50 gap-2">
+                  <Zap size={32} />
+                  <p className="text-[10px] font-black uppercase tracking-widest">目前無新線索</p>
+                </div>
+              )}
+              {leads.filter(l => l.status === 'new').length > 0 && (
+                <p className="text-[9px] text-center text-stone-400 font-bold mt-2 cursor-pointer hover:text-indigo-600">查看所有外部線索 →</p>
+              )}
+            </div>
+          </div>
+
           <div className="bg-stone-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl">
             <div className="relative z-10 space-y-6">
               <h3 className="text-lg font-bold flex items-center gap-2">

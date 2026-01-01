@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ProjectList from './components/ProjectList';
@@ -32,6 +31,40 @@ const App: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+
+  useEffect(() => {
+    // Seed some mock leads if empty for demo
+    const savedLeads = JSON.parse(localStorage.getItem('bt_leads') || '[]');
+    if (savedLeads.length === 0) {
+      const mockLeads: Lead[] = [
+        {
+          id: 'L-1',
+          customerName: '張小姐',
+          phone: '0912-345-678',
+          address: '台北市士林區',
+          diagnosis: '浴室外牆產生壁癌，疑似冷熱水管滲漏導致水氣滲透。',
+          photos: ['https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800'],
+          timestamp: '2026-01-02 09:30',
+          status: 'new'
+        },
+        {
+          id: 'L-2',
+          customerName: '科技辦公室行政',
+          phone: '02-2345-6789',
+          address: '新北市中和區',
+          diagnosis: '頂樓女兒牆裂縫與防水層老化，雨後天花板有明顯滴水現象。',
+          photos: ['https://images.unsplash.com/photo-1516714435131-44d6b64dc392?auto=format&fit=crop&q=80&w=800'],
+          timestamp: '2026-01-02 10:15',
+          status: 'new'
+        }
+      ];
+      setLeads(mockLeads);
+      localStorage.setItem('bt_leads', JSON.stringify(mockLeads));
+    } else {
+      setLeads(savedLeads);
+    }
+  }, []);
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -90,6 +123,7 @@ const App: React.FC = () => {
         setCustomers(JSON.parse(localStorage.getItem('bt_customers') || '[]'));
         setTeamMembers(JSON.parse(localStorage.getItem('bt_team') || '[]'));
         setVendors(JSON.parse(localStorage.getItem('bt_vendors') || '[]'));
+        setLeads(JSON.parse(localStorage.getItem('bt_leads') || '[]'));
         setActivityLogs(JSON.parse(localStorage.getItem('bt_logs') || '[]'));
 
         // 3. 優先解鎖介面 (不等待雲端)
@@ -129,6 +163,7 @@ const App: React.FC = () => {
         if (cloudData.teamMembers) setTeamMembers(cloudData.teamMembers);
         if (cloudData.activityLogs) setActivityLogs(cloudData.activityLogs);
         if (cloudData.vendors) setVendors(cloudData.vendors);
+        if (cloudData.leads) setLeads(cloudData.leads);
         setLastCloudSync(new Date().toLocaleTimeString());
       }
     } catch (e) {
@@ -176,7 +211,7 @@ const App: React.FC = () => {
         setCloudError(null);
       } else {
         const status = googleDriveService.getLastErrorStatus();
-        setCloudError(`同步失敗 (${status || '?'})`);
+        setCloudError(`同步失敗(${status || '?'})`);
       }
     } catch (err) {
       setCloudError('連線異常');
@@ -223,6 +258,7 @@ const App: React.FC = () => {
       localStorage.setItem('bt_team', JSON.stringify(teamMembers));
       localStorage.setItem('bt_logs', JSON.stringify(activityLogs));
       localStorage.setItem('bt_vendors', JSON.stringify(vendors));
+      localStorage.setItem('bt_leads', JSON.stringify(leads));
       setLastLocalSave(new Date().toLocaleTimeString());
     }
 
@@ -239,7 +275,7 @@ const App: React.FC = () => {
     if (user?.role === 'Guest') return;
     const project = projects.find(p => p.id === projectId);
     if (project) {
-      addActivityLog(`變更專案狀態：${status}`, project.name, projectId, 'project');
+      addActivityLog(`變更專案狀態：${status} `, project.name, projectId, 'project');
     }
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status } : p));
   };
@@ -285,6 +321,47 @@ const App: React.FC = () => {
 
   const handleUpdatePayments = (projectId: string, payments: PaymentStage[]) => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, payments } : p));
+  };
+
+  const handleConvertLead = (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    const newProject: Project = {
+      id: `AI${new Date().toISOString().slice(2, 10).replace(/-/g, '')}${Math.floor(100 + Math.random() * 900)} `,
+      departmentId: viewingDeptId === 'all' ? 'DEPT-1' : viewingDeptId,
+      name: `${lead.customerName} - 智慧抓漏會勘件`,
+      category: '室內裝修',
+      source: 'AI會勘系統',
+      client: lead.customerName,
+      referrer: 'Tiiny Web App',
+      manager: user?.name || '',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '',
+      createdDate: new Date().toISOString().split('T')[0],
+      budget: 0,
+      spent: 0,
+      progress: 0,
+      status: ProjectStatus.NEGOTIATING,
+      tasks: [],
+      phases: [],
+      checklist: [],
+      payments: [],
+      inspectionData: {
+        diagnosis: lead.diagnosis,
+        suggestedFix: '待現場覆核後提供完整對策',
+        originalPhotos: lead.photos,
+        aiAnalysis: '初步特徵符合漏水徵兆，內容由智慧抓漏系統 v8.1 自動生成。',
+        timestamp: lead.timestamp
+      },
+      financials: { labor: 0, material: 0, subcontractor: 0, other: 0 }
+    };
+
+    setProjects([newProject, ...projects]);
+    setLeads(leads.map(l => l.id === leadId ? { ...l, status: 'converted' } : l));
+    addActivityLog('將會勘線索轉為專案', newProject.name, newProject.id, 'project');
+    setActiveTab('projects');
+    setSelectedProjectId(newProject.id);
   };
 
   const handleLogout = () => {
@@ -357,7 +434,7 @@ const App: React.FC = () => {
         />
       )}
 
-      <div className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static transition-transform duration-500 z-[101] w-64 h-full shrink-0`}>
+      <div className={`fixed inset - y - 0 left - 0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg: translate - x - 0 lg:static transition - transform duration - 500 z - [101] w - 64 h - full shrink - 0`}>
         <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsSidebarOpen(false); }} user={user} onMenuClose={() => setIsSidebarOpen(false)} />
       </div>
 
@@ -367,8 +444,8 @@ const App: React.FC = () => {
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-stone-600 hover:bg-stone-100 rounded-lg"><Menu size={24} /></button>
 
             <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-lg ${user.role === 'Guest' ? 'bg-stone-900 text-orange-400' : 'bg-stone-900 text-white'}`}>
-                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${user.role === 'Guest' ? 'bg-orange-500' : 'bg-emerald-400'}`}></div>
+              <div className={`flex items - center gap - 2 px - 3 py - 1.5 rounded - 2xl shadow - lg ${user.role === 'Guest' ? 'bg-stone-900 text-orange-400' : 'bg-stone-900 text-white'} `}>
+                <div className={`w - 1.5 h - 1.5 rounded - full animate - pulse ${user.role === 'Guest' ? 'bg-orange-500' : 'bg-emerald-400'} `}></div>
                 <span className="text-[10px] font-black uppercase tracking-widest">{user.role === 'Guest' ? '訪客唯讀模式' : '生產環境 已上線'}</span>
               </div>
 
@@ -452,7 +529,12 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === 'dashboard' && <Dashboard projects={filteredData.projects} onProjectClick={(p) => setSelectedProjectId(p.id)} />}
+              {activeTab === 'dashboard' && <Dashboard
+                projects={filteredData.projects}
+                leads={leads}
+                onConvertLead={handleConvertLead}
+                onProjectClick={(id) => { setSelectedProjectId(id); setActiveTab('projects'); }}
+              />}
               {activeTab === 'projects' && <ProjectList projects={filteredData.projects} user={user} onAddClick={() => { setEditingProject(null); setIsModalOpen(true); }} onEditClick={(p) => { setEditingProject(p); setIsModalOpen(true); }} onDeleteClick={(id) => { if (confirm('刪除操作不可逆，確定嗎？')) { const p = projects.find(x => x.id === id); if (p) addActivityLog('刪除了專案', p.name, id, 'project'); setProjects(prev => prev.filter(p => p.id !== id)); } }} onDetailClick={(p) => setSelectedProjectId(p.id)} onLossClick={() => { }} />}
               {activeTab === 'settings' && (
                 <Settings
@@ -604,7 +686,7 @@ const App: React.FC = () => {
             sequence = Math.max(...sequences) + 1;
           }
 
-          const newId = `${prefix}${year}${sequence.toString().padStart(3, '0')}`;
+          const newId = `${prefix}${year}${sequence.toString().padStart(3, '0')} `;
           addActivityLog('建立新專案', data.name, newId, 'project');
           setProjects(prev => [{ ...data, id: newId, status: ProjectStatus.NEGOTIATING, progress: 0, workAssignments: [], expenses: [], comments: [], files: [], phases: [] } as any, ...prev]);
         }

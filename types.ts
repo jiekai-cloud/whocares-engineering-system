@@ -25,6 +25,7 @@ export type ProjectSource =
   | '網路客'
   | '住宅'
   | '台灣美光晶圓'
+  | 'AI會勘系統'
   | 'JW';
 
 export interface Expense {
@@ -175,11 +176,29 @@ export interface Project {
   payments?: PaymentStage[];
   financials: ProjectFinancials;
   location?: ProjectLocation;
+  inspectionData?: {
+    diagnosis: string;
+    suggestedFix: string;
+    originalPhotos: string[];
+    aiAnalysis: string;
+    timestamp: string;
+  };
   lossReason?: string;
   comments?: ProjectComment[];
   expenses?: Expense[];
   workAssignments?: WorkAssignment[];
   files?: ProjectFile[];
+}
+
+export interface Lead {
+  id: string;
+  customerName: string;
+  phone: string;
+  address: string;
+  diagnosis: string;
+  photos: string[];
+  timestamp: string;
+  status: 'new' | 'contacted' | 'converted';
 }
 
 export interface Customer {

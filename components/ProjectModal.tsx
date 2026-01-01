@@ -12,7 +12,7 @@ interface ProjectModalProps {
 
 const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onConfirm, initialData, teamMembers }) => {
   const categories: ProjectCategory[] = ['室內裝修', '建築營造', '水電機電', '景觀工程', '設計規劃', '其他'];
-  const sources: ProjectSource[] = ['BNI', '台塑集團', '士林電機', '信義居家', '企業', '新建工程', '網路客', '住宅', '台灣美光晶圓', 'JW'];
+  const sources: ProjectSource[] = ['BNI', '台塑集團', '士林電機', '信義居家', '企業', '新建工程', '網路客', '住宅', '台灣美光晶圓', 'AI會勘系統', 'JW'];
   const statuses = Object.values(ProjectStatus);
   const isEditMode = !!initialData;
 
