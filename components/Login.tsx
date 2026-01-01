@@ -51,13 +51,17 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       if (member) {
         const expectedPassword = member.password || '1234';
         if (password === expectedPassword) {
+          // 強制使用該員工設定的部門和權限，忽略下拉選單的選擇 (除非是 SuperAdmin)
+          const finalRole = member.systemRole || (member.role === '工務主管' || member.role === '專案經理' ? 'DeptAdmin' : 'Staff');
+          const finalDept = finalRole === 'SuperAdmin' ? 'all' : (member.departmentId || 'DEPT-1');
+
           onLoginSuccess({
             id: member.id,
             name: member.name,
             email: member.email,
             picture: member.avatar,
-            role: member.role === '工務主管' || member.role === '專案經理' ? 'DeptAdmin' : 'Staff'
-          }, selectedDeptId);
+            role: finalRole
+          }, finalDept);
         } else {
           setError('密碼輸入錯誤');
           setIsLoading(false);
@@ -87,9 +91,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       {/* 動態背景裝飾 */}
       <div className="absolute top-[-15%] left-[-10%] w-[60%] h-[60%] bg-orange-600/10 blur-[150px] rounded-full animate-pulse"></div>
       <div className="absolute bottom-[-15%] right-[-10%] w-[60%] h-[60%] bg-amber-600/10 blur-[150px] rounded-full animate-pulse [animation-delay:2s]"></div>
-      
+
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 bg-stone-900/40 backdrop-blur-3xl border border-white/10 rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative z-10 overflow-hidden">
-        
+
         {/* 左側：品牌形象區 (佔 5 格) */}
         <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-16 bg-gradient-to-br from-stone-900 to-stone-950 border-r border-white/5 relative">
           <div className="relative z-10">
@@ -108,7 +112,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               為現代工程人打造的數位大腦。整合預算控制、派工追蹤與 AI 智慧分析，全面提升施工效率。
             </p>
           </div>
-          
+
           <div className="space-y-6 relative z-10">
             <div className="flex items-center gap-3 text-stone-300">
               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
@@ -148,16 +152,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     key={dept.id}
                     type="button"
                     onClick={() => setSelectedDeptId(dept.id)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-300 ${
-                      selectedDeptId === dept.id 
-                        ? 'border-orange-600 bg-orange-600/10 shadow-[0_0_30px_-10px_rgba(234,88,12,0.3)]' 
+                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-300 ${selectedDeptId === dept.id
+                        ? 'border-orange-600 bg-orange-600/10 shadow-[0_0_30px_-10px_rgba(234,88,12,0.3)]'
                         : 'border-white/5 bg-white/5 hover:border-white/10'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${
-                        selectedDeptId === dept.id ? 'bg-orange-600 text-white' : 'bg-stone-800 text-stone-500'
-                      }`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${selectedDeptId === dept.id ? 'bg-orange-600 text-white' : 'bg-stone-800 text-stone-500'
+                        }`}>
                         {dept.id.split('-')[1]}
                       </div>
                       <span className={`text-sm font-bold transition-colors ${selectedDeptId === dept.id ? 'text-white' : 'text-stone-400'}`}>
@@ -181,7 +183,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <Hash size={14} className="text-orange-500" /> 員工編號 Employee ID
                 </label>
                 <div className="group relative">
-                  <input 
+                  <input
                     type="text"
                     placeholder="例如: ADMIN"
                     className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm text-white font-bold outline-none focus:ring-2 focus:ring-orange-600/50 focus:border-orange-600/50 transition-all placeholder:text-stone-700 uppercase"
@@ -194,7 +196,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <label className="text-stone-500 text-[10px] font-black uppercase tracking-[0.25em] pl-1 flex items-center gap-2">
                   <Lock size={14} className="text-orange-500" /> 登入密碼 Password
                 </label>
-                <input 
+                <input
                   type="password"
                   placeholder="••••••••"
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm text-white font-bold outline-none focus:ring-2 focus:ring-orange-600/50 focus:border-orange-600/50 transition-all placeholder:text-stone-700"
@@ -205,14 +207,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
 
             <div className="space-y-4 pt-4">
-              <button 
+              <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-5 rounded-2xl flex items-center justify-center gap-3 font-black text-sm tracking-[0.2em] uppercase transition-all shadow-2xl active:scale-[0.98] ${
-                  isLoading 
-                    ? 'bg-stone-800 text-stone-600 cursor-not-allowed' 
+                className={`w-full py-5 rounded-2xl flex items-center justify-center gap-3 font-black text-sm tracking-[0.2em] uppercase transition-all shadow-2xl active:scale-[0.98] ${isLoading
+                    ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
                     : 'bg-orange-600 hover:bg-orange-500 text-white shadow-orange-900/20 hover:shadow-orange-600/30'
-                }`}
+                  }`}
               >
                 {isLoading ? (
                   <>
@@ -227,7 +228,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 )}
               </button>
 
-              <button 
+              <button
                 type="button"
                 onClick={handleQuickAccess}
                 disabled={isLoading}

@@ -384,7 +384,7 @@ const App: React.FC = () => {
 
       {isTeamModalOpen && user.role !== 'Guest' && <TeamModal onClose={() => setIsTeamModalOpen(false)} onConfirm={(data) => {
         if (editingMember) setTeamMembers(prev => prev.map(m => m.id === editingMember.id ? { ...m, ...data } : m));
-        else setTeamMembers(prev => [{ ...data, id: 'T' + Date.now().toString().slice(-6), status: 'Available', activeProjectsCount: 0 } as any, ...prev]);
+        else setTeamMembers(prev => [{ ...data, id: 'T' + Date.now().toString().slice(-6), status: 'Available', activeProjectsCount: 0, systemRole: data.systemRole || 'Staff', departmentId: data.departmentId || 'DEPT-1' } as any, ...prev]);
         setIsTeamModalOpen(false);
       }} initialData={editingMember} />}
     </div>
