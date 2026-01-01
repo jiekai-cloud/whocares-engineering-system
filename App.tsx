@@ -203,7 +203,14 @@ const App: React.FC = () => {
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const filteredData = useMemo(() => {
-    const filterByDept = (item: any) => viewingDeptId === 'all' || item.departmentId === viewingDeptId;
+    const filterByDept = (item: any) => {
+      if (viewingDeptId === 'all') return true;
+      // 支援多部門過濾
+      if (item.departmentIds && Array.isArray(item.departmentIds) && item.departmentIds.length > 0) {
+        return item.departmentIds.includes(viewingDeptId);
+      }
+      return item.departmentId === viewingDeptId;
+    };
     return {
       projects: projects.filter(filterByDept),
       customers: customers.filter(filterByDept),
@@ -341,7 +348,7 @@ const App: React.FC = () => {
                   lastSyncTime={lastCloudSync}
                 />
               )}
-              {activeTab === 'team' && <TeamList members={filteredData.teamMembers} onAddClick={() => { setEditingMember(null); setIsTeamModalOpen(true); }} onEditClick={(m) => { setEditingMember(m); setIsTeamModalOpen(true); }} onDeleteClick={(id) => { if (confirm('確定移除此成員？')) setTeamMembers(prev => prev.filter(m => m.id !== id)); }} />}
+              {activeTab === 'team' && <TeamList members={filteredData.teamMembers} departments={MOCK_DEPARTMENTS} onAddClick={() => { setEditingMember(null); setIsTeamModalOpen(true); }} onEditClick={(m) => { setEditingMember(m); setIsTeamModalOpen(true); }} onDeleteClick={(id) => { if (confirm('確定移除此成員？')) setTeamMembers(prev => prev.filter(m => m.id !== id)); }} />}
               {activeTab === 'customers' && <CustomerList customers={filteredData.customers} onAddClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }} onEditClick={(c) => { setEditingCustomer(c); setIsCustomerModalOpen(true); }} onDeleteClick={(id) => { if (confirm('確定移除此客戶？')) setCustomers(prev => prev.filter(c => c.id !== id)); }} />}
               {activeTab === 'dispatch' && <DispatchManager projects={filteredData.projects} teamMembers={filteredData.teamMembers} onAddDispatch={(pid, ass) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: [ass, ...(p.workAssignments || [])] } : p))} onDeleteDispatch={(pid, aid) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: (p.workAssignments || []).filter(a => a.id !== aid) } : p))} />}
               {activeTab === 'analytics' && <Analytics projects={filteredData.projects} />}

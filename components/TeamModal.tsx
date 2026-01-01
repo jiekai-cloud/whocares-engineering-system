@@ -193,20 +193,69 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData }
               </select>
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">所屬部門</label>
-              <select
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
-                value={formData.departmentId || 'DEPT-1'}
-                onChange={e => setFormData({ ...formData, departmentId: e.target.value })}
-              >
-                <option value="DEPT-1">業務部 (Sales)</option>
-                <option value="DEPT-2">財務部 (Finance)</option>
-                <option value="DEPT-3">第一工程部 (Engineering 1)</option>
-                <option value="DEPT-4">戰略指揮部 (Strategic)</option>
-                <option value="DEPT-5">品質訓練部 (Quality & Training)</option>
-                <option value="DEPT-6">行銷部 (Marketing)</option>
-              </select>
+            <div className="md:col-span-2 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">主要部門 (Primary Department)</label>
+                <select
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
+                  value={formData.departmentId || 'DEPT-1'}
+                  onChange={e => {
+                    const newIds = [...(formData.departmentIds || ['DEPT-1', '', ''])];
+                    newIds[0] = e.target.value;
+                    setFormData({ ...formData, departmentId: e.target.value, departmentIds: newIds });
+                  }}
+                >
+                  <option value="DEPT-1">業務部 (Sales)</option>
+                  <option value="DEPT-2">財務部 (Finance)</option>
+                  <option value="DEPT-3">第一工程部 (Engineering 1)</option>
+                  <option value="DEPT-4">戰略指揮部 (Strategic)</option>
+                  <option value="DEPT-5">品質訓練部 (Quality & Training)</option>
+                  <option value="DEPT-6">行銷部 (Marketing)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">第二部門 (Optional)</label>
+                  <select
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
+                    value={formData.departmentIds?.[1] || ''}
+                    onChange={e => {
+                      const newIds = [...(formData.departmentIds || [formData.departmentId || 'DEPT-1', '', ''])];
+                      newIds[1] = e.target.value;
+                      setFormData({ ...formData, departmentIds: newIds });
+                    }}
+                  >
+                    <option value="">無 (None)</option>
+                    <option value="DEPT-1">業務部 (Sales)</option>
+                    <option value="DEPT-2">財務部 (Finance)</option>
+                    <option value="DEPT-3">第一工程部 (Engineering 1)</option>
+                    <option value="DEPT-4">戰略指揮部 (Strategic)</option>
+                    <option value="DEPT-5">品質訓練部 (Quality & Training)</option>
+                    <option value="DEPT-6">行銷部 (Marketing)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">第三部門 (Optional)</label>
+                  <select
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-black font-bold appearance-none"
+                    value={formData.departmentIds?.[2] || ''}
+                    onChange={e => {
+                      const newIds = [...(formData.departmentIds || [formData.departmentId || 'DEPT-1', '', ''])];
+                      newIds[2] = e.target.value;
+                      setFormData({ ...formData, departmentIds: newIds });
+                    }}
+                  >
+                    <option value="">無 (None)</option>
+                    <option value="DEPT-1">業務部 (Sales)</option>
+                    <option value="DEPT-2">財務部 (Finance)</option>
+                    <option value="DEPT-3">第一工程部 (Engineering 1)</option>
+                    <option value="DEPT-4">戰略指揮部 (Strategic)</option>
+                    <option value="DEPT-5">品質訓練部 (Quality & Training)</option>
+                    <option value="DEPT-6">行銷部 (Marketing)</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div>

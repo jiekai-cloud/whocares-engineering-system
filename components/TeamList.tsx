@@ -11,9 +11,10 @@ interface TeamListProps {
   onAddClick: () => void;
   onEditClick: (member: TeamMember) => void;
   onDeleteClick: (id: string) => void;
+  departments: any[];
 }
 
-const TeamList: React.FC<TeamListProps> = ({ members, onAddClick, onEditClick, onDeleteClick }) => {
+const TeamList: React.FC<TeamListProps> = ({ members, departments, onAddClick, onEditClick, onDeleteClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredMembers = members.filter(m =>
@@ -108,6 +109,16 @@ const TeamList: React.FC<TeamListProps> = ({ members, onAddClick, onEditClick, o
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{member.role}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(member.departmentIds || [member.departmentId]).filter(Boolean).map(deptId => {
+                        const dept = departments.find(d => d.id === deptId);
+                        return dept ? (
+                          <span key={deptId} className="text-[8px] font-black px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded border border-slate-200 uppercase">
+                            {dept.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
                   </div>
                 </div>
 
