@@ -4,7 +4,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie
 } from 'recharts';
-import { LayoutDashboard, FolderKanban, Users, BarChart3, TrendingUp, AlertCircle, Clock, CheckCircle2, DollarSign, ArrowUpRight, ArrowDownRight, Activity, ShieldAlert, Zap, ExternalLink, Sparkles, Phone, MapPin } from 'lucide-react';
+import {
+  LayoutDashboard, FolderKanban, Users, BarChart3, TrendingUp,
+  AlertCircle, Clock, CheckCircle2, DollarSign, ArrowUpRight,
+  ArrowDownRight, Activity, ShieldAlert, Zap, ExternalLink,
+  Sparkles, Phone, MapPin, FileWarning, CalendarDays, AlertTriangle,
+  Layers, Target, ArrowRight, Briefcase
+} from 'lucide-react';
 import { Project, ProjectStatus, Lead } from '../types';
 
 interface DashboardProps {
@@ -20,7 +26,9 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
   const availableYears = useMemo(() => {
-    const years = projects.map(p => p.startDate.split('-')[0]);
+    const years = projects
+      .map(p => p.startDate ? p.startDate.split('-')[0] : null)
+      .filter(Boolean);
     const uniqueYears = (Array.from(new Set(years)) as string[]).sort((a, b) => b.localeCompare(a));
     return uniqueYears;
   }, [projects]);
@@ -35,6 +43,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
   // 1. 高效過濾：在大數據量下僅在必要時重新計算
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
+      if (!p.startDate) return false;
       const [pYear, pMonth] = p.startDate.split('-');
       const matchYear = selectedYear === 'all' || pYear === selectedYear;
       const matchMonth = selectedMonth === 'all' || pMonth === selectedMonth;
@@ -61,11 +70,10 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
   const riskProjects = useMemo(() => {
     const now = new Date();
 
-    // 時間風險
     const timeRisks = filteredProjects
-      .filter(p => (p.status === ProjectStatus.NEGOTIATING || p.status === ProjectStatus.QUOTING))
+      .filter(p => p.createdDate && (p.status === ProjectStatus.NEGOTIATING || p.status === ProjectStatus.QUOTING))
       .map(p => {
-        const diff = now.getTime() - new Date(p.createdDate).getTime();
+        const diff = now.getTime() - new Date(p.createdDate!).getTime();
         return { ...p, riskType: 'delay', riskValue: Math.floor(diff / (1000 * 60 * 60 * 24)) };
       })
       .filter(p => p.riskValue >= 5);
@@ -88,7 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
     { label: '案件總量', value: filteredProjects.length, icon: Layers, color: 'text-slate-600', bg: 'bg-slate-50' },
     { label: '報價滯留', value: (stats.counts[ProjectStatus.NEGOTIATING] || 0) + (stats.counts[ProjectStatus.QUOTING] || 0), icon: FileWarning, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: '施工進行中', value: stats.counts[ProjectStatus.CONSTRUCTING] || 0, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: '執行週轉率', value: `${filteredProjects.length > 0 ? Math.round(((stats.counts[ProjectStatus.COMPLETED] || 0) / filteredProjects.length) * 100) : 0}% `, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: '執行週轉率', value: `${filteredProjects.length > 0 ? Math.round(((stats.counts[ProjectStatus.COMPLETED] || 0) / filteredProjects.length) * 100) : 0}%`, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   return (
@@ -126,7 +134,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {statsCards.map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4 transition-all hover:shadow-md">
-            <div className={`p - 3 rounded - xl ${stat.bg} ${stat.color} `}>
+            <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
               <stat.icon size={20} />
             </div>
             <div className="text-center sm:text-left">
@@ -152,8 +160,8 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
                   <button key={p.id} onClick={() => onProjectClick(p)} className="flex items-center justify-between p-4 bg-rose-50/50 rounded-2xl border border-rose-100 hover:bg-rose-50 transition-all text-left group">
                     <div className="space-y-1">
                       <p className="text-xs font-black text-stone-900 group-hover:text-rose-600 truncate max-w-[150px]">{p.name}</p>
-                      <p className={`text - [10px] font - bold ${p.riskType === 'budget' ? 'text-orange-600' : 'text-rose-500'} `}>
-                        {p.riskType === 'budget' ? `預算執行率已達 ${p.riskValue}% ` : `報價已滯留 ${p.riskValue} 天`}
+                      <p className={`text-[10px] font-bold ${p.riskType === 'budget' ? 'text-orange-600' : 'text-rose-500'}`}>
+                        {p.riskType === 'budget' ? `預算執行率已達 ${p.riskValue}%` : `報價已滯留 ${p.riskValue} 天`}
                       </p>
                     </div>
                     <ArrowRight size={14} className="text-rose-300" />

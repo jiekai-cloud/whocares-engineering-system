@@ -1,5 +1,5 @@
 
-import { Project, ProjectStatus, Department } from './types';
+import { Project, ProjectStatus, Department, TeamMember } from './types';
 
 export const MOCK_DEPARTMENTS: Department[] = [
   { id: 'DEPT-1', name: '業務部', color: '#ea580c', manager: '經理' },
@@ -71,5 +71,76 @@ export const MOCK_PROJECTS: Project[] = [
     tasks: [],
     phases: [],
     financials: { labor: 40, material: 30, subcontractor: 20, other: 10 }
+  }
+];
+
+export const MOCK_TEAM_MEMBERS: TeamMember[] = [
+  {
+    id: 'T-1',
+    employeeId: 'ADM001',
+    name: '李大維',
+    role: '總經理',
+    systemRole: 'SuperAdmin',
+    departmentId: 'DEPT-4',
+    departmentIds: ['DEPT-4', 'DEPT-1'],
+    phone: '0912-000-001',
+    email: 'ceo@lifequality.ai',
+    status: 'Available',
+    activeProjectsCount: 2,
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200',
+    specialty: ['企業管理', '戰略規劃'],
+    certifications: ['PMP', '工地主任證照'],
+    joinDate: '2020-01-01'
+  },
+  {
+    id: 'T-2',
+    employeeId: 'ENG001',
+    name: '張家銘',
+    role: '工地主任',
+    systemRole: 'DeptAdmin',
+    departmentId: 'DEPT-3',
+    departmentIds: ['DEPT-3'],
+    phone: '0928-111-222',
+    email: 'jm.chang@lifequality.ai',
+    status: 'Busy',
+    activeProjectsCount: 3,
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200',
+    specialty: ['室內裝修', '水電配置'],
+    certifications: ['乙級室內裝修工程管理'],
+    joinDate: '2022-03-15'
+  },
+  {
+    id: 'T-3',
+    employeeId: 'AST001',
+    name: '陳小美',
+    role: '工地助理',
+    systemRole: 'Staff',
+    departmentId: 'DEPT-3',
+    departmentIds: ['DEPT-3'],
+    phone: '0933-444-555',
+    email: 'xm.chen@lifequality.ai',
+    status: 'Available',
+    activeProjectsCount: 1,
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200',
+    specialty: ['現場紀錄', '物料清點'],
+    certifications: ['職業安全衛生管理員'],
+    joinDate: '2023-06-01'
+  },
+  {
+    id: 'T-4',
+    employeeId: 'ACC001',
+    name: '王雪芬',
+    role: '經理',
+    systemRole: 'DeptAdmin',
+    departmentId: 'DEPT-2',
+    departmentIds: ['DEPT-2'],
+    phone: '0955-666-777',
+    email: 'accounting@lifequality.ai',
+    status: 'Available',
+    activeProjectsCount: 0,
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=200',
+    specialty: ['財務會計', '稅務申報'],
+    certifications: ['記帳士', '會計師乙級'],
+    joinDate: '2021-11-20'
   }
 ];

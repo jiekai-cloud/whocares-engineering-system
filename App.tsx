@@ -16,7 +16,7 @@ import TeamModal from './components/TeamModal';
 import Login from './components/Login';
 import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as UserIcon, Trash2, ShoppingBag, Receipt } from 'lucide-react';
 import NotificationPanel from './components/NotificationPanel';
-import { MOCK_PROJECTS, MOCK_DEPARTMENTS } from './constants';
+import { MOCK_PROJECTS, MOCK_DEPARTMENTS, MOCK_TEAM_MEMBERS } from './constants';
 import { Project, ProjectStatus, Customer, TeamMember, User, Department, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead } from './types';
 import { googleDriveService, DEFAULT_CLIENT_ID } from './services/googleDriveService';
 
@@ -121,7 +121,14 @@ const App: React.FC = () => {
           payments: p.payments || []
         })));
         setCustomers(JSON.parse(localStorage.getItem('bt_customers') || '[]'));
-        setTeamMembers(JSON.parse(localStorage.getItem('bt_team') || '[]'));
+        const savedTeam = localStorage.getItem('bt_team');
+        const initialTeam = savedTeam ? JSON.parse(savedTeam) : MOCK_TEAM_MEMBERS;
+        setTeamMembers(initialTeam.map((m: any) => ({
+          ...m,
+          specialty: m.specialty || [],
+          certifications: m.certifications || [],
+          departmentIds: m.departmentIds || [m.departmentId]
+        })));
         setVendors(JSON.parse(localStorage.getItem('bt_vendors') || '[]'));
         setLeads(JSON.parse(localStorage.getItem('bt_leads') || '[]'));
         setActivityLogs(JSON.parse(localStorage.getItem('bt_logs') || '[]'));
@@ -434,7 +441,7 @@ const App: React.FC = () => {
         />
       )}
 
-      <div className={`fixed inset - y - 0 left - 0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg: translate - x - 0 lg:static transition - transform duration - 500 z - [101] w - 64 h - full shrink - 0`}>
+      <div className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static transition-transform duration-500 z-[101] w-64 h-full shrink-0`}>
         <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsSidebarOpen(false); }} user={user} onMenuClose={() => setIsSidebarOpen(false)} />
       </div>
 
@@ -444,8 +451,8 @@ const App: React.FC = () => {
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-stone-600 hover:bg-stone-100 rounded-lg"><Menu size={24} /></button>
 
             <div className="flex items-center gap-3">
-              <div className={`flex items - center gap - 2 px - 3 py - 1.5 rounded - 2xl shadow - lg ${user.role === 'Guest' ? 'bg-stone-900 text-orange-400' : 'bg-stone-900 text-white'} `}>
-                <div className={`w - 1.5 h - 1.5 rounded - full animate - pulse ${user.role === 'Guest' ? 'bg-orange-500' : 'bg-emerald-400'} `}></div>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-lg ${user.role === 'Guest' ? 'bg-stone-900 text-orange-400' : 'bg-stone-900 text-white'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${user.role === 'Guest' ? 'bg-orange-500' : 'bg-emerald-400'}`}></div>
                 <span className="text-[10px] font-black uppercase tracking-widest">{user.role === 'Guest' ? '訪客唯讀模式' : '生產環境 已上線'}</span>
               </div>
 
