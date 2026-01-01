@@ -304,7 +304,7 @@ const App: React.FC = () => {
                   ) : isCloudConnected ? (
                     <div className="flex items-center gap-2.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 shadow-sm">
                       <div className="relative"><CheckCircle size={14} className="text-emerald-500" />{isSyncing && <RefreshCw size={10} className="absolute -top-1 -right-1 text-emerald-600 animate-spin bg-white rounded-full p-0.5" />}</div>
-                      <div className="flex flex-col"><span className="text-[9px] font-black uppercase tracking-widest leading-none">雲端儲存中</span></div>
+                      <div className="flex flex-col"><span className="text-[9px] font-black uppercase tracking-widest leading-none">{isSyncing ? '同步中...' : '雲端同步就緒'}</span></div>
                     </div>
                   ) : (
                     <button onClick={handleConnectCloud} className="flex items-center gap-2 px-3 py-1.5 bg-stone-100 text-stone-400 rounded-2xl border border-stone-200 hover:text-orange-600"><CloudOff size={14} /><span className="text-[10px] font-black uppercase tracking-widest">離線保護模式</span></button>
