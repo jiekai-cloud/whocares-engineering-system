@@ -98,7 +98,7 @@ const App: React.FC = () => {
   const isSyncingRef = React.useRef(false);
   const syncTimeoutRef = React.useRef<any>(null);
 
-  const mergeData = useCallback(<T extends { id: string, updatedAt?: string }>(local: T[], remote: T[]): T[] => {
+  const mergeData = useCallback(<T extends { id: string, updatedAt?: string, deletedAt?: string }>(local: T[], remote: T[]): T[] => {
     const merged = [...local];
     remote.forEach(remoteItem => {
       const localIndex = merged.findIndex(item => item.id === remoteItem.id);
@@ -108,7 +108,10 @@ const App: React.FC = () => {
         const localItem = merged[localIndex];
         const localTime = localItem.updatedAt ? new Date(localItem.updatedAt).getTime() : 0;
         const remoteTime = remoteItem.updatedAt ? new Date(remoteItem.updatedAt).getTime() : 0;
-        // 如果遠端比較新，或者是本地沒有時間戳而遠端有，則更新
+
+        // Soft Delete Logic: 如果任一方有 deletedAt 且時間較新，該物件應保持刪除狀態
+        // 但此處簡化邏輯：只要遠端 updated_at 較新，就採信遠端 (包含 deletedAt)
+        // 因為 deletedAt 设置时也会更新 updatedAt
         if (remoteTime > localTime) {
           merged[localIndex] = remoteItem;
         }
@@ -495,6 +498,9 @@ const App: React.FC = () => {
 
   const filteredData = useMemo(() => {
     const filterByDept = (item: any) => {
+      // 過濾已被軟刪除的項目
+      if (item.deletedAt) return false;
+
       if (viewingDeptId === 'all') return true;
       // 支援多部門過濾
       if (item.departmentIds && Array.isArray(item.departmentIds) && item.departmentIds.length > 0) {
@@ -619,7 +625,13 @@ const App: React.FC = () => {
               project={selectedProject} user={user} teamMembers={teamMembers}
               onBack={() => setSelectedProjectId(null)}
               onEdit={(p) => { setEditingProject(p); setIsModalOpen(true); }}
-              onDelete={(id) => { if (confirm('確定要刪除嗎？')) { setProjects(prev => prev.filter(p => p.id !== id)); setSelectedProjectId(null); } }}
+              onDelete={(id) => {
+                if (confirm('確定要刪除嗎？')) {
+                  // Soft Delete: 標記刪除而非移除
+                  setProjects(prev => prev.map(p => p.id === id ? { ...p, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : p));
+                  setSelectedProjectId(null);
+                }
+              }}
               onUpdateStatus={(status) => handleUpdateStatus(selectedProject.id, status)}
               onAddComment={(text) => handleAddComment(selectedProject.id, text)}
               onUpdateFiles={(files) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, files, updatedAt: new Date().toISOString() } : p))}
@@ -654,7 +666,21 @@ const App: React.FC = () => {
                 onConvertLead={handleConvertLead}
                 onProjectClick={(id) => { setSelectedProjectId(id); setActiveTab('projects'); }}
               />}
-              {activeTab === 'projects' && <ProjectList projects={filteredData.projects} user={user} onAddClick={() => { setEditingProject(null); setIsModalOpen(true); }} onEditClick={(p) => { setEditingProject(p); setIsModalOpen(true); }} onDeleteClick={(id) => { if (confirm('刪除操作不可逆，確定嗎？')) { const p = projects.find(x => x.id === id); if (p) addActivityLog('刪除了專案', p.name, id, 'project'); setProjects(prev => prev.filter(p => p.id !== id)); } }} onDetailClick={(p) => setSelectedProjectId(p.id)} onLossClick={() => { }} />}
+              {activeTab === 'projects' && <ProjectList
+                projects={filteredData.projects}
+                user={user}
+                onAddClick={() => { setEditingProject(null); setIsModalOpen(true); }}
+                onEditClick={(p) => { setEditingProject(p); setIsModalOpen(true); }}
+                onDeleteClick={(id) => {
+                  if (confirm('刪除操作將移動至回收桶，確定嗎？')) {
+                    const p = projects.find(x => x.id === id);
+                    if (p) addActivityLog('刪除了專案', p.name, id, 'project');
+                    setProjects(prev => prev.map(p => p.id === id ? { ...p, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : p));
+                  }
+                }}
+                onDetailClick={(p) => setSelectedProjectId(p.id)}
+                onLossClick={() => { }}
+              />}
               {activeTab === 'settings' && (
                 <Settings
                   user={user} projects={projects} customers={customers} teamMembers={teamMembers}
@@ -678,8 +704,31 @@ const App: React.FC = () => {
                   lastSyncTime={lastCloudSync}
                 />
               )}
-              {activeTab === 'team' && <TeamList members={filteredData.teamMembers} departments={MOCK_DEPARTMENTS} onAddClick={() => { setEditingMember(null); setIsTeamModalOpen(true); }} onEditClick={(m) => { setEditingMember(m); setIsTeamModalOpen(true); }} onDeleteClick={(id) => { if (confirm('確定移除此成員？')) { const m = teamMembers.find(x => x.id === id); if (m) addActivityLog('移除了成員', m.name, id, 'team'); setTeamMembers(prev => prev.filter(m => m.id !== id)); } }} />}
-              {activeTab === 'customers' && <CustomerList customers={filteredData.customers} onAddClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }} onEditClick={(c) => { setEditingCustomer(c); setIsCustomerModalOpen(true); }} onDeleteClick={(id) => { if (confirm('確定移除此客戶？')) { const c = customers.find(x => x.id === id); if (c) addActivityLog('移除了客戶', c.name, id, 'customer'); setCustomers(prev => prev.filter(c => c.id !== id)); } }} />}
+              {activeTab === 'team' && <TeamList
+                members={filteredData.teamMembers}
+                departments={MOCK_DEPARTMENTS}
+                onAddClick={() => { setEditingMember(null); setIsTeamModalOpen(true); }}
+                onEditClick={(m) => { setEditingMember(m); setIsTeamModalOpen(true); }}
+                onDeleteClick={(id) => {
+                  if (confirm('確定移除此成員？')) {
+                    const m = teamMembers.find(x => x.id === id);
+                    if (m) addActivityLog('移除了成員', m.name, id, 'team');
+                    setTeamMembers(prev => prev.map(m => m.id === id ? { ...m, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : m));
+                  }
+                }}
+              />}
+              {activeTab === 'customers' && <CustomerList
+                customers={filteredData.customers}
+                onAddClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
+                onEditClick={(c) => { setEditingCustomer(c); setIsCustomerModalOpen(true); }}
+                onDeleteClick={(id) => {
+                  if (confirm('確定移除此客戶？')) {
+                    const c = customers.find(x => x.id === id);
+                    if (c) addActivityLog('移除了客戶', c.name, id, 'customer');
+                    setCustomers(prev => prev.map(c => c.id === id ? { ...c, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : c));
+                  }
+                }}
+              />}
               {activeTab === 'dispatch' && <DispatchManager projects={filteredData.projects} teamMembers={filteredData.teamMembers} onAddDispatch={(pid, ass) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: [ass, ...(p.workAssignments || [])], updatedAt: new Date().toISOString() } : p))} onDeleteDispatch={(pid, aid) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: (p.workAssignments || []).filter(a => a.id !== aid), updatedAt: new Date().toISOString() } : p))} />}
               {activeTab === 'analytics' && <Analytics projects={filteredData.projects} />}
 
@@ -715,7 +764,7 @@ const App: React.FC = () => {
                             <button
                               onClick={() => {
                                 if (window.confirm(`確定要刪除廠商 ${v.name} 嗎？`)) {
-                                  setVendors(vendors.filter(vend => vend.id !== v.id));
+                                  setVendors(prev => prev.map(vend => vend.id === v.id ? { ...vend, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : vend));
                                 }
                               }}
                               className="text-stone-300 hover:text-rose-500 p-1"

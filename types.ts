@@ -132,6 +132,7 @@ export interface Vendor {
   rating: number;
   notes?: string;
   updatedAt?: string;
+  deletedAt?: string;
 }
 
 export interface DailyLogEntry {
@@ -196,6 +197,7 @@ export interface Project {
   workAssignments?: WorkAssignment[];
   files?: ProjectFile[];
   updatedAt?: string;
+  deletedAt?: string;
 }
 
 export interface Lead {
@@ -208,6 +210,7 @@ export interface Lead {
   timestamp: string;
   status: 'new' | 'contacted' | 'converted';
   updatedAt?: string;
+  deletedAt?: string;
 }
 
 export interface Customer {
@@ -233,6 +236,7 @@ export interface Customer {
   notes?: string; // 客戶備註
   tags?: string[]; // 標籤
   updatedAt?: string;
+  deletedAt?: string;
 }
 
 export interface TeamMember {
@@ -265,6 +269,7 @@ export interface TeamMember {
   activeProjectsCount: number;
   avatar: string;
   updatedAt?: string;
+  deletedAt?: string;
 }
 
 export interface User {
