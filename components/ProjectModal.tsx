@@ -72,7 +72,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onConfirm, initial
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className={`px-6 py-4 flex justify-between items-center ${isEditMode ? 'bg-amber-600' : 'bg-slate-900'}`}>
           <h2 className="text-white font-bold flex items-center gap-2 text-lg">
             {isEditMode ? <Save size={20} /> : <Briefcase size={20} className="text-blue-400" />}

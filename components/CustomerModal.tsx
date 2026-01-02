@@ -82,7 +82,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onConfirm, initi
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="px-8 py-6 bg-slate-900 flex justify-between items-center text-white">
           <h2 className="font-bold flex items-center gap-3 text-lg">
             <User className="text-blue-400" />
@@ -290,8 +290,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onConfirm, initi
                         type="button"
                         onClick={() => setFormData({ ...formData, preferredContactMethod: method as any })}
                         className={`py - 3 rounded - 2xl text - xs font - bold border transition - all ${formData.preferredContactMethod === method
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100'
-                            : 'bg-white border-slate-200 text-slate-500 hover:border-blue-200'
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100'
+                          : 'bg-white border-slate-200 text-slate-500 hover:border-blue-200'
                           } `}
                       >
                         {method === 'Phone' ? '電話' : method === 'Email' ? '郵件' : 'Line'}

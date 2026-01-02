@@ -342,17 +342,55 @@ const App: React.FC = () => {
     }
   };
 
+  // 安全儲存到 localStorage，處理 QuotaExceededError
+  const safeLocalStorageSave = useCallback((key: string, data: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      return true;
+    } catch (e: any) {
+      if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+        console.warn(`[Storage] QuotaExceededError for ${key}, attempting cleanup...`);
+        // 嘗試清理策略
+        try {
+          // 1. 首先嘗試清除舊的 logs (通常最大)
+          const logsKey = 'bt_logs';
+          const currentLogs = localStorage.getItem(logsKey);
+          if (currentLogs) {
+            const parsedLogs = JSON.parse(currentLogs);
+            if (Array.isArray(parsedLogs) && parsedLogs.length > 10) {
+              // 只保留最近 10 筆
+              localStorage.setItem(logsKey, JSON.stringify(parsedLogs.slice(0, 10)));
+              console.log('[Storage] Trimmed activity logs to 10 entries');
+            }
+          }
+          // 2. 再次嘗試儲存
+          localStorage.setItem(key, JSON.stringify(data));
+          return true;
+        } catch (retryError) {
+          console.error('[Storage] Retry failed, clearing all storage for recovery');
+          // 最後手段：清除所有數據並提示用戶
+          alert('儲存空間不足！系統將清除舊資料以恢復運作。請連接雲端備份以避免資料遺失。');
+          localStorage.clear();
+          return false;
+        }
+      }
+      console.error(`[Storage] Unexpected error saving ${key}:`, e);
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     if (!initialSyncDone || !user) return;
 
     // 定期本地保存 (訪客不保存)
     if (user.role !== 'Guest') {
-      localStorage.setItem('bt_projects', JSON.stringify(projects));
-      localStorage.setItem('bt_customers', JSON.stringify(customers));
-      localStorage.setItem('bt_team', JSON.stringify(teamMembers));
-      localStorage.setItem('bt_logs', JSON.stringify(activityLogs));
-      localStorage.setItem('bt_vendors', JSON.stringify(vendors));
-      localStorage.setItem('bt_leads', JSON.stringify(leads));
+      // 使用安全儲存函式，處理 QuotaExceededError
+      safeLocalStorageSave('bt_projects', projects);
+      safeLocalStorageSave('bt_customers', customers);
+      safeLocalStorageSave('bt_team', teamMembers);
+      safeLocalStorageSave('bt_logs', activityLogs.slice(0, 30)); // 限制 logs 最多 30 筆
+      safeLocalStorageSave('bt_vendors', vendors);
+      safeLocalStorageSave('bt_leads', leads);
       setLastLocalSave(new Date().toLocaleTimeString());
     }
 
@@ -363,7 +401,7 @@ const App: React.FC = () => {
         handleCloudSync();
       }, 3000);
     }
-  }, [projects, customers, teamMembers, activityLogs, vendors, isCloudConnected, cloudError, initialSyncDone, handleCloudSync, user?.role, leads]);
+  }, [projects, customers, teamMembers, activityLogs, vendors, isCloudConnected, cloudError, initialSyncDone, handleCloudSync, user?.role, leads, safeLocalStorageSave]);
 
   // 背景心跳監測 (Heartbeat Polling) - 每 45 秒檢查一次雲端是否有新更動
   useEffect(() => {
