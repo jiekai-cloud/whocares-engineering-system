@@ -206,20 +206,23 @@ export interface Customer {
   departmentId: string;
   name: string;
   contactPerson: string;
+  secondaryContact?: string; // 新增：第二聯絡人
   phone: string;
-  secondaryPhone?: string; // 新增：備用電話
+  landline?: string; // 新增：室內電話
+  fax?: string; // 新增：傳真
+  secondaryPhone?: string; // 備用電話
   email: string;
   address: string;
-  birthday?: string; // 新增：生日
-  occupation?: string; // 新增：職業
-  source?: string; // 新增：來源 (例如：FB, 官網, 介紹)
-  lineId?: string; // 新增：Line ID
-  preferredContactMethod?: 'Phone' | 'Email' | 'Line'; // 新增：首選聯繫方式
+  birthday?: string; // 生日
+  occupation?: string; // 職業
+  source?: string; // 來源 (例如：FB, 官網, 介紹)
+  lineId?: string; // Line ID
+  preferredContactMethod?: 'Phone' | 'Email' | 'Line'; // 首選聯繫方式
   type: '個人' | '企業' | '政府單位' | '長期夥伴';
   createdDate: string;
   taxId?: string;
-  notes?: string; // 新增：客戶備註
-  tags?: string[]; // 新增：標籤
+  notes?: string; // 客戶備註
+  tags?: string[]; // 標籤
 }
 
 export interface TeamMember {

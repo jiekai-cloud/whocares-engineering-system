@@ -1,10 +1,9 @@
-
 import React, { useState, useMemo } from 'react';
 import {
   Search, Plus, User, Phone, Mail, MapPin,
   MoreHorizontal, Pencil, Trash2, Building2,
   ShieldAlert, Tag, Share2, MessageSquare,
-  Smartphone, Filter, Hash, ExternalLink
+  Smartphone, Filter, Hash, ExternalLink, Printer, UserCheck
 } from 'lucide-react';
 import { Customer, User as UserType } from '../types';
 
@@ -98,10 +97,10 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
             <button
               key={type}
               onClick={() => setSelectedType(type)}
-              className={`px-5 py-2.5 rounded-xl text-[11px] font-black transition-all ${selectedType === type
+              className={`px - 5 py - 2.5 rounded - xl text - [11px] font - black transition - all ${selectedType === type
                   ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                }`}
+                } `}
             >
               {type === 'all' ? '全部類型' : type}
             </button>
@@ -125,17 +124,22 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
               <div className="p-6 lg:px-8 lg:py-5 lg:grid lg:grid-cols-12 lg:items-center gap-4">
                 {/* Basic Info */}
                 <div className="col-span-4 flex items-center gap-4 mb-4 lg:mb-0">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-white shadow-sm shrink-0 ${customer.type === '企業' ? 'bg-indigo-100 text-indigo-600' :
+                  <div className={`w - 12 h - 12 rounded - 2xl flex items - center justify - center border - 2 border - white shadow - sm shrink - 0 ${customer.type === '企業' ? 'bg-indigo-100 text-indigo-600' :
                       customer.type === '政府單位' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
-                    }`}>
+                    } `}>
                     {customer.type === '企業' ? <Building2 size={24} /> : <User size={24} />}
                   </div>
                   <div>
-                    <h3 className="font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">
+                    <h3 className="font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight flex items-center gap-2">
                       {customer.name}
+                      {customer.secondaryContact && (
+                        <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 flex items-center gap-1">
+                          <UserCheck size={10} /> {customer.secondaryContact}
+                        </span>
+                      )}
                     </h3>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border uppercase ${getTypeStyle(customer.type)}`}>
+                      <span className={`text - [10px] font - black px - 2 py - 0.5 rounded - lg border uppercase ${getTypeStyle(customer.type)} `}>
                         {customer.type}
                       </span>
                       {customer.tags?.map(tag => (
@@ -155,7 +159,19 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-slate-400 leading-none">主要窗口 / 電話</p>
-                      <p className="text-xs font-black text-slate-700 mt-1">{customer.contactPerson || '未填寫'} - {customer.phone}</p>
+                      <p className="text-xs font-black text-slate-700 mt-1">
+                        {customer.contactPerson || '未填寫'} - {customer.phone}
+                      </p>
+                      {customer.landline && (
+                        <p className="text-[10px] font-bold text-slate-500 mt-0.5 flex items-center gap-1">
+                          <Phone size={10} /> 室話: {customer.landline}
+                        </p>
+                      )}
+                      {customer.fax && (
+                        <p className="text-[10px] font-bold text-slate-500 mt-0.5 flex items-center gap-1">
+                          <Printer size={10} /> 傳真: {customer.fax}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {(customer.lineId || customer.email) && (

@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   X, User, Phone, Mail, MapPin, Building2, Save,
   Fingerprint, Calendar, Briefcase, Share2, MessageSquare,
-  Tag, Info, Heart, Smartphone
+  Tag, Info, Heart, Smartphone, Printer, UserCheck
 } from 'lucide-react';
 import { Customer } from '../types';
 
@@ -20,7 +19,10 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onConfirm, initi
   const [formData, setFormData] = useState<Partial<Customer>>({
     name: '',
     contactPerson: '',
+    secondaryContact: '',
     phone: '',
+    landline: '',
+    fax: '',
     secondaryPhone: '',
     email: '',
     address: '',
@@ -96,8 +98,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onConfirm, initi
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 py-4 px-2 flex flex-col items-center gap-1.5 transition-all relative min-w-[80px] ${activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                }`}
+              className={`flex - 1 py - 4 px - 2 flex flex - col items - center gap - 1.5 transition - all relative min - w - [80px] ${activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+                } `}
             >
               <tab.icon size={18} className={activeTab === tab.id ? 'text-blue-500' : ''} />
               <span className="text-[10px] font-black uppercase tracking-tighter">{tab.label}</span>
@@ -124,13 +126,25 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onConfirm, initi
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">聯絡窗口姓名</label>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">主要窗口姓名</label>
                   <div className="relative">
                     <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                     <input
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-black font-bold"
                       value={formData.contactPerson}
                       onChange={e => setFormData({ ...formData, contactPerson: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">第二聯絡人</label>
+                  <div className="relative">
+                    <UserCheck size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                    <input
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-black font-bold"
+                      value={formData.secondaryContact || ''}
+                      onChange={e => setFormData({ ...formData, secondaryContact: e.target.value })}
                     />
                   </div>
                 </div>
@@ -168,14 +182,50 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onConfirm, initi
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">主要電話 *</label>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">行動電話 (主要) *</label>
                   <div className="relative">
-                    <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                    <Smartphone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                     <input
                       required
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-stone-900 font-bold"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">室內電話 / 分機</label>
+                  <div className="relative">
+                    <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                    <input
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-stone-900 font-bold"
+                      value={formData.landline || ''}
+                      onChange={e => setFormData({ ...formData, landline: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">傳真號碼</label>
+                  <div className="relative">
+                    <Printer size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                    <input
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-stone-900 font-bold"
+                      value={formData.fax || ''}
+                      onChange={e => setFormData({ ...formData, fax: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">次要電話</label>
+                  <div className="relative">
+                    <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                    <input
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-stone-900 font-bold"
+                      value={formData.secondaryPhone || ''}
+                      onChange={e => setFormData({ ...formData, secondaryPhone: e.target.value })}
                     />
                   </div>
                 </div>
@@ -225,10 +275,10 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onConfirm, initi
                         key={method}
                         type="button"
                         onClick={() => setFormData({ ...formData, preferredContactMethod: method as any })}
-                        className={`py-3 rounded-2xl text-xs font-bold border transition-all ${formData.preferredContactMethod === method
+                        className={`py - 3 rounded - 2xl text - xs font - bold border transition - all ${formData.preferredContactMethod === method
                             ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100'
                             : 'bg-white border-slate-200 text-slate-500 hover:border-blue-200'
-                          }`}
+                          } `}
                       >
                         {method === 'Phone' ? '電話' : method === 'Email' ? '郵件' : 'Line'}
                       </button>
