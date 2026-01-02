@@ -519,6 +519,181 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                 </div>
               </div>
             )}
+
+            {activeView === 'tasks' && (
+              <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden animate-in fade-in">
+                <div className="px-6 py-4 border-b border-stone-100 bg-stone-50/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                    <h3 className="font-black text-xs uppercase tracking-widest">待辦任務清單</h3>
+                  </div>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => {
+                        const title = prompt('任務內容：');
+                        if (title) {
+                          const newTask: Task = {
+                            id: Date.now().toString(),
+                            title,
+                            assignee: user.name,
+                            status: 'Todo',
+                            priority: 'Medium',
+                            dueDate: new Date().toISOString().split('T')[0]
+                          };
+                          onUpdateTasks([newTask, ...(project.tasks || [])]);
+                        }
+                      }}
+                      className="bg-stone-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black hover:bg-stone-800 transition-all active:scale-95"
+                    >
+                      + 新增任務
+                    </button>
+                  )}
+                </div>
+                <div className="divide-y divide-stone-50">
+                  {project.tasks && project.tasks.length > 0 ? project.tasks.map(task => (
+                    <div key={task.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <button
+                          disabled={isReadOnly}
+                          onClick={() => {
+                            const newStatus = task.status === 'Done' ? 'Todo' : 'Done';
+                            onUpdateTasks(project.tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+                          }}
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${task.status === 'Done' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 text-transparent hover:border-emerald-400'}`}
+                        >
+                          <Check size={12} strokeWidth={4} />
+                        </button>
+                        <div>
+                          <p className={`text-sm font-bold text-stone-700 ${task.status === 'Done' ? 'line-through opacity-50' : ''}`}>{task.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded uppercase">{task.assignee}</span>
+                            {task.dueDate && <span className="text-[9px] text-stone-400 flex items-center gap-1"><CalendarDays size={10} /> {task.dueDate}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {!isReadOnly && (
+                        <button onClick={() => onUpdateTasks(project.tasks.filter(t => t.id !== task.id))} className="text-stone-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all px-2">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  )) : (
+                    <div className="py-20 flex flex-col items-center justify-center text-stone-300 gap-4 opacity-50">
+                      <CheckCircle2 size={48} />
+                      <p className="text-[10px] font-black uppercase tracking-widest">目前沒有待辦任務</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeView === 'schedule' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-stone-100 bg-stone-50/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays size={16} className="text-blue-600" />
+                      <h3 className="font-black text-xs uppercase tracking-widest">施工進度排程</h3>
+                      <button onClick={() => setIsAIScheduling(true)} className="ml-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-2 py-1 rounded-lg text-[9px] font-black flex items-center gap-1"><Sparkles size={10} /> AI 排程助手</button>
+                    </div>
+                    {!isReadOnly && (
+                      <button
+                        onClick={() => {
+                          const name = prompt('階段名稱：');
+                          if (name) {
+                            const newPhase: ProjectPhase = {
+                              id: Date.now().toString(),
+                              name,
+                              status: 'Upcoming',
+                              progress: 0,
+                              startDate: new Date().toISOString().split('T')[0],
+                              endDate: new Date().toISOString().split('T')[0]
+                            };
+                            if (onUpdatePhases) onUpdatePhases([...(project.phases || []), newPhase]);
+                          }
+                        }}
+                        className="bg-stone-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black hover:bg-stone-800 transition-all active:scale-95"
+                      >
+                        + 新增階段
+                      </button>
+                    )}
+                  </div>
+                  <div className="p-6 space-y-6">
+                    {project.phases && project.phases.length > 0 ? project.phases.map(phase => (
+                      <div key={phase.id} className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold text-stone-700">
+                          <span>{phase.name}</span>
+                          <span className="text-stone-400 text-[10px]">{phase.startDate} - {phase.endDate}</span>
+                        </div>
+                        <div className="h-2 bg-stone-100 rounded-full overflow-hidden relative group cursor-pointer" onClick={() => {
+                          if (!isReadOnly && onUpdatePhases) {
+                            const newProgress = prompt('輸入新進度 (0-100):', phase.progress.toString());
+                            if (newProgress !== null) {
+                              const p = Math.min(100, Math.max(0, parseInt(newProgress) || 0));
+                              onUpdatePhases(project.phases.map(ph => ph.id === phase.id ? { ...ph, progress: p, status: p === 100 ? 'Completed' : p > 0 ? 'Current' : 'Upcoming' } : ph));
+                            }
+                          }
+                        }}>
+                          <div className={`h-full rounded-full transition-all duration-500 ${phase.status === 'Completed' ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${phase.progress}%` }}></div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="py-12 flex flex-col items-center justify-center text-stone-300 gap-3 opacity-50">
+                        <CalendarDays size={32} />
+                        <p className="text-[10px] font-black uppercase tracking-widest">尚無排程資料</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeView === 'photos' && (
+              <div className="space-y-4 animate-in fade-in">
+                {!isReadOnly && (
+                  <div className="flex justify-end">
+                    <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={(e) => {
+                      if (e.target.files && onUpdateFiles) {
+                        const newFiles = Array.from(e.target.files).map(file => ({
+                          id: Date.now().toString() + Math.random(),
+                          url: URL.createObjectURL(file), // Note: In real app, upload to cloud
+                          name: file.name,
+                          type: 'image' as const,
+                          uploadedAt: new Date().toISOString(),
+                          uploadedBy: user.name,
+                          size: file.size
+                        }));
+                        onUpdateFiles([...(project.files || []), ...newFiles]);
+                      }
+                    }} />
+                    <button onClick={() => fileInputRef.current?.click()} className="bg-stone-900 text-white px-4 py-2 rounded-xl text-[10px] font-black flex items-center gap-2 hover:bg-stone-800 transition-all">
+                      <Upload size={14} /> 上傳照片
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {project.files && project.files.length > 0 ? project.files.filter(f => f.type === 'image').map(file => (
+                    <div key={file.id} className="aspect-square bg-stone-100 rounded-2xl overflow-hidden relative group border border-stone-200 shadow-sm cursor-zoom-in" onClick={() => setSelectedImage(file)}>
+                      <img src={file.url} alt={file.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-white text-[10px] font-bold truncate">{file.name}</p>
+                        <p className="text-white/60 text-[9px]">{new Date(file.uploadedAt).toLocaleDateString()}</p>
+                      </div>
+                      {!isReadOnly && onUpdateFiles && (
+                        <button onClick={(e) => { e.stopPropagation(); if (confirm('刪除此照片？')) onUpdateFiles(project.files!.filter(f => f.id !== file.id)); }} className="absolute top-2 right-2 p-1.5 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-rose-500 transition-colors opacity-0 group-hover:opacity-100">
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )) : (
+                    <div className="col-span-full py-20 flex flex-col items-center justify-center text-stone-300 gap-4 opacity-50">
+                      <ImageIcon size={48} />
+                      <p className="text-[10px] font-black uppercase tracking-widest">照片庫是空的</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
