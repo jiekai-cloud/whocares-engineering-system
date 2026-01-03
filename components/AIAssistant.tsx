@@ -134,7 +134,11 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ projects }) => {
                 </div>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-stone-400 hover:text-white transition-colors">
+            <button
+              onClick={() => setIsOpen(false)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="text-stone-400 hover:text-white transition-colors"
+            >
               <X size={24} />
             </button>
           </div>
