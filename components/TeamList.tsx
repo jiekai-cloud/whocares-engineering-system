@@ -176,7 +176,7 @@ const TeamList: React.FC<TeamListProps> = ({ members, departments, onAddClick, o
                     <div className="col-span-3 space-y-1 mb-4 lg:mb-0">
                       <div className="flex items-center gap-2 text-xs text-slate-600">
                         <Phone size={12} className="text-slate-400" />
-                        <span className="font-bold font-mono">{member.phone}</span>
+                        <a href={`tel:${member.phone}`} className="font-bold font-mono hover:text-orange-600 hover:underline transition-colors">{member.phone}</a>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-400">
                         <Mail size={12} className="shrink-0" />
