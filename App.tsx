@@ -352,25 +352,28 @@ const App: React.FC = () => {
         console.warn(`[Storage] QuotaExceededError for ${key}, attempting cleanup...`);
         // 嘗試清理策略
         try {
-          // 1. 首先嘗試清除舊的 logs (通常最大)
+          // 1. 優先清除 Activity Logs (非必要資料)
+          // 只保留最近 5 筆，或者直接清空，視情況而定
           const logsKey = 'bt_logs';
           const currentLogs = localStorage.getItem(logsKey);
           if (currentLogs) {
+            // 嘗試只保留極少量日誌
             const parsedLogs = JSON.parse(currentLogs);
-            if (Array.isArray(parsedLogs) && parsedLogs.length > 10) {
-              // 只保留最近 10 筆
-              localStorage.setItem(logsKey, JSON.stringify(parsedLogs.slice(0, 10)));
-              console.log('[Storage] Trimmed activity logs to 10 entries');
+            if (Array.isArray(parsedLogs) && parsedLogs.length > 0) {
+              localStorage.setItem(logsKey, JSON.stringify(parsedLogs.slice(0, 5)));
+              console.log('[Storage] Aggressively trimmed activity logs to 5 entries');
+            } else {
+              localStorage.removeItem(logsKey);
             }
           }
+
           // 2. 再次嘗試儲存
           localStorage.setItem(key, JSON.stringify(data));
           return true;
         } catch (retryError) {
-          console.error('[Storage] Retry failed, clearing all storage for recovery');
-          // 最後手段：清除所有數據並提示用戶
-          alert('儲存空間不足！系統將清除舊資料以恢復運作。請連接雲端備份以避免資料遺失。');
-          localStorage.clear();
+          console.error('[Storage] Retry failed. storage is full.');
+          // CRITICAL CHANGE: 絕對不執行 localStorage.clear()，避免遺失專案資料。
+          // 僅在 console 報錯，並依賴雲端同步作為備份。
           return false;
         }
       }

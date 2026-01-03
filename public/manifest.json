@@ -1,16 +1,16 @@
-
 {
-  "short_name": "生活品質管理",
+  "short_name": "工程管家",
   "name": "生活品質智慧工程管理系統",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/4342/4342728.png",
-      "sizes": "512x512",
+      "sizes": "192x192 512x512",
       "type": "image/png"
     }
   ],
   "start_url": "./",
   "display": "standalone",
   "theme_color": "#ea580c",
-  "background_color": "#fafaf9"
+  "background_color": "#fafaf9",
+  "orientation": "portrait-primary"
 }
