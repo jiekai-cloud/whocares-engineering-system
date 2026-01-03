@@ -131,15 +131,17 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
         </div>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         {statsCards.map((stat, i) => (
-          <div key={i} className="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4 transition-all hover:shadow-md">
-            <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
-              <stat.icon size={20} />
-            </div>
-            <div className="text-center sm:text-left">
-              <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1">{stat.label}</p>
-              <p className="text-xl font-black text-stone-900 leading-tight">{stat.value}</p>
+          <div key={i} className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-100 shadow-sm hover:shadow-lg hover:border-stone-200 transition-all group">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className={`p-2.5 sm:p-3 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
+                <stat.icon size={18} className="sm:w-5 sm:h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-black text-stone-400 uppercase tracking-widest mb-0.5 sm:mb-1 truncate">{stat.label}</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-black text-stone-900 leading-tight">{stat.value}</p>
+              </div>
             </div>
           </div>
         ))}
@@ -155,29 +157,29 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
                   <h3 className="font-black text-sm uppercase tracking-widest">營運與財務預警中心</h3>
                 </div>
               </div>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
                 {riskProjects.map(p => (
-                  <button key={p.id} onClick={() => onProjectClick(p.id)} className="flex items-center justify-between p-4 bg-rose-50/50 rounded-2xl border border-rose-100 hover:bg-rose-50 transition-all text-left group">
-                    <div className="space-y-1">
-                      <p className="text-xs font-black text-stone-900 group-hover:text-rose-600 truncate max-w-[150px]">{p.name}</p>
-                      <p className={`text-[10px] font-bold ${p.riskType === 'budget' ? 'text-orange-600' : 'text-rose-500'}`}>
+                  <button key={p.id} onClick={() => onProjectClick(p.id)} className="flex items-center justify-between p-3 sm:p-4 bg-rose-50/50 rounded-2xl border border-rose-100 hover:bg-rose-50 active:scale-[0.98] transition-all text-left group min-h-[60px] touch-manipulation">
+                    <div className="space-y-1 flex-1 min-w-0 pr-2">
+                      <p className="text-xs font-black text-stone-900 group-hover:text-rose-600 truncate">{p.name}</p>
+                      <p className={`text-[10px] font-bold ${p.riskType === 'budget' ? 'text-orange-600' : 'text-rose-500'} leading-tight`}>
                         {p.riskType === 'budget' ? `預算執行率已達 ${p.riskValue}%` : `報價已滯留 ${p.riskValue} 天`}
                       </p>
                     </div>
-                    <ArrowRight size={14} className="text-rose-300" />
+                    <ArrowRight size={16} className="text-rose-300 group-hover:text-rose-500 shrink-0" />
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm">
-            <h3 className="text-sm font-black text-stone-900 mb-8 uppercase tracking-widest border-l-4 border-orange-500 pl-4">全案場狀態分佈矩陣</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border border-stone-100 shadow-sm">
+            <h3 className="text-xs sm:text-sm font-black text-stone-900 mb-4 sm:mb-6 lg:mb-8 uppercase tracking-widest border-l-4 border-orange-500 pl-3 sm:pl-4">全案場狀態分佈矩陣</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
               {Object.values(ProjectStatus).map((status) => (
-                <div key={status} className="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex flex-col items-center justify-center text-center">
-                  <span className="text-lg font-black text-stone-900">{stats.counts[status] || 0}</span>
-                  <span className="text-[9px] font-black text-stone-400 uppercase tracking-tighter">{status}</span>
+                <div key={status} className="bg-stone-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-stone-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all flex flex-col items-center justify-center text-center min-h-[70px] sm:min-h-[80px]">
+                  <span className="text-base sm:text-lg lg:text-xl font-black text-stone-900">{stats.counts[status] || 0}</span>
+                  <span className="text-[8px] sm:text-[9px] font-black text-stone-400 uppercase tracking-tighter mt-1 leading-tight">{status}</span>
                 </div>
               ))}
             </div>

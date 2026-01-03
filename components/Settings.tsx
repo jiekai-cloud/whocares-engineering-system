@@ -43,7 +43,7 @@ const Settings: FC<SettingsProps> = ({
     setIsExporting(true);
     setTimeout(() => {
       const backupData = {
-        version: "2026.1.0",
+        version: "2026.1.1",
         exportDate: new Date().toISOString(),
         projects,
         customers,

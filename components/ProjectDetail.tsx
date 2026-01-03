@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { Project, ProjectStatus, Task, ProjectComment, Expense, WorkAssignment, TeamMember, ProjectFile, ProjectPhase, User, ChecklistTask, PaymentStage } from '../types';
 import { suggestProjectSchedule, searchNearbyResources } from '../services/geminiService';
+import GanttChart from './GanttChart';
+import MapLocation from './MapLocation';
 
 interface ProjectDetailProps {
   project: Project;
@@ -619,25 +621,38 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     )}
                   </div>
                   <div className="p-6 space-y-6">
-                    {project.phases && project.phases.length > 0 ? project.phases.map(phase => (
-                      <div key={phase.id} className="space-y-2">
-                        <div className="flex justify-between items-center text-xs font-bold text-stone-700">
-                          <span>{phase.name}</span>
-                          <span className="text-stone-400 text-[10px]">{phase.startDate} - {phase.endDate}</span>
+                    {project.phases && project.phases.length > 0 ? (
+                      <div className="space-y-8">
+                        {/* 甘特圖概覽 */}
+                        <div className="bg-stone-50/50 p-4 rounded-[2rem] border border-stone-100">
+                          <h4 className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-4 ml-2">時程視覺化概覽</h4>
+                          <GanttChart phases={project.phases} />
                         </div>
-                        <div className="h-2 bg-stone-100 rounded-full overflow-hidden relative group cursor-pointer" onClick={() => {
-                          if (!isReadOnly && onUpdatePhases) {
-                            const newProgress = prompt('輸入新進度 (0-100):', phase.progress.toString());
-                            if (newProgress !== null) {
-                              const p = Math.min(100, Math.max(0, parseInt(newProgress) || 0));
-                              onUpdatePhases(project.phases.map(ph => ph.id === phase.id ? { ...ph, progress: p, status: p === 100 ? 'Completed' : p > 0 ? 'Current' : 'Upcoming' } : ph));
-                            }
-                          }
-                        }}>
-                          <div className={`h-full rounded-full transition-all duration-500 ${phase.status === 'Completed' ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${phase.progress}%` }}></div>
+
+                        {/* 詳細列表 */}
+                        <div className="space-y-6">
+                          {project.phases.map(phase => (
+                            <div key={phase.id} className="space-y-2">
+                              <div className="flex justify-between items-center text-xs font-bold text-stone-700">
+                                <span>{phase.name}</span>
+                                <span className="text-stone-400 text-[10px]">{phase.startDate} - {phase.endDate}</span>
+                              </div>
+                              <div className="h-2 bg-stone-100 rounded-full overflow-hidden relative group cursor-pointer" onClick={() => {
+                                if (!isReadOnly && onUpdatePhases) {
+                                  const newProgress = prompt('輸入新進度 (0-100):', phase.progress.toString());
+                                  if (newProgress !== null) {
+                                    const p = Math.min(100, Math.max(0, parseInt(newProgress) || 0));
+                                    onUpdatePhases(project.phases.map(ph => ph.id === phase.id ? { ...ph, progress: p, status: p === 100 ? 'Completed' : p > 0 ? 'Current' : 'Upcoming' } : ph));
+                                  }
+                                }
+                              }}>
+                                <div className={`h-full rounded-full transition-all duration-500 ${phase.status === 'Completed' ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${phase.progress}%` }}></div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    )) : (
+                    ) : (
                       <div className="py-12 flex flex-col items-center justify-center text-stone-300 gap-3 opacity-50">
                         <CalendarDays size={32} />
                         <p className="text-[10px] font-black uppercase tracking-widest">尚無排程資料</p>
@@ -645,6 +660,17 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeView === 'map' && (
+              <div className="h-full overflow-hidden">
+                <MapLocation
+                  address={project.location?.address || project.client || ''}
+                  lat={project.location?.lat}
+                  lng={project.location?.lng}
+                  projectName={project.name}
+                />
               </div>
             )}
 

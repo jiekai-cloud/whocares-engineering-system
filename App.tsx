@@ -524,6 +524,14 @@ const App: React.FC = () => {
     setSelectedProjectId(newProject.id);
   };
 
+  const handleMarkLogAsRead = (logId: string) => {
+    setActivityLogs(prev => prev.map(log => log.id === logId ? { ...log, isRead: true } : log));
+  };
+
+  const handleMarkAllLogsAsRead = () => {
+    setActivityLogs(prev => prev.map(log => ({ ...log, isRead: true })));
+  };
+
   const handleLogout = () => {
     if (confirm('確定要安全登出生產系統嗎？')) {
       setUser(null);
@@ -978,6 +986,8 @@ const App: React.FC = () => {
                 setIsNotificationOpen(false);
                 setActiveTab('projects');
               }}
+              onMarkAsRead={handleMarkLogAsRead}
+              onMarkAllAsRead={handleMarkAllLogsAsRead}
             />
           </div>
         </>

@@ -99,6 +99,7 @@ export interface ActivityLog {
   targetName: string;
   timestamp: string;
   type: 'project' | 'customer' | 'team' | 'system';
+  isRead?: boolean;
 }
 
 export interface ChecklistTask {
