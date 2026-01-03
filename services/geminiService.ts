@@ -5,11 +5,12 @@ import { Project } from "../types";
 // Always use named parameter for apiKey and fetch from process.env.API_KEY
 const getAI = () => {
   const savedKey = typeof window !== 'undefined' ? localStorage.getItem('GEMINI_API_KEY') : null;
-  const key = savedKey || process.env.API_KEY || process.env.GEMINI_API_KEY;
+  // Use provided key as the final fallback
+  const key = savedKey || process.env.API_KEY || process.env.GEMINI_API_KEY || 'AIzaSyCATCTCS4NtudYGQAnz5q-smUnxrSS0C2Y';
 
   if (!key || key === 'PLACEHOLDER_API_KEY' || key === 'undefined') {
     console.error("Gemini API Key is missing or invalid.");
-    throw new Error("Gemini API 金鑰未設定或無效。請點擊右上角「AI 智慧分析已掛載」來配置金鑰。");
+    throw new Error("Gemini API 金鑰未設定或無效。請點擊右上角「AI 服務」來配置金鑰。");
   }
   return new GoogleGenAI({ apiKey: key });
 };

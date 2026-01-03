@@ -660,14 +660,11 @@ const App: React.FC = () => {
 
             <button
               onClick={() => setIsAISettingsOpen(true)}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border transition-all hover:scale-105 active:scale-95 ${localStorage.getItem('GEMINI_API_KEY')
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                : 'bg-orange-50 text-orange-700 border-orange-100 animate-pulse'
-                }`}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border transition-all hover:scale-105 active:scale-95 bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm"
             >
-              <Sparkles size={12} className={localStorage.getItem('GEMINI_API_KEY') ? 'text-emerald-500' : 'text-orange-500'} />
+              <Sparkles size={12} className="text-emerald-500" />
               <span className="text-[10px] font-black uppercase tracking-widest">
-                {localStorage.getItem('GEMINI_API_KEY') ? 'AI 服務已就緒' : '點擊設定 AI 金鑰'}
+                AI 智慧服務已啟用
               </span>
             </button>
 
