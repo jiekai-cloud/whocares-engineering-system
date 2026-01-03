@@ -21,9 +21,9 @@ const getAI = () => {
   }
 
   // Debug log (masked)
-  console.log(`Using AI Key: ${key.substring(0, 8)}... (Safe Mode + Force v1)`);
+  console.log(`Using AI Key: ${key.substring(0, 8)}... (GenAI SDK - Gemini 2.0)`);
 
-  return new GoogleGenAI({ apiKey: key, apiVersion: 'v1' });
+  return new GoogleGenAI({ apiKey: key });
 };
 
 /**
@@ -49,7 +49,7 @@ export const getPortfolioAnalysis = async (projects: Project[]) => {
     const projectSummary = criticalOnes.map(p => `- ${p.name}: 狀態 ${p.status}, 進度 ${p.progress}%, 預算 ${p.budget}`).join('\n');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
           text: `妳是「生活品質工程管理系統」的首席運籌官。
@@ -74,7 +74,7 @@ export const getProjectInsights = async (project: Project, question: string) => 
   const ai = getAI();
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
           text: `妳是專業的智慧營造顧問。請根據提供的單一專案數據，精確回答使用者的疑問並提出具體的改進或監控建議。
@@ -103,7 +103,7 @@ export const searchEngineeringKnowledge = async (query: string) => {
   const ai = getAI();
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
           text: `妳是營造法規與市場趨勢專家。請利用搜尋功能為使用者提供具備權權威來源的解答，包含最新法規更新或建材價格行情。
@@ -138,7 +138,7 @@ export const suggestProjectSchedule = async (project: Project) => {
   try {
     // 對於複雜推理任務使用 Pro 模型
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
           text: `妳是具備二十年經驗的資深工務經理。妳擅長進行裝修與建築工程的排程規劃，請提供符合實務邏輯的階段劃分。
@@ -171,7 +171,7 @@ export const getTeamLoadAnalysis = async (members: any[], projects: Project[]) =
       .join('\n');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
           text: `妳是技術總監級別的 AI 管理顧問。
@@ -200,7 +200,7 @@ export const searchNearbyResources = async (address: string, lat: number, lng: n
   try {
     // 地圖服務僅支援 Gemini 2.5 系列模型
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
           text: `妳是地圖導航專家。請在 ${address} 附近搜尋 ${resourceType} 並提供相關資訊。`
@@ -240,7 +240,7 @@ export const parseWorkDispatchText = async (text: string) => {
   const ai = getAI();
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
           text: `妳是專業的工務數據解析員。妳能從混亂的通訊軟體對話或手寫日報轉錄文字中，精準提取出派工數據並轉化為 JSON 陣列。
@@ -271,7 +271,7 @@ export const scanBusinessCard = async (base64Image: string) => {
   try {
     // 使用具備視覺能力的模型
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [
         {
           inlineData: {
