@@ -117,7 +117,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-16 bg-gradient-to-br from-stone-900 to-stone-950 border-r border-white/5 relative">
           <div className="relative z-10">
             <div className="bg-white/10 w-16 h-16 rounded-3xl flex items-center justify-center border border-white/10 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.4)] mb-10 group hover:scale-110 transition-transform duration-500 overflow-hidden">
-              <img src="/pwa-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
+              <img src="./pwa-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
             </div>
             <h1 className="text-4xl font-black text-white leading-tight tracking-tighter mb-6">
               生活品質<br />
@@ -151,7 +151,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <div className="text-center lg:text-left space-y-2">
               <div className="lg:hidden flex justify-center mb-6">
                 <div className="bg-white/10 w-12 h-12 rounded-2xl flex items-center justify-center border border-white/10 shadow-lg overflow-hidden">
-                  <img src="/pwa-icon.png" alt="Logo" className="w-8 h-8 object-contain" />
+                  <img src="./pwa-icon.png" alt="Logo" className="w-10 h-8 object-contain" />
                 </div>
               </div>
               <h1 className="lg:hidden text-2xl font-black text-white tracking-tighter mb-2">生活品質工程管理系統</h1>
