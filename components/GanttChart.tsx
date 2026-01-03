@@ -132,6 +132,26 @@ const GanttChart: React.FC<GanttChartProps> = ({ phases }) => {
                                 className="transition-all hover:opacity-80"
                             />
                         ))}
+                        <LabelList
+                            dataKey="startStr"
+                            position="left"
+                            formatter={(val: string) => {
+                                const d = new Date(val);
+                                return `${d.getMonth() + 1}/${d.getDate()}`;
+                            }}
+                            style={{ fontSize: 9, fontWeight: 800, fill: '#64748b' }}
+                            offset={8}
+                        />
+                        <LabelList
+                            dataKey="endStr"
+                            position="right"
+                            formatter={(val: string) => {
+                                const d = new Date(val);
+                                return `${d.getMonth() + 1}/${d.getDate()}`;
+                            }}
+                            style={{ fontSize: 9, fontWeight: 800, fill: '#334155' }}
+                            offset={8}
+                        />
                     </Bar>
                 </BarChart>
             </ResponsiveContainer>
