@@ -569,7 +569,7 @@ const App: React.FC = () => {
     return (
       <div className="h-screen w-screen bg-[#1c1917] flex flex-col items-center justify-center space-y-8 animate-in fade-in">
         <div className="relative">
-          <img src="/pwa-icon.png" alt="Loading" className="w-24 h-24 object-contain animate-pulse" />
+          <img src="./pwa-icon.png" alt="Loading" className="w-24 h-24 object-contain animate-pulse" />
         </div>
         <div className="text-center space-y-3">
           <h2 className="text-white font-black text-2xl uppercase tracking-[0.2em]">Quality of Life</h2>

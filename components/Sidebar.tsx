@@ -30,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, user, onMenu
       <div className="p-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3">
-            <img src="/pwa-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
+            <img src="./pwa-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
             <div className="flex flex-col">
               <span className="text-[11px] font-black tracking-tight leading-none text-orange-400 uppercase">Quality of Life</span>
               <span className="text-[10px] font-bold text-stone-500">Development Corp.</span>
