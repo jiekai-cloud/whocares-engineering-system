@@ -3,7 +3,14 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Project } from "../types";
 
 // Always use named parameter for apiKey and fetch from process.env.API_KEY
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY });
+
+/**
+ * 輔助函式：清理 AI 回傳的 JSON 字串 (移除 Markdown 區塊標記)
+ */
+const cleanJsonString = (str: string) => {
+  return str.replace(/```json/g, '').replace(/```/g, '').trim();
+};
 
 /**
  * 全案場風險報告分析 - 針對大數據量進行採樣優化
@@ -225,7 +232,8 @@ export const parseWorkDispatchText = async (text: string) => {
         systemInstruction: "妳是專業的工務數據解析員。妳能從混亂的通訊軟體對話或手寫日報轉錄文字中，精準提取出派工數據並轉化為 JSON 格式。"
       }
     });
-    return JSON.parse(response.text || "[]");
+    const jsonStr = cleanJsonString(response.text || "[]");
+    return JSON.parse(jsonStr);
   } catch (error) {
     console.error("日報解析失敗:", error);
     return [];
