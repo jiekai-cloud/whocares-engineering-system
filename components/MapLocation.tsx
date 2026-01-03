@@ -32,19 +32,34 @@ const MapLocation: React.FC<MapLocationProps> = ({ address, lat = 25.0330, lng =
 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const hasApiKey = apiKey && apiKey !== 'undefined' && apiKey !== '';
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* 地圖預覽區域 */}
-            <div className="relative aspect-video rounded-[2.5rem] overflow-hidden border border-stone-200 shadow-xl group">
-                <iframe
-                    title="project-location"
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    style={{ border: 0 }}
-                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.GOOGLE_MAPS_API_KEY || ''}&q=${encodeURIComponent(address)}`}
-                    allowFullScreen
-                ></iframe>
+            <div className="relative aspect-video rounded-[2.5rem] overflow-hidden border border-stone-200 shadow-xl group bg-stone-100">
+                {hasApiKey ? (
+                    <iframe
+                        title="project-location"
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        style={{ border: 0 }}
+                        src={`https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(address)}`}
+                        allowFullScreen
+                    ></iframe>
+                ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-stone-50">
+                        <div className="w-16 h-16 bg-stone-200 rounded-2xl flex items-center justify-center text-stone-400 mb-4">
+                            <MapPin size={32} />
+                        </div>
+                        <h4 className="text-sm font-black text-stone-600 uppercase tracking-widest">Google Maps 未就緒</h4>
+                        <p className="text-[10px] font-bold text-stone-400 mt-2 max-w-[240px] leading-relaxed">
+                            請在系統設定中配置您的 Google Maps API 金鑰以啟動案場定位與街景預覽功能。
+                        </p>
+                    </div>
+                )}
 
                 <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none">
                     <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-lg pointer-events-auto">
@@ -89,8 +104,8 @@ const MapLocation: React.FC<MapLocationProps> = ({ address, lat = 25.0330, lng =
                             onClick={() => handleSearchResources(type.label)}
                             disabled={isSearching}
                             className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 group ${activeResourceType === type.label
-                                    ? 'bg-stone-900 border-stone-900 text-white shadow-lg'
-                                    : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300 hover:shadow-md'
+                                ? 'bg-stone-900 border-stone-900 text-white shadow-lg'
+                                : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300 hover:shadow-md'
                                 }`}
                         >
                             <type.icon size={20} className={`${activeResourceType === type.label ? 'text-white' : 'text-stone-400 group-hover:text-stone-900'} transition-colors`} />
