@@ -96,9 +96,6 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
   const canEditPayroll = isSuperAdmin || isFinance;
   const showSubmit = isSuperAdmin || (activeTab === 'payroll' && isFinance);
 
-  const handleAvatarClick = () => {
-    if (isEditable) fileInputRef.current?.click();
-  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">

@@ -828,39 +828,38 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
           </div>
         )}
       </div>
-    </div>
 
-      {/* Lightbox / Media Preview Modal */ }
-  {
-    selectedImage && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-12 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-        <button onClick={() => setSelectedImage(null)} className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors z-[110] bg-white/10 p-3 rounded-full hover:bg-white/20">
-          <X size={32} />
-        </button>
+      {/* Lightbox / Media Preview Modal */}
+      {
+        selectedImage && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-12 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+            <button onClick={() => setSelectedImage(null)} className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors z-[110] bg-white/10 p-3 rounded-full hover:bg-white/20">
+              <X size={32} />
+            </button>
 
-        <div className="relative w-full h-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-300">
-          <div className="flex-1 w-full flex items-center justify-center min-h-0">
-            {selectedImage.type === 'video' ? (
-              <video src={selectedImage.url} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay />
-            ) : (
-              <img src={selectedImage.url} alt={selectedImage.name} className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
-            )}
-          </div>
+            <div className="relative w-full h-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-300">
+              <div className="flex-1 w-full flex items-center justify-center min-h-0">
+                {selectedImage.type === 'video' ? (
+                  <video src={selectedImage.url} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay />
+                ) : (
+                  <img src={selectedImage.url} alt={selectedImage.name} className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
+                )}
+              </div>
 
-          <div className="mt-8 text-center space-y-2">
-            <h3 className="text-white text-lg font-black tracking-tight">{selectedImage.name}</h3>
-            <div className="flex items-center justify-center gap-4">
-              <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">{new Date(selectedImage.uploadedAt).toLocaleString()}</p>
-              <span className="w-1 h-1 bg-white/20 rounded-full" />
-              <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">上傳者: {selectedImage.uploadedBy}</p>
-              <span className="w-1 h-1 bg-white/20 rounded-full" />
-              <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
+              <div className="mt-8 text-center space-y-2">
+                <h3 className="text-white text-lg font-black tracking-tight">{selectedImage.name}</h3>
+                <div className="flex items-center justify-center gap-4">
+                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">{new Date(selectedImage.uploadedAt).toLocaleString()}</p>
+                  <span className="w-1 h-1 bg-white/20 rounded-full" />
+                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">上傳者: {selectedImage.uploadedBy}</p>
+                  <span className="w-1 h-1 bg-white/20 rounded-full" />
+                  <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
     </div >
   );
 };
