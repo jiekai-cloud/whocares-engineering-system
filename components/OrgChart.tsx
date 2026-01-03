@@ -82,7 +82,8 @@ const OrgChart: React.FC<OrgChartProps> = ({ members, departments }) => {
                                                 <Shield size={12} className="text-stone-300" /> {dept?.name || '未知部門'}
                                             </div>
                                             <div className="flex items-center gap-2 text-[10px] text-stone-500 font-bold">
-                                                <Phone size={12} className="text-stone-300" /> {m.phone || '無電話'}
+                                                <Phone size={12} className="text-stone-300" />
+                                                <a href={`tel:${m.phone}`} className="hover:text-orange-600 hover:underline transition-colors">{m.phone || '無電話'}</a>
                                             </div>
                                         </div>
 

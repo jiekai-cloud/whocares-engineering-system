@@ -206,7 +206,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
                   </div>
                   <div className="space-y-1.5 mb-4">
                     <div className="flex items-center gap-2 text-[10px] text-stone-500 font-medium">
-                      <Phone size={10} /> {lead.phone}
+                      <Phone size={10} /> <a href={`tel:${lead.phone}`} className="hover:text-indigo-600 hover:underline transition-colors">{lead.phone}</a>
                     </div>
                     <div className="flex items-center gap-2 text-[10px] text-stone-500 font-medium">
                       <MapPin size={10} /> {lead.address}

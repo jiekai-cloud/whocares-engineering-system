@@ -98,8 +98,8 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
               key={type}
               onClick={() => setSelectedType(type)}
               className={`px - 5 py - 2.5 rounded - xl text - [11px] font - black transition - all ${selectedType === type
-                  ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
                 } `}
             >
               {type === 'all' ? '全部類型' : type}
@@ -125,7 +125,7 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
                 {/* Basic Info */}
                 <div className="col-span-4 flex items-center gap-4 mb-4 lg:mb-0">
                   <div className={`w - 12 h - 12 rounded - 2xl flex items - center justify - center border - 2 border - white shadow - sm shrink - 0 ${customer.type === '企業' ? 'bg-indigo-100 text-indigo-600' :
-                      customer.type === '政府單位' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
+                    customer.type === '政府單位' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
                     } `}>
                     {customer.type === '企業' ? <Building2 size={24} /> : <User size={24} />}
                   </div>
@@ -160,11 +160,11 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
                     <div>
                       <p className="text-[10px] font-black text-slate-400 leading-none">主要窗口 / 電話</p>
                       <p className="text-xs font-black text-slate-700 mt-1">
-                        {customer.contactPerson || '未填寫'} - {customer.phone}
+                        {customer.contactPerson || '未填寫'} - <a href={`tel:${customer.phone}`} className="hover:text-blue-600 hover:underline transition-colors">{customer.phone}</a>
                       </p>
                       {customer.landline && (
                         <p className="text-[10px] font-bold text-slate-500 mt-0.5 flex items-center gap-1">
-                          <Phone size={10} /> 室話: {customer.landline}
+                          <Phone size={10} /> 室話: <a href={`tel:${customer.landline}`} className="hover:text-blue-600 hover:underline transition-colors">{customer.landline}</a>
                         </p>
                       )}
                       {customer.fax && (
