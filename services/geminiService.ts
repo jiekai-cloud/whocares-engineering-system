@@ -6,7 +6,7 @@ import { Project } from "../types";
 const getAI = () => {
   const savedKey = typeof window !== 'undefined' ? localStorage.getItem('GEMINI_API_KEY') : null;
   // Use provided key as the final fallback
-  const key = savedKey || process.env.API_KEY || process.env.GEMINI_API_KEY || 'AIzaSyCATCTCS4NtudYGQAnz5q-smUnxrSS0C2Y';
+  const key = savedKey || process.env.API_KEY || process.env.GEMINI_API_KEY || 'AIzaSyCrx4WHs8bKX9YI_-4guWJGZJfgmJip0mQ';
 
   if (!key || key === 'PLACEHOLDER_API_KEY' || key === 'undefined') {
     console.error("Gemini API Key is missing or invalid.");
