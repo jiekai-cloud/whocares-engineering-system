@@ -13,7 +13,7 @@ export enum ProjectStatus {
   LOST = '未成交'
 }
 
-export type ProjectCategory = '室內裝修' | '建築營造' | '水電機電' | '景觀工程' | '設計規劃' | '其他';
+export type ProjectCategory = '室內裝修' | '建築營造' | '水電機電' | '防水工程' | '補強工程' | '其他';
 
 export type ProjectSource =
   | 'BNI'

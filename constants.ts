@@ -55,8 +55,8 @@ export const MOCK_PROJECTS: Project[] = [
   {
     id: 'RE202604001',
     departmentId: 'DEPT-6', // 業務部
-    name: '高雄住宅景觀工程',
-    category: '景觀工程',
+    name: '高雄住宅防水工程',
+    category: '防水工程',
     source: '住宅',
     client: '李女士',
     referrer: '直客',
