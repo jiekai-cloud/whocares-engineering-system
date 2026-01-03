@@ -598,11 +598,13 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1.5">支付對象 (選填)</label>
+                      <label className="block text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1.5">
+                        {expenseFormData.category === '委託工程' ? '承攬廠商名稱 (必填)' : '支付對象 (選填)'}
+                      </label>
                       <input
                         type="text"
                         className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                        placeholder="廠商或請款人..."
+                        placeholder={expenseFormData.category === '委託工程' ? '請輸入廠商名稱...' : '廠商或請款人...'}
                         value={expenseFormData.supplier}
                         onChange={e => setExpenseFormData({ ...expenseFormData, supplier: e.target.value })}
                       />
@@ -613,6 +615,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     <button
                       onClick={() => {
                         if (!expenseFormData.name || !expenseFormData.amount) return alert('請填寫完整資訊');
+                        if (expenseFormData.category === '委託工程' && !expenseFormData.supplier) return alert('委託工程必須填寫承攬廠商名稱');
                         const newExp: Expense = {
                           id: Date.now().toString(),
                           ...expenseFormData as Expense
@@ -659,10 +662,10 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                         <td className="px-6 py-4 text-xs font-bold text-stone-500">{exp.date}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider ${exp.category === '委託工程' ? 'bg-indigo-50 text-indigo-600' :
-                              exp.category === '機具材料' ? 'bg-amber-50 text-amber-600' :
-                                exp.category === '行政人事成本' ? 'bg-purple-50 text-purple-600' :
-                                  exp.category === '零用金' ? 'bg-teal-50 text-teal-600' :
-                                    'bg-stone-100 text-stone-600'
+                            exp.category === '機具材料' ? 'bg-amber-50 text-amber-600' :
+                              exp.category === '行政人事成本' ? 'bg-purple-50 text-purple-600' :
+                                exp.category === '零用金' ? 'bg-teal-50 text-teal-600' :
+                                  'bg-stone-100 text-stone-600'
                             }`}>
                             {exp.category}
                           </span>
