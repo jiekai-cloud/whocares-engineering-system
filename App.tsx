@@ -535,9 +535,51 @@ const App: React.FC = () => {
     setActiveTab('projects');
     setSelectedProjectId(newProject.id);
   };
+  const handleAddTestProject = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const testId = `TEST-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
 
-  const handleMarkLogAsRead = (logId: string) => {
-    setActivityLogs(prev => prev.map(log => log.id === logId ? { ...log, isRead: true } : log));
+    const testProject: Project = {
+      id: testId,
+      departmentId: viewingDeptId === 'all' ? 'DEPT-1' : viewingDeptId,
+      name: '系統測試案件 - 萬大路室內裝修工程',
+      category: '室內裝修',
+      source: '系統測試',
+      client: '測試客戶 (林先生)',
+      location: '台北市萬華區萬大路 123 號 5 樓',
+      manager: user?.name || '測試經理',
+      startDate: today,
+      endDate: new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0],
+      createdDate: today,
+      budget: 1200000,
+      spent: 0,
+      progress: 15,
+      status: ProjectStatus.CONSTRUCTING,
+      tasks: [
+        { id: 'T-1', title: '現場放樣與水電確認', completed: true, priority: 'High', dueDate: today },
+        { id: 'T-2', title: '拆除牆面與清運', completed: true, priority: 'Medium', dueDate: today },
+        { id: 'T-3', title: '泥作粉刷工程', completed: false, priority: 'Medium', dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0] }
+      ],
+      phases: [
+        { id: 'P-1', name: '準備階段', startDate: today, endDate: today, status: 'Completed', progress: 100 },
+        { id: 'P-2', name: '拆除工程', startDate: today, endDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], status: 'Current', progress: 50 },
+        { id: 'P-3', name: '泥作工程', startDate: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0], endDate: new Date(Date.now() + 86400000 * 10).toISOString().split('T')[0], status: 'Upcoming', progress: 0 }
+      ],
+      checklist: [
+        { id: 'C-1', category: '合約與文件', task: '合約用印與簽署', completed: true },
+        { id: 'C-2', category: '合約與文件', task: '室內裝修審查申請', completed: false }
+      ],
+      payments: [
+        { id: 'PY-1', stage: '開工案', amount: 360000, dueDate: today, status: 'Paid', datePaid: today },
+        { id: 'PY-2', stage: '泥作完成', amount: 360000, dueDate: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0], status: 'Pending' }
+      ],
+      updatedAt: new Date().toISOString(),
+      financials: { labor: 0, material: 0, subcontractor: 0, other: 0 }
+    };
+
+    setProjects([testProject, ...projects]);
+    addActivityLog('新增測試案件', testProject.name, testProject.id, 'project');
+    setSelectedProjectId(testProject.id);
   };
 
   const handleMarkAllLogsAsRead = () => {
@@ -818,6 +860,7 @@ const App: React.FC = () => {
                 projects={filteredData.projects}
                 user={user}
                 onAddClick={() => { setEditingProject(null); setIsModalOpen(true); }}
+                onAddTestClick={handleAddTestProject}
                 onEditClick={(p) => { setEditingProject(p); setIsModalOpen(true); }}
                 onDeleteClick={(id) => {
                   if (confirm('刪除操作將移動至回收桶，確定嗎？')) {

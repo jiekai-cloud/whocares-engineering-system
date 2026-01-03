@@ -8,6 +8,7 @@ interface ProjectListProps {
   projects: Project[];
   user: User;
   onAddClick: () => void;
+  onAddTestClick: () => void;
   onEditClick: (project: Project) => void;
   onDeleteClick: (id: string) => void;
   onLossClick: (project: Project) => void;
@@ -16,7 +17,7 @@ interface ProjectListProps {
 
 const ITEMS_PER_PAGE = 15;
 
-const ProjectList: React.FC<ProjectListProps> = ({ projects, user, onAddClick, onEditClick, onDeleteClick, onLossClick, onDetailClick }) => {
+const ProjectList: React.FC<ProjectListProps> = ({ projects, user, onAddClick, onAddTestClick, onEditClick, onDeleteClick, onLossClick, onDetailClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,7 +84,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, user, onAddClick, o
 
           <button onClick={() => exportProjectsToCSV(projects)} className="flex-1 sm:flex-none bg-white border border-stone-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-stone-50 transition-all"><FileSpreadsheet size={14} /> <span className="hidden sm:inline">匯出 CSV</span></button>
           {!isReadOnly && (
-            <button onClick={onAddClick} className="flex-1 sm:flex-none bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md hover:bg-orange-700 active:scale-95 transition-all"><Plus size={16} /> 新增案件</button>
+            <>
+              <button
+                onClick={onAddTestClick}
+                className="flex-1 sm:flex-none bg-white border border-stone-200 border-dashed text-stone-600 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-stone-50 hover:border-stone-400 transition-all"
+              >
+                <Zap size={16} className="text-amber-500" /> 建立測試案件
+              </button>
+              <button
+                onClick={onAddClick}
+                className="flex-1 sm:flex-none bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md hover:bg-orange-700 active:scale-95 transition-all"
+              >
+                <Plus size={16} /> 新增案件
+              </button>
+            </>
           )}
           {isReadOnly && (
             <div className="flex-1 sm:flex-none bg-stone-100 text-stone-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-stone-200 cursor-not-allowed">
