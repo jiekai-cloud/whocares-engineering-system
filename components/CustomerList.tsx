@@ -78,8 +78,8 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2">
+      <div className="flex flex-col xl:flex-row gap-4">
+        <div className="flex-1 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
             <input
@@ -90,19 +90,36 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
+          <div className="hidden sm:flex items-center gap-1.5 border-l border-slate-100 pl-4 overflow-x-auto no-scrollbar whitespace-nowrap">
+            <Filter size={14} className="text-slate-300 mr-2" />
+            {['all', '個人', '企業', '政府單位', '長期夥伴'].map(type => (
+              <button
+                key={type}
+                onClick={() => setSelectedType(type)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${selectedType === type
+                  ? 'bg-slate-900 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  }`}
+              >
+                {type === 'all' ? '全部類型' : type}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-hidden whitespace-nowrap overflow-x-auto no-scrollbar">
+        {/* Mobile Filter (Only visible on smallest screens) */}
+        <div className="sm:hidden flex bg-white p-2 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto no-scrollbar gap-1.5">
           {['all', '個人', '企業', '政府單位', '長期夥伴'].map(type => (
             <button
               key={type}
               onClick={() => setSelectedType(type)}
-              className={`px - 5 py - 2.5 rounded - xl text - [11px] font - black transition - all ${selectedType === type
-                ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+              className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${selectedType === type
+                ? 'bg-slate-900 text-white shadow-lg'
                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                } `}
+                }`}
             >
-              {type === 'all' ? '全部類型' : type}
+              {type === 'all' ? '全部' : type}
             </button>
           ))}
         </div>
@@ -124,9 +141,9 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
               <div className="p-6 lg:px-8 lg:py-5 lg:grid lg:grid-cols-12 lg:items-center gap-4">
                 {/* Basic Info */}
                 <div className="col-span-4 flex items-center gap-4 mb-4 lg:mb-0">
-                  <div className={`w - 12 h - 12 rounded - 2xl flex items - center justify - center border - 2 border - white shadow - sm shrink - 0 ${customer.type === '企業' ? 'bg-indigo-100 text-indigo-600' :
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-white shadow-sm shrink-0 ${customer.type === '企業' ? 'bg-indigo-100 text-indigo-600' :
                     customer.type === '政府單位' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
-                    } `}>
+                    }`}>
                     {customer.type === '企業' ? <Building2 size={24} /> : <User size={24} />}
                   </div>
                   <div>
@@ -139,7 +156,7 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick
                       )}
                     </h3>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                      <span className={`text - [10px] font - black px - 2 py - 0.5 rounded - lg border uppercase ${getTypeStyle(customer.type)} `}>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border uppercase ${getTypeStyle(customer.type)}`}>
                         {customer.type}
                       </span>
                       {customer.tags?.map(tag => (
