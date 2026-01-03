@@ -1089,29 +1089,75 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                                 if (svg) {
                                   // Get current dimensions
                                   const { width, height } = svg.getBoundingClientRect();
+                                  const headerHeight = 160; // Extra space for branding info
 
-                                  const svgData = new XMLSerializer().serializeToString(svg);
                                   const canvas = document.createElement('canvas');
                                   const ctx = canvas.getContext('2d');
-                                  const img = new Image();
+                                  if (!ctx) return;
 
-                                  img.onload = () => {
-                                    canvas.width = width * 2; // High res
-                                    canvas.height = height * 2;
-                                    if (ctx) {
-                                      ctx.scale(2, 2);
-                                      ctx.fillStyle = 'white';
-                                      ctx.fillRect(0, 0, width, height);
-                                      ctx.drawImage(img, 0, 0, width, height);
+                                  canvas.width = width * 2;
+                                  canvas.height = (height + headerHeight) * 2;
+                                  ctx.scale(2, 2);
 
-                                      const a = document.createElement('a');
-                                      a.download = `施工進度表-${project.name}.jpg`;
-                                      a.href = canvas.toDataURL('image/jpeg', 0.9);
-                                      a.click();
-                                    }
+                                  // Background
+                                  ctx.fillStyle = 'white';
+                                  ctx.fillRect(0, 0, width, height + headerHeight);
+
+                                  const logoImg = new Image();
+                                  const chartImg = new Image();
+                                  let loadedCount = 0;
+
+                                  const onAllLoaded = () => {
+                                    loadedCount++;
+                                    if (loadedCount < 2) return;
+
+                                    // 1. Draw Logo
+                                    const logoSize = 60;
+                                    ctx.drawImage(logoImg, 40, 25, logoSize, logoSize);
+
+                                    // 2. Draw Company Info
+                                    ctx.fillStyle = '#ea580c'; // Orange-600
+                                    ctx.font = '900 20px "Inter", sans-serif';
+                                    ctx.fillText('生活品質工程管理系統', 115, 52);
+
+                                    ctx.fillStyle = '#78716c'; // Stone-500
+                                    ctx.font = '800 12px "Inter", sans-serif';
+                                    ctx.fillText('Quality of Life Development Corp.', 115, 75);
+
+                                    // 3. Draw Project Details Divider
+                                    ctx.strokeStyle = '#e7e5e4'; // Stone-200
+                                    ctx.lineWidth = 1;
+                                    ctx.beginPath();
+                                    ctx.moveTo(40, 105);
+                                    ctx.lineTo(width - 40, 105);
+                                    ctx.stroke();
+
+                                    // 4. Project metadata
+                                    ctx.fillStyle = '#1c1917'; // Stone-900
+                                    ctx.font = '900 15px "Inter", sans-serif';
+                                    ctx.fillText(`案件名稱：${project.name}`, 40, 132);
+
+                                    ctx.font = '700 12px "Inter", sans-serif';
+                                    ctx.fillStyle = '#44403c'; // Stone-700
+                                    ctx.fillText(`施工地址：${project.location}`, 40, 153);
+
+                                    // 5. Draw Chart
+                                    ctx.drawImage(chartImg, 0, headerHeight, width, height);
+
+                                    // 6. Download
+                                    const a = document.createElement('a');
+                                    a.download = `施工進度表-${project.name}.jpg`;
+                                    a.href = canvas.toDataURL('image/jpeg', 0.9);
+                                    a.click();
                                   };
-                                  // Handle unicode characters properly
-                                  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+
+                                  logoImg.onload = onAllLoaded;
+                                  chartImg.onload = onAllLoaded;
+
+                                  // Set sources
+                                  logoImg.src = './pwa-icon.png';
+                                  const svgData = new XMLSerializer().serializeToString(svg);
+                                  chartImg.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
                                 } else {
                                   alert('無法找到圖表，請稍後再試');
                                 }
