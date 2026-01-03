@@ -63,7 +63,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
   // Schedule Options State
   const [scheduleStartDate, setScheduleStartDate] = useState(project.startDate || new Date().toISOString().split('T')[0]);
   const [workOnHolidays, setWorkOnHolidays] = useState(false);
-
+  const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
 
   const [isAnalyzingFinancials, setIsAnalyzingFinancials] = useState(false);
   const [financialAnalysis, setFinancialAnalysis] = useState<string | null>(null);
@@ -1065,24 +1065,87 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                         <div className="space-y-6">
                           {project.phases.map(phase => (
                             <div key={phase.id} className="space-y-2 group">
-                              <div className="flex justify-between items-center text-xs font-bold text-stone-700">
-                                <span>{phase.name}</span>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-stone-400 text-[10px]">{phase.startDate} - {phase.endDate}</span>
-                                  {!isReadOnly && (
-                                    <button
-                                      onClick={() => {
-                                        if (confirm(`確定要刪除「${phase.name}」項目嗎？`)) {
-                                          onUpdatePhases(project.phases.filter(p => p.id !== phase.id));
-                                        }
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-50 text-rose-400 hover:text-rose-600 rounded-lg transition-all"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  )}
+                              {editingPhaseId === phase.id ? (
+                                <div className="flex flex-col gap-2 bg-stone-50 p-3 rounded-xl border border-stone-200">
+                                  <input
+                                    type="text"
+                                    defaultValue={phase.name}
+                                    id={`edit-name-${phase.id}`}
+                                    className="text-xs font-bold bg-white border border-stone-200 rounded px-2 py-1 outline-none focus:border-blue-500"
+                                    placeholder="項目名稱"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="date"
+                                      defaultValue={phase.startDate}
+                                      id={`edit-start-${phase.id}`}
+                                      className="text-[10px] bg-white border border-stone-200 rounded px-2 py-1 outline-none focus:border-blue-500"
+                                    />
+                                    <span className="text-stone-400">-</span>
+                                    <input
+                                      type="date"
+                                      defaultValue={phase.endDate}
+                                      id={`edit-end-${phase.id}`}
+                                      className="text-[10px] bg-white border border-stone-200 rounded px-2 py-1 outline-none focus:border-blue-500"
+                                    />
+                                    <div className="flex items-center gap-1 ml-auto">
+                                      <button
+                                        onClick={() => {
+                                          const nameInput = document.getElementById(`edit-name-${phase.id}`) as HTMLInputElement;
+                                          const startInput = document.getElementById(`edit-start-${phase.id}`) as HTMLInputElement;
+                                          const endInput = document.getElementById(`edit-end-${phase.id}`) as HTMLInputElement;
+
+                                          if (nameInput.value && startInput.value && endInput.value) {
+                                            onUpdatePhases(project.phases.map(p => p.id === phase.id ? {
+                                              ...p,
+                                              name: nameInput.value,
+                                              startDate: startInput.value,
+                                              endDate: endInput.value
+                                            } : p));
+                                            setEditingPhaseId(null);
+                                          }
+                                        }}
+                                        className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
+                                      >
+                                        <Check size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingPhaseId(null)}
+                                        className="p-1.5 bg-stone-100 text-stone-500 rounded-lg hover:bg-stone-200 transition-colors"
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <div className="flex justify-between items-center text-xs font-bold text-stone-700">
+                                  <span>{phase.name}</span>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-stone-400 text-[10px]">{phase.startDate} - {phase.endDate}</span>
+                                    {!isReadOnly && (
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                          onClick={() => setEditingPhaseId(phase.id)}
+                                          className="p-1.5 hover:bg-blue-50 text-blue-400 hover:text-blue-600 rounded-lg transition-all"
+                                        >
+                                          <Edit2 size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (confirm(`確定要刪除「${phase.name}」項目嗎？`)) {
+                                              onUpdatePhases(project.phases.filter(p => p.id !== phase.id));
+                                            }
+                                          }}
+                                          className="p-1.5 hover:bg-rose-50 text-rose-400 hover:text-rose-600 rounded-lg transition-all"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                               <div className="h-2 bg-stone-100 rounded-full overflow-hidden relative cursor-pointer" onClick={() => {
                                 if (!isReadOnly && onUpdatePhases) {
                                   const newProgress = prompt('輸入新進度 (0-100):', phase.progress.toString());
