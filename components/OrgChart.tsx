@@ -78,8 +78,16 @@ const OrgChart: React.FC<OrgChartProps> = ({ members, departments }) => {
                                         </div>
 
                                         <div className="mt-4 pt-4 border-t border-stone-100 space-y-2">
-                                            <div className="flex items-center gap-2 text-[10px] text-stone-500 font-bold">
-                                                <Shield size={12} className="text-stone-300" /> {dept?.name || '未知部門'}
+                                            <div className="flex flex-wrap gap-1">
+                                                {(m.departmentIds || [m.departmentId]).map(deptId => {
+                                                    const d = departments.find(dep => dep.id === deptId);
+                                                    return d ? (
+                                                        <div key={deptId} className="flex items-center gap-1.5 text-[9px] text-stone-500 font-black bg-stone-50 px-2 py-0.5 rounded-md border border-stone-100 uppercase">
+                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                                                            {d.name}
+                                                        </div>
+                                                    ) : null;
+                                                })}
                                             </div>
                                             <div className="flex items-center gap-2 text-[10px] text-stone-500 font-bold">
                                                 <Phone size={12} className="text-stone-300" />

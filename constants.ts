@@ -82,7 +82,7 @@ export const MOCK_TEAM_MEMBERS: TeamMember[] = [
     role: '總經理',
     systemRole: 'SuperAdmin',
     departmentId: 'DEPT-1', // 戰略指揮部
-    departmentIds: ['DEPT-1'],
+    departmentIds: ['DEPT-1', 'DEPT-2'],
     phone: '0912-000-001',
     email: 'ceo@lifequality.ai',
     status: 'Available',

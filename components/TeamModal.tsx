@@ -175,12 +175,44 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
                 <div>
 
 
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">所屬部門</label>
-                  <select disabled={!isSuperAdmin} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.departmentId} onChange={e => setFormData({ ...formData, departmentId: e.target.value })}>
-                    {MOCK_DEPARTMENTS.map(dept => (
-                      <option key={dept.id} value={dept.id}>{dept.name}</option>
-                    ))}
-                  </select>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex justify-between">
+                    <span>所屬部門 (最多 3 個)</span>
+                    <span className="text-orange-500">{formData.departmentIds?.length || 0} / 3</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {MOCK_DEPARTMENTS.map(dept => {
+                      const isSelected = (formData.departmentIds || []).includes(dept.id);
+                      return (
+                        <button
+                          key={dept.id}
+                          type="button"
+                          disabled={!isSuperAdmin || (!isSelected && (formData.departmentIds?.length || 0) >= 3)}
+                          onClick={() => {
+                            const currentIds = formData.departmentIds || [];
+                            let nextIds = [];
+                            if (isSelected) {
+                              nextIds = currentIds.filter(id => id !== dept.id);
+                            } else if (currentIds.length < 3) {
+                              nextIds = [...currentIds, dept.id];
+                            } else {
+                              return;
+                            }
+                            setFormData({
+                              ...formData,
+                              departmentIds: nextIds,
+                              departmentId: nextIds[0] || 'DEPT-1' // Keep primary synced
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all ${isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                            : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                            } ${!isSuperAdmin ? 'cursor-default opacity-80' : ''}`}
+                        >
+                          {dept.name}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
