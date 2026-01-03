@@ -79,7 +79,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
   const canViewAllTabs = isSuperAdmin || isDeptAdmin || isFinance;
 
   const tabs = [
-    { id: 'basic', label: '基本帳戶', icon: User, visible: true },
+    { id: 'basic', label: '基本資料', icon: User, visible: true },
     { id: 'hr', label: '詳細人事', icon: Calendar, visible: isSuperAdmin || isDeptAdmin || isFinance },
     { id: 'pro', label: '專業資歷', icon: Award, visible: isSuperAdmin || isDeptAdmin || isFinance },
     { id: 'payroll', label: '薪資會計', icon: Landmark, visible: isSuperAdmin || isDeptAdmin || isFinance },
@@ -96,6 +96,10 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
   const isEditable = isSuperAdmin;
   const canEditPayroll = isSuperAdmin || isFinance;
   const showSubmit = isSuperAdmin || (activeTab === 'payroll' && isFinance);
+
+  const handleCall = (number: string) => {
+    window.location.href = `tel:${number}`;
+  };
 
 
   return (
@@ -135,11 +139,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
               <div className="flex flex-col md:flex-row items-center gap-8">
                 <div onClick={handleAvatarClick} className={`relative group ${isEditable ? 'cursor-pointer' : 'cursor-default'}`}>
                   <img src={formData.avatar} className="w-28 h-28 rounded-3xl object-cover border-4 border-slate-100 shadow-md" alt="Avatar" />
-                  {isEditable && (
-                    <div className="absolute inset-0 bg-black/40 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      {isUploading ? <Loader2 size={24} className="text-white animate-spin" /> : <Camera size={24} className="text-white" />}
-                    </div>
-                  )}
+                  {isUploading ? <Loader2 size={24} className="text-white animate-spin" /> : <Camera size={24} className="text-white" />}
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 </div>
                 <div className="flex-1 w-full space-y-4">
@@ -165,10 +165,19 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">真實姓名 *</label>
                   <input required disabled={!isEditable} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                 </div>
-                <div className="col-span-2">
+                <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">職稱角色</label>
                   <select disabled={!isEditable} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value as any })}>
                     {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">所屬部門</label>
+                  <select disabled={!isSuperAdmin} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.departmentId} onChange={e => setFormData({ ...formData, departmentId: e.target.value })}>
+                    <option value="DEPT-1">管理部</option>
+                    <option value="DEPT-2">工務部</option>
+                    <option value="DEPT-3">設計部</option>
+                    <option value="DEPT-4">財務部</option>
                   </select>
                 </div>
               </div>
@@ -189,7 +198,14 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">聯絡電話</label>
-                <input disabled={!isEditable} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                <div className="flex gap-2">
+                  <input disabled={!isEditable} className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                  {formData.phone && (
+                    <button type="button" onClick={() => handleCall(formData.phone)} className="bg-emerald-50 text-emerald-600 px-4 rounded-2xl hover:bg-emerald-100 transition-colors border border-emerald-200">
+                      <Phone size={20} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">電子信箱</label>
@@ -204,7 +220,14 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
                 <div className="grid grid-cols-2 gap-4">
                   <input placeholder="姓名" disabled={!isEditable} className="bg-white border border-rose-100 rounded-xl px-4 py-2 text-xs font-bold" value={formData.emergencyContact?.name || ''} onChange={e => setFormData({ ...formData, emergencyContact: { ...(formData.emergencyContact || { name: '', relationship: '', phone: '' }), name: e.target.value } })} />
                   <input placeholder="關係" disabled={!isEditable} className="bg-white border border-rose-100 rounded-xl px-4 py-2 text-xs font-bold" value={formData.emergencyContact?.relationship || ''} onChange={e => setFormData({ ...formData, emergencyContact: { ...(formData.emergencyContact || { name: '', relationship: '', phone: '' }), relationship: e.target.value } })} />
-                  <input placeholder="電話" disabled={!isEditable} className="col-span-2 bg-white border border-rose-100 rounded-xl px-4 py-2 text-xs font-bold" value={formData.emergencyContact?.phone || ''} onChange={e => setFormData({ ...formData, emergencyContact: { ...(formData.emergencyContact || { name: '', relationship: '', phone: '' }), phone: e.target.value } })} />
+                  <div className="col-span-2 flex gap-2">
+                    <input placeholder="電話" disabled={!isEditable} className="flex-1 bg-white border border-rose-100 rounded-xl px-4 py-2 text-xs font-bold" value={formData.emergencyContact?.phone || ''} onChange={e => setFormData({ ...formData, emergencyContact: { ...(formData.emergencyContact || { name: '', relationship: '', phone: '' }), phone: e.target.value } })} />
+                    {formData.emergencyContact?.phone && (
+                      <button type="button" onClick={() => handleCall(formData.emergencyContact?.phone!)} className="bg-rose-100 text-rose-600 px-3 rounded-xl hover:bg-rose-200 transition-colors">
+                        <Phone size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -283,17 +306,6 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
               <div className="bg-stone-50 p-6 rounded-3xl border border-stone-200 space-y-6">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">所屬部門</label>
-                  <select disabled={!isSuperAdmin} className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.departmentId} onChange={e => setFormData({ ...formData, departmentId: e.target.value })}>
-                    <option value="DEPT-1">管理部</option>
-                    <option value="DEPT-2">工務部</option>
-                    <option value="DEPT-3">設計部</option>
-                    <option value="DEPT-4">財務部</option>
-                  </select>
-                  <p className="text-[10px] text-stone-400 mt-2 ml-1">部門主管權限將以此設定為準</p>
-                </div>
-
-                <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">系統權限級別</label>
                   <select disabled={!isSuperAdmin} className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.systemRole} onChange={e => setFormData({ ...formData, systemRole: e.target.value as any })}>
                     <option value="Staff">一般成員 (僅限查看所属專案)</option>
@@ -313,23 +325,27 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
             </div>
           )}
 
-          {showSubmit && (
-            <div className="pt-8 flex gap-4">
-              <button type="button" onClick={onClose} className="flex-1 py-4 text-slate-400 font-bold hover:text-slate-600">取消</button>
-              <button type="submit" disabled={isUploading} className="flex-[2] bg-stone-900 text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-stone-800 active:scale-95 transition-all flex items-center justify-center gap-2">
-                <Save size={20} /> 儲存變更
-              </button>
-            </div>
-          )}
-          {!showSubmit && (
-            <div className="pt-8">
-              <button type="button" onClick={onClose} className="w-full bg-slate-100 text-slate-600 font-bold py-4 rounded-2xl hover:bg-slate-200 transition-all">關閉視窗</button>
-            </div>
-          )}
+          {
+            showSubmit && (
+              <div className="pt-8 flex gap-4">
+                <button type="button" onClick={onClose} className="flex-1 py-4 text-slate-400 font-bold hover:text-slate-600">取消</button>
+                <button type="submit" disabled={isUploading} className="flex-[2] bg-stone-900 text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-stone-800 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <Save size={20} /> 儲存變更
+                </button>
+              </div>
+            )
+          }
+          {
+            !showSubmit && (
+              <div className="pt-8">
+                <button type="button" onClick={onClose} className="w-full bg-slate-100 text-slate-600 font-bold py-4 rounded-2xl hover:bg-slate-200 transition-all">關閉視窗</button>
+              </div>
+            )
+          }
 
-        </form>
-      </div>
-    </div>
+        </form >
+      </div >
+    </div >
   );
 };
 
