@@ -11,23 +11,28 @@ interface GanttChartProps {
 }
 
 const GanttChart: React.FC<GanttChartProps> = ({ phases }) => {
-    const data = useMemo(() => {
-        if (!phases || phases.length === 0) return [];
+    const { data, minTime, maxTime } = useMemo(() => {
+        if (!phases || phases.length === 0) return { data: [], minTime: 0, maxTime: 0 };
 
-        // 尋找最早的日期作為基準
         const dates = phases.flatMap(p => [new Date(p.startDate), new Date(p.endDate)]);
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-        const minTime = minDate.getTime();
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
 
-        return phases.map(p => {
+        // Include padding (3 days before and after)
+        const minTime = minDate.getTime() - (86400000 * 3);
+        const maxTime = maxDate.getTime() + (86400000 * 3);
+
+        const processedData = phases.map(p => {
             const start = new Date(p.startDate).getTime();
             const end = new Date(p.endDate).getTime();
-            const duration = Math.max(1, (end - start) / (1000 * 60 * 60 * 24));
-            const offset = (start - minTime) / (1000 * 60 * 60 * 24);
+            // Ensure at least 1 day duration for visibility
+            const duration = Math.max(86400000, end - start);
 
             return {
                 name: p.name,
-                offset: offset,
+                // We use [start, end] tuple for range bar but Recharts generic Bar uses length.
+                // Trick: stack with transparent bar.
+                offset: start,
                 duration: duration,
                 progress: p.progress,
                 status: p.status,
@@ -36,13 +41,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ phases }) => {
                 endStr: p.endDate
             };
         }).sort((a, b) => a.offset - b.offset);
+
+        return { data: processedData, minTime, maxTime };
     }, [phases]);
 
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (
-                <div className="bg-white p-4 rounded-2xl shadow-xl border border-stone-100 animate-in fade-in zoom-in duration-200">
+                <div className="bg-white p-4 rounded-2xl shadow-xl border border-stone-100 z-50">
                     <p className="text-xs font-black text-stone-900 mb-2 uppercase tracking-widest">{data.fullName}</p>
                     <div className="space-y-1 text-[10px] font-bold text-stone-500">
                         <p className="flex justify-between gap-4"><span>開始:</span> <span className="text-stone-900">{data.startStr}</span></p>
@@ -64,35 +71,43 @@ const GanttChart: React.FC<GanttChartProps> = ({ phases }) => {
     }
 
     return (
-        <div className="h-[400px] w-full">
+        <div className="h-[400px] w-full bg-white rounded-2xl" id="gantt-chart-container">
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                     data={data}
                     layout="vertical"
                     margin={{ top: 20, right: 30, left: 40, bottom: 20 }}
-                    barSize={32}
+                    barSize={24}
                 >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                    <XAxis type="number" hide />
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} stroke="#f1f5f9" />
+                    <XAxis
+                        type="number"
+                        domain={[minTime, maxTime]}
+                        scale="time"
+                        tickFormatter={(unixTime) => new Date(unixTime).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
+                        tick={{ fontSize: 10, fill: '#9ca3af' }}
+                        position="top"
+                    />
                     <YAxis
                         dataKey="name"
                         type="category"
                         axisLine={false}
                         tickLine={false}
                         width={100}
-                        tick={{ fontSize: 10, fontWeight: 900, fill: '#1c1917' }}
+                        tick={{ fontSize: 11, fontWeight: 700, fill: '#1c1917' }}
                     />
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
 
-                    {/* 背景條 (透明偏移) */}
+                    {/* Invisible offset bar */}
                     <Bar dataKey="offset" stackId="a" fill="transparent" />
 
-                    {/* 進度條 */}
-                    <Bar dataKey="duration" stackId="a" radius={[12, 12, 12, 12]}>
+                    {/* Visible duration bar */}
+                    <Bar dataKey="duration" stackId="a" radius={[4, 4, 4, 4]}>
                         {data.map((entry, index) => (
                             <Cell
                                 key={`cell-${index}`}
-                                fill={entry.status === 'Completed' ? '#10b981' : entry.status === 'Current' ? '#ea580c' : '#e7e5e4'}
+                                fill={entry.status === 'Completed' ? '#10b981' : entry.status === 'Current' ? '#3b82f6' : '#e7e5e4'}
+                                className="transition-all hover:opacity-80"
                             />
                         ))}
                     </Bar>

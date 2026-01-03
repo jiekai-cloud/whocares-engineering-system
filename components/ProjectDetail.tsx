@@ -1011,7 +1011,31 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                                 <input
                                   type="date"
                                   value={scheduleStartDate}
-                                  onChange={(e) => setScheduleStartDate(e.target.value)}
+                                  onChange={(e) => {
+                                    const newDate = e.target.value;
+                                    setScheduleStartDate(newDate);
+
+                                    // Cascade update phases
+                                    if (project.phases && project.phases.length > 0 && newDate) {
+                                      const phases = project.phases;
+                                      const currentEarliest = phases.reduce((min, p) => p.startDate < min ? p.startDate : min, phases[0].startDate);
+
+                                      const diff = new Date(newDate).getTime() - new Date(currentEarliest).getTime();
+
+                                      if (diff !== 0) {
+                                        const updatedPhases = phases.map(p => {
+                                          const s = new Date(p.startDate);
+                                          const e = new Date(p.endDate);
+                                          return {
+                                            ...p,
+                                            startDate: new Date(s.getTime() + diff).toISOString().split('T')[0],
+                                            endDate: new Date(e.getTime() + diff).toISOString().split('T')[0]
+                                          };
+                                        });
+                                        onUpdatePhases(updatedPhases);
+                                      }
+                                    }
+                                  }}
                                   className="text-[10px] font-bold bg-transparent border-none outline-none p-0 text-stone-700 w-24"
                                 />
                               </div>
@@ -1057,6 +1081,44 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                             >
                               {isAIScheduling ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                               AI 建議排程
+                            </button>
+                            <button
+                              onClick={() => {
+                                const container = document.getElementById('gantt-chart-container');
+                                const svg = container?.querySelector('svg');
+                                if (svg) {
+                                  // Get current dimensions
+                                  const { width, height } = svg.getBoundingClientRect();
+
+                                  const svgData = new XMLSerializer().serializeToString(svg);
+                                  const canvas = document.createElement('canvas');
+                                  const ctx = canvas.getContext('2d');
+                                  const img = new Image();
+
+                                  img.onload = () => {
+                                    canvas.width = width * 2; // High res
+                                    canvas.height = height * 2;
+                                    if (ctx) {
+                                      ctx.scale(2, 2);
+                                      ctx.fillStyle = 'white';
+                                      ctx.fillRect(0, 0, width, height);
+                                      ctx.drawImage(img, 0, 0, width, height);
+
+                                      const a = document.createElement('a');
+                                      a.download = `施工進度表-${project.name}.jpg`;
+                                      a.href = canvas.toDataURL('image/jpeg', 0.9);
+                                      a.click();
+                                    }
+                                  };
+                                  // Handle unicode characters properly
+                                  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+                                } else {
+                                  alert('無法找到圖表，請稍後再試');
+                                }
+                              }}
+                              className="bg-stone-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black hover:bg-stone-700 transition-all flex items-center gap-2"
+                            >
+                              <DownloadCloud size={12} /> 匯出圖表
                             </button>
                           </div>
                         </div>
