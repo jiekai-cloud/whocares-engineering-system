@@ -41,6 +41,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         return;
       }
 
+      // 1.5 檢查同步專用帳號 (用於新設備初始化)
+      if (cleanId.toLowerCase() === 'text' && cleanPassword === 'text') {
+        onLoginSuccess({
+          id: 'SYNC-ONLY',
+          name: "系統同步員",
+          email: "sync@lifequality.ai",
+          picture: `https://ui-avatars.com/api/?name=Sync&background=0ea5e9&color=fff`,
+          role: 'SyncOnly'
+        }, 'all');
+        return;
+      }
+
       // 2. 檢查團隊成員
       let team = [];
       try {
