@@ -143,7 +143,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 </div>
               </div>
               <h1 className="lg:hidden text-2xl font-black text-white tracking-tighter mb-2">生活品質工程管理系統</h1>
-              <h2 className="text-3xl font-black text-white tracking-tight">系統登入</h2>
+              <h1 className="text-3xl font-black text-stone-900 tracking-tight">Quality of Life</h1>
+              <p className="text-stone-500 font-bold uppercase tracking-widest text-xs mt-2">Development Corporation</p>
               <p className="text-stone-500 text-sm">歡迎回來，請輸入帳號驗證您的身份。</p>
             </div>
 

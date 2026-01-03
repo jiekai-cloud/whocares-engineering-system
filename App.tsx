@@ -569,16 +569,13 @@ const App: React.FC = () => {
     return (
       <div className="h-screen w-screen bg-[#1c1917] flex flex-col items-center justify-center space-y-8 animate-in fade-in">
         <div className="relative">
-          <div className="w-20 h-20 bg-orange-600 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-orange-500/20 animate-pulse">
-            <Globe className="text-white w-10 h-10" />
-          </div>
-          <div className="absolute inset-0 bg-orange-500 rounded-[2.5rem] blur-2xl opacity-20 animate-ping"></div>
+          <img src="/pwa-icon.png" alt="Loading" className="w-24 h-24 object-contain animate-pulse" />
         </div>
         <div className="text-center space-y-3">
-          <h2 className="text-white font-black text-2xl uppercase tracking-[0.4em] ml-[0.4em]">Life Quality</h2>
+          <h2 className="text-white font-black text-2xl uppercase tracking-[0.2em]">Quality of Life</h2>
           <div className="flex items-center justify-center gap-2">
             <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-bounce"></span>
-            <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">正在啟動智慧營造生產環境</p>
+            <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">Development Corporation</p>
           </div>
           <button
             onClick={() => setIsInitializing(false)}
