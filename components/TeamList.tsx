@@ -29,8 +29,8 @@ const TeamList: React.FC<TeamListProps> = ({ members, departments, projects, onA
     try {
       const result = await getTeamLoadAnalysis(members, projects);
       setAnalysisResult(result.text);
-    } catch (error) {
-      alert('分析失敗，請稍後再試');
+    } catch (error: any) {
+      alert(`分析失敗: ${error.message || '請稍後再試'}`);
     } finally {
       setIsAnalyzing(false);
     }

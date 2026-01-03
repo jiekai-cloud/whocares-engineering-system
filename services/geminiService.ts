@@ -3,12 +3,20 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Project } from "../types";
 
 // Always use named parameter for apiKey and fetch from process.env.API_KEY
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY });
+const getAI = () => {
+  const key = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  if (!key || key === 'PLACEHOLDER_API_KEY' || key === 'undefined') {
+    console.error("Gemini API Key is missing or invalid. Please check your .env.local or environment variables.");
+    throw new Error("Gemini API 金鑰未設定或無效。請確認環境變數 GEMINI_API_KEY 是否正確配置。");
+  }
+  return new GoogleGenAI({ apiKey: key });
+};
 
 /**
  * 輔助函式：清理 AI 回傳的 JSON 字串 (移除 Markdown 區塊標記)
  */
 const cleanJsonString = (str: string) => {
+  if (!str) return "[]";
   return str.replace(/```json/g, '').replace(/```/g, '').trim();
 };
 

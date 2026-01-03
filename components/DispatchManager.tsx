@@ -69,8 +69,8 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
         };
       });
       setPendingAssignments(mapped);
-    } catch (error) {
-      alert("AI 解析失敗，請檢查網路或手動輸入。");
+    } catch (error: any) {
+      alert(`AI 解析失敗: ${error.message || '請檢查網路後再試'}`);
     } finally {
       setIsParsing(false);
     }
