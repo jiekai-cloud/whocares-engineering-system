@@ -16,7 +16,7 @@ import TeamModal from './components/TeamModal';
 import VendorModal from './components/VendorModal';
 import LeadToProjectModal from './components/LeadToProjectModal';
 import Login from './components/Login';
-import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as UserIcon, Trash2, ShoppingBag, Receipt, Pencil, X, ExternalLink, Download } from 'lucide-react';
+import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as UserIcon, Trash2, ShoppingBag, Receipt, Pencil, X, ExternalLink, Download, Smartphone, Phone } from 'lucide-react';
 import NotificationPanel from './components/NotificationPanel';
 import { MOCK_PROJECTS, MOCK_DEPARTMENTS, MOCK_TEAM_MEMBERS } from './constants';
 import { Project, ProjectStatus, Customer, TeamMember, User, Department, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead } from './types';
