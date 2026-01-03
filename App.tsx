@@ -16,7 +16,7 @@ import TeamModal from './components/TeamModal';
 import VendorModal from './components/VendorModal';
 import LeadToProjectModal from './components/LeadToProjectModal';
 import Login from './components/Login';
-import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as UserIcon, Trash2, ShoppingBag, Receipt, Pencil } from 'lucide-react';
+import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as UserIcon, Trash2, ShoppingBag, Receipt, Pencil, X, ExternalLink } from 'lucide-react';
 import NotificationPanel from './components/NotificationPanel';
 import { MOCK_PROJECTS, MOCK_DEPARTMENTS, MOCK_TEAM_MEMBERS } from './constants';
 import { Project, ProjectStatus, Customer, TeamMember, User, Department, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead } from './types';
@@ -92,6 +92,15 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [initialSyncDone, setInitialSyncDone] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
+  const [aiApiKey, setAiApiKey] = useState(localStorage.getItem('GEMINI_API_KEY') || '');
+
+  const saveAiApiKey = () => {
+    localStorage.setItem('GEMINI_API_KEY', aiApiKey);
+    setIsAISettingsOpen(false);
+    alert('AI 金鑰已儲存，服務將在下次解析時生效。');
+    window.location.reload();
+  };
 
   // 同步控制與合併邏輯
   const lastRemoteModifiedTime = React.useRef<string | null>(null);
@@ -649,10 +658,18 @@ const App: React.FC = () => {
               )}
             </button>
 
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-2xl border border-orange-100">
-              <Sparkles size={12} className="text-orange-500 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest">AI 智慧分析已掛載</span>
-            </div>
+            <button
+              onClick={() => setIsAISettingsOpen(true)}
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border transition-all hover:scale-105 active:scale-95 ${localStorage.getItem('GEMINI_API_KEY')
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                : 'bg-orange-50 text-orange-700 border-orange-100 animate-pulse'
+                }`}
+            >
+              <Sparkles size={12} className={localStorage.getItem('GEMINI_API_KEY') ? 'text-emerald-500' : 'text-orange-500'} />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                {localStorage.getItem('GEMINI_API_KEY') ? 'AI 服務已就緒' : '點擊設定 AI 金鑰'}
+              </span>
+            </button>
 
             <div className="hidden sm:flex items-center gap-2 bg-stone-100 px-3 py-1.5 rounded-xl border border-stone-200">
               <Layers size={14} className="text-stone-400" />
@@ -865,6 +882,51 @@ const App: React.FC = () => {
         )}
 
         <div className="no-print"><AIAssistant projects={filteredData.projects} /></div>
+        {/* AI API Key Settings Modal */}
+        {isAISettingsOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+              <div className="px-8 py-6 bg-stone-900 flex justify-between items-center text-white">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500 rounded-xl">
+                    <Sparkles size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg leading-tight">AI 服務核心配置</h2>
+                    <p className="text-[10px] text-orange-200 font-bold uppercase tracking-widest">Gemini API Configuration</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsAISettingsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={24} /></button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest flex justify-between">
+                    <span>Gemini API Key</span>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                      獲取金鑰 <ExternalLink size={10} />
+                    </a>
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="貼上您的 API 金鑰..."
+                    className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:ring-4 focus:ring-orange-500/10 placeholder:text-stone-300 transition-all font-mono"
+                    value={aiApiKey}
+                    onChange={(e) => setAiApiKey(e.target.value)}
+                  />
+                  <p className="text-[10px] text-stone-400 font-bold leading-relaxed px-1">
+                    金鑰將安全地儲存在您的瀏覽器本地 (LocalStorage)，不會上傳至伺服器或 GitHub，且僅用於此設備的 AI 解析功能。
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => { localStorage.removeItem('GEMINI_API_KEY'); setAiApiKey(''); alert('已清除金鑰'); window.location.reload(); }} className="flex-1 py-4 border border-stone-200 text-stone-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-stone-50 transition-all">清除</button>
+                  <button onClick={saveAiApiKey} className="flex-[2] bg-stone-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-stone-100 hover:bg-black active:scale-[0.98] transition-all">儲存配置</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {isModalOpen && user.role !== 'Guest' && <ProjectModal onClose={() => setIsModalOpen(false)} onConfirm={(data) => {
