@@ -5,7 +5,7 @@ import {
   LineChart, Line, AreaChart, Area, Cell, PieChart, Pie
 } from 'recharts';
 import { TrendingUp, Coins, Users, Target, ArrowUpRight, ArrowDownRight, Sparkles, Activity } from 'lucide-react';
-import { Project } from '../types';
+import { Project, ProjectStatus } from '../types';
 
 interface AnalyticsProps {
   projects: Project[];
