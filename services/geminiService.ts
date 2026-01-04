@@ -5,14 +5,15 @@ import { Project } from "../types";
 // Always use named parameter for apiKey and fetch from process.env.API_KEY
 const getAI = () => {
   const savedKey = typeof window !== 'undefined' ? localStorage.getItem('GEMINI_API_KEY') : null;
-  const envKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  // Vite environment variables or process.env (fallback)
+  const envKey = (import.meta.env?.VITE_GEMINI_API_KEY) || process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY;
   const hardcodedKey = ''; // Removed for security reasons
 
   const isInvalid = (k: string | null | undefined) => !k || k === 'PLACEHOLDER_API_KEY' || k === 'undefined' || k === '';
 
   // Priority: localStorage > env > hardcoded
   let key = hardcodedKey;
-  if (!isInvalid(envKey)) key = envKey!;
+  if (!isInvalid(envKey)) key = envKey! as string;
   if (!isInvalid(savedKey)) key = savedKey!;
 
   if (isInvalid(key)) {
