@@ -78,6 +78,15 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
   const [isAnalyzingFinancials, setIsAnalyzingFinancials] = useState(false);
   const [financialAnalysis, setFinancialAnalysis] = useState<string | null>(null);
 
+  // Local state for Pre-construction Prep to ensure smooth typing
+  const [localMaterials, setLocalMaterials] = useState(project.preConstruction?.materialsAndTools || '');
+  const [localNotice, setLocalNotice] = useState(project.preConstruction?.notice || '');
+
+  React.useEffect(() => {
+    setLocalMaterials(project.preConstruction?.materialsAndTools || '');
+    setLocalNotice(project.preConstruction?.notice || '');
+  }, [project.id, project.updatedAt]);
+
   const profit = useMemo(() => {
     // Labor cost is now derived purely from dispatch records
     const labor = (project.workAssignments || []).reduce((acc, curr) => acc + curr.totalCost, 0);
@@ -1493,8 +1502,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                         readOnly={isReadOnly}
                         className={`w-full min-h-[250px] bg-stone-50/30 border border-stone-100 rounded-[1.5rem] p-5 text-sm font-bold text-stone-700 outline-none focus:ring-4 focus:ring-orange-500/5 transition-all no-scrollbar leading-relaxed ${isReadOnly ? 'cursor-not-allowed opacity-80' : ''}`}
                         placeholder="請描述此案所需材料與工具，或點擊上方「AI 輔助」自動生成..."
-                        value={project.preConstruction?.materialsAndTools || ''}
-                        onChange={(e) => onUpdatePreConstruction({ ...project.preConstruction, materialsAndTools: e.target.value, updatedAt: new Date().toISOString() })}
+                        value={localMaterials}
+                        onChange={(e) => setLocalMaterials(e.target.value)}
+                        onBlur={() => onUpdatePreConstruction({ ...project.preConstruction, materialsAndTools: localMaterials, updatedAt: new Date().toISOString() })}
                       />
                       {isReadOnly && (
                         <div className="absolute top-4 right-4 text-stone-300 pointer-events-none">
@@ -1520,8 +1530,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                         readOnly={isReadOnly}
                         className={`w-full min-h-[250px] bg-stone-50/30 border border-stone-100 rounded-[1.5rem] p-5 text-sm font-bold text-stone-700 outline-none focus:ring-4 focus:ring-blue-500/5 transition-all no-scrollbar leading-relaxed ${isReadOnly ? 'cursor-not-allowed opacity-80' : ''}`}
                         placeholder="請輸入公告內容，或使用 AI 產生標準範本..."
-                        value={project.preConstruction?.notice || ''}
-                        onChange={(e) => onUpdatePreConstruction({ ...project.preConstruction, notice: e.target.value, updatedAt: new Date().toISOString() })}
+                        value={localNotice}
+                        onChange={(e) => setLocalNotice(e.target.value)}
+                        onBlur={() => onUpdatePreConstruction({ ...project.preConstruction, notice: localNotice, updatedAt: new Date().toISOString() })}
                       />
                       {isReadOnly && (
                         <div className="absolute top-4 right-4 text-stone-300 pointer-events-none">

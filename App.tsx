@@ -829,13 +829,13 @@ const App: React.FC = () => {
               onAddDailyLog={(log) => handleAddDailyLog(selectedProjectId, log)}
               onUpdateChecklist={(checklist) => handleUpdateChecklist(selectedProjectId, checklist)}
               onUpdatePayments={(payments) => handleUpdatePayments(selectedProjectId, payments)}
-              onUpdateTasks={(tasks) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, tasks, updatedAt: new Date().toISOString() } : p))}
-              onUpdateProgress={(progress) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, progress, updatedAt: new Date().toISOString() } : p))}
-              onUpdateExpenses={(expenses) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, expenses, updatedAt: new Date().toISOString() } : p))}
-              onUpdateWorkAssignments={(assignments) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, workAssignments: assignments, updatedAt: new Date().toISOString() } : p))}
-              onUpdatePreConstruction={(prep) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, preConstruction: prep, updatedAt: new Date().toISOString() } : p))}
-              onUpdateContractUrl={(url) => setProjects(prev => prev.map(p => p.id === selectedProject.id ? { ...p, contractUrl: url, updatedAt: new Date().toISOString() } : p))}
-              onLossClick={() => handleUpdateStatus(selectedProject.id, ProjectStatus.LOST)}
+              onUpdateTasks={(tasks) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, tasks, updatedAt: new Date().toISOString() } : p))}
+              onUpdateProgress={(progress) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, progress, updatedAt: new Date().toISOString() } : p))}
+              onUpdateExpenses={(expenses) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, expenses, updatedAt: new Date().toISOString() } : p))}
+              onUpdateWorkAssignments={(assignments) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, workAssignments: assignments, updatedAt: new Date().toISOString() } : p))}
+              onUpdatePreConstruction={(prep) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, preConstruction: prep, updatedAt: new Date().toISOString() } : p))}
+              onUpdateContractUrl={(url) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, contractUrl: url, updatedAt: new Date().toISOString() } : p))}
+              onLossClick={() => handleUpdateStatus(selectedProjectId!, ProjectStatus.LOST)}
             />
           ) : (
             <div className="pb-32">
