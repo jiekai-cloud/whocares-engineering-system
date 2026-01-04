@@ -707,6 +707,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                             className="hidden"
                             ref={receiptInputRef}
                             accept="image/*"
+                            capture="environment"
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
