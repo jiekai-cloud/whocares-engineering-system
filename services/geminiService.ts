@@ -1,8 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Project } from "../types";
 
-// 使用 1.5-flash 作為預設穩定模型 (最廣為支援的版本)
-const STABLE_MODEL = 'gemini-1.5-flash';
+// 使用 2.0-flash-exp 作為預設穩定模型 (最相容 v1beta 且免費配額大)
+const STABLE_MODEL = 'gemini-2.0-flash-exp';
 const EXPERIMENTAL_MODEL = 'gemini-2.0-flash';
 
 // Always use named parameter for apiKey and fetch from process.env.API_KEY

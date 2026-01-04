@@ -1466,7 +1466,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                         setIsGeneratingPrep(true);
                         try {
                           const result = await generatePreConstructionPrep(project);
-                          onUpdatePreConstruction({
+                          props.onUpdatePreConstruction({
                             ...project.preConstruction,
                             ...result,
                             updatedAt: new Date().toISOString()
@@ -1505,7 +1505,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                         placeholder="請描述此案所需材料與工具，或點擊上方「AI 輔助」自動生成..."
                         value={localMaterials}
                         onChange={(e) => setLocalMaterials(e.target.value)}
-                        onBlur={() => onUpdatePreConstruction({ ...project.preConstruction, materialsAndTools: localMaterials, updatedAt: new Date().toISOString() })}
+                        onBlur={() => props.onUpdatePreConstruction({ ...project.preConstruction, materialsAndTools: localMaterials, updatedAt: new Date().toISOString() })}
                       />
                       {isReadOnly && (
                         <div className="absolute top-4 right-4 text-stone-300 pointer-events-none">
@@ -1533,7 +1533,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                         placeholder="請輸入公告內容，或使用 AI 產生標準範本..."
                         value={localNotice}
                         onChange={(e) => setLocalNotice(e.target.value)}
-                        onBlur={() => onUpdatePreConstruction({ ...project.preConstruction, notice: localNotice, updatedAt: new Date().toISOString() })}
+                        onBlur={() => props.onUpdatePreConstruction({ ...project.preConstruction, notice: localNotice, updatedAt: new Date().toISOString() })}
                       />
                       {isReadOnly && (
                         <div className="absolute top-4 right-4 text-stone-300 pointer-events-none">
@@ -1576,7 +1576,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                       if (file) {
                         try {
                           const url = await cloudFileService.uploadFile(file);
-                          onUpdatePreConstruction({
+                          props.onUpdatePreConstruction({
                             ...project.preConstruction,
                             scopeDrawingUrl: url,
                             updatedAt: new Date().toISOString()
@@ -1604,7 +1604,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                         </button>
                         {!isReadOnly && (
                           <button
-                            onClick={() => { if (confirm('確定要移除此圖面嗎？')) onUpdatePreConstruction({ ...project.preConstruction, scopeDrawingUrl: '', updatedAt: new Date().toISOString() }) }}
+                            onClick={() => { if (confirm('確定要移除此圖面嗎？')) props.onUpdatePreConstruction({ ...project.preConstruction, scopeDrawingUrl: '', updatedAt: new Date().toISOString() }) }}
                             className="w-12 h-12 rounded-full bg-rose-500 text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-all"
                           >
                             <Trash2 size={20} />
