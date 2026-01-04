@@ -43,12 +43,13 @@ interface ProjectDetailProps {
   onUpdateContractUrl: (url: string) => void;
 }
 
-const ProjectDetail: React.FC<ProjectDetailProps> = ({
-  project, user, teamMembers, onBack, onEdit, onDelete, onLossClick,
-  onUpdateTasks, onUpdateProgress, onUpdateStatus, onAddComment,
-  onUpdateExpenses, onUpdateWorkAssignments, onUpdatePreConstruction, onUpdateFiles, onUpdatePhases,
-  onAddDailyLog, onUpdateChecklist, onUpdatePayments, onUpdateContractUrl
-}) => {
+const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
+  const {
+    project, user, teamMembers, onBack, onEdit, onDelete, onLossClick,
+    onUpdateTasks, onUpdateProgress, onUpdateStatus, onAddComment,
+    onUpdateExpenses, onUpdateWorkAssignments, onUpdatePreConstruction, onUpdateFiles, onUpdatePhases,
+    onAddDailyLog, onUpdateChecklist, onUpdatePayments, onUpdateContractUrl
+  } = props;
   const [newComment, setNewComment] = useState('');
   const [activeView, setActiveView] = useState<'tasks' | 'financials' | 'logs' | 'photos' | 'schedule' | 'map' | 'inspection' | 'prep'>('logs');
   const [selectedImage, setSelectedImage] = useState<ProjectFile | null>(null);
