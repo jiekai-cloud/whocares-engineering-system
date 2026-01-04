@@ -7,7 +7,7 @@ import {
   Layers, Camera, HardHat, CheckCircle, ShieldCheck, Edit2, Wrench, ClipboardList, Construction, FileImage
 } from 'lucide-react';
 import { Project, ProjectStatus, Task, ProjectComment, Expense, WorkAssignment, TeamMember, ProjectFile, ProjectPhase, User, ChecklistTask, PaymentStage } from '../types';
-import { suggestProjectSchedule, searchNearbyResources, analyzeProjectFinancials, parseScheduleFromImage, generatePreConstructionPrep } from '../services/geminiService';
+import { suggestProjectSchedule, searchNearbyResources, analyzeProjectFinancials, parseScheduleFromImage, generatePreConstructionPrep, scanReceipt } from '../services/geminiService';
 import GanttChart from './GanttChart';
 import MapLocation from './MapLocation';
 import { cloudFileService } from '../services/cloudFileService';
@@ -61,7 +61,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleFileInputRef = useRef<HTMLInputElement>(null);
   const scopeDrawingInputRef = useRef<HTMLInputElement>(null);
+  const receiptInputRef = useRef<HTMLInputElement>(null);
   const [isGeneratingPrep, setIsGeneratingPrep] = useState(false);
+  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
 
   // Schedule Options State
   const [scheduleStartDate, setScheduleStartDate] = useState(project.startDate || new Date().toISOString().split('T')[0]);
@@ -699,6 +701,49 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
                     {isAddingExpense && (
                       <div className="p-6 bg-stone-50 border-b border-stone-100 space-y-4 animate-in slide-in-from-top-2">
+                        <div className="flex justify-center mb-4">
+                          <input
+                            type="file"
+                            className="hidden"
+                            ref={receiptInputRef}
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setIsScanningReceipt(true);
+                                const reader = new FileReader();
+                                reader.onload = async (event) => {
+                                  try {
+                                    const base64 = (event.target?.result as string).split(',')[1];
+                                    const result = await scanReceipt(base64);
+                                    if (result) {
+                                      setExpenseFormData({
+                                        ...expenseFormData,
+                                        ...result,
+                                        amount: Number(result.amount) || 0
+                                      });
+                                    }
+                                  } catch (err) {
+                                    alert('掃描失敗，請手動輸入');
+                                  } finally {
+                                    setIsScanningReceipt(false);
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => receiptInputRef.current?.click()}
+                            disabled={isScanningReceipt}
+                            className="bg-white border-2 border-dashed border-stone-200 text-stone-600 px-6 py-4 rounded-2xl text-[11px] font-black flex flex-col items-center gap-2 hover:bg-stone-100 hover:border-stone-400 transition-all w-full"
+                          >
+                            {isScanningReceipt ? <Loader2 size={24} className="animate-spin text-orange-600" /> : <Camera size={24} className="text-stone-400" />}
+                            {isScanningReceipt ? 'AI 正在分析收據...' : '點擊此處上傳發票/收據照片，AI 自動填表'}
+                          </button>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1.5">支出類別</label>

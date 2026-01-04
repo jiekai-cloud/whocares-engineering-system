@@ -299,6 +299,48 @@ export const scanBusinessCard = async (base64Image: string) => {
     throw error;
   }
 };
+
+/**
+ * 智慧發票收據辨識 - 提取支出資訊
+ */
+export const scanReceipt = async (base64Image: string) => {
+  const ai = getAI();
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: base64Image
+          }
+        },
+        `妳是專業的財務單據辨識專家。妳能從發票或收據照片中精準辨認各個欄位。
+        請辨識這張收據上的支出資訊，並僅回傳 JSON 格式數據。
+        
+        回傳格式必須包含以下欄位：
+        - date: 日期 (格式必須為 YYYY-MM-DD，如果找不到則當天日期)
+        - name: 項目名稱 (簡短描述，例如：水泥一批、機具維護)
+        - amount: 金額 (數字，不要符號)
+        - supplier: 供應商/商號名稱
+        - category: 類別 (必須從以下選一：'委託工程', '零用金', '機具材料', '行政人事成本', '其他')
+        
+        請直接回傳 JSON 物件，不包含 Markdown 標記，也不要包含 \`\`\`json 等字樣。`
+      ]
+    });
+
+    try {
+      const jsonStr = cleanJsonString(response.text || "{}");
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      console.error("JSON 解析失敗，原始文字:", response.text);
+      return null;
+    }
+  } catch (error) {
+    console.error("收據掃描失敗:", error);
+    throw error;
+  }
+};
 /**
  * 專案財務與盈虧預測分析
  */
