@@ -1881,13 +1881,22 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
                   {/* Summary Cards */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100">
-                      <p className="text-[10px] font-black text-emerald-600 uppercase mb-1 text-center">預估毛利</p>
-                      <p className="text-xl font-black text-emerald-700 text-center">${margin.toLocaleString()}</p>
+                    <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100 relative overflow-hidden">
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase">預估毛利</p>
+                        {/* Profit Health Indicator */}
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${(margin / (project.budget || 1)) > 0.3 ? 'bg-emerald-500 text-white' :
+                            (margin / (project.budget || 1)) > 0.15 ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'
+                          }`}>
+                          <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                          {(margin / (project.budget || 1)) > 0.3 ? 'Safe' : (margin / (project.budget || 1)) > 0.15 ? 'Caution' : 'Critical'}
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-emerald-700">${margin.toLocaleString()}</p>
                     </div>
                     <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100">
-                      <p className="text-[10px] font-black text-blue-600 uppercase mb-1 text-center">利潤率</p>
-                      <p className="text-xl font-black text-blue-700 text-center">{project.budget > 0 ? Math.round((margin / project.budget) * 100) : 0}%</p>
+                      <p className="text-[10px] font-black text-blue-600 uppercase mb-1">利潤率</p>
+                      <p className="text-xl font-black text-blue-700">{project.budget > 0 ? Math.round((margin / project.budget) * 100) : 0}%</p>
                     </div>
                   </div>
                 </div>
@@ -1938,14 +1947,35 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
                     <Sparkles size={24} />
                   </div>
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-black tracking-tight">AI 專案診斷建議</h4>
-                    <p className="text-xs text-stone-400 leading-relaxed">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black tracking-tight">AI 專案診斷建議</h4>
+                      <button
+                        onClick={async () => {
+                          const btn = document.getElementById('ai-analyze-btn');
+                          if (btn) btn.innerHTML = '分析中...';
+                          try {
+                            const res = await analyzeProjectFinancials(project);
+                            const adviceP = document.getElementById('ai-advice-text');
+                            if (adviceP) adviceP.innerHTML = res.text;
+                          } catch (e) {
+                            alert('分析失敗');
+                          } finally {
+                            if (btn) btn.innerHTML = '重新診斷';
+                          }
+                        }}
+                        id="ai-analyze-btn"
+                        className="text-[9px] font-black uppercase tracking-widest bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-all"
+                      >
+                        執行深度診斷
+                      </button>
+                    </div>
+                    <div id="ai-advice-text" className="text-xs text-stone-300 leading-relaxed prose prose-invert prose-xs max-w-none">
                       根據目前的進度為 {project.progress}%，與預算執行率 {project.budget > 0 ? Math.round((currentSpent / project.budget) * 100) : 0}% 相比，
                       {currentSpent > project.budget ? '支出已超過預算，建議立即檢查「材料支出」與「委託工程」是否有異常。' :
-                        (margin / project.budget) < 0.2 ? '目前毛利稍微偏低，請留意後續工資成本的控管。' :
+                        (margin / (project.budget || 1)) < 0.2 ? '目前毛利稍微偏低，請留意後續工資成本的控管。' :
                           '目前案場營運狀況良好，資金執行率與進度匹配。'}
-                    </p>
+                    </div>
                   </div>
                 </div>
               </div>

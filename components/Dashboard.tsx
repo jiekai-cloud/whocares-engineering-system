@@ -24,6 +24,23 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
   const [lastSync, setLastSync] = useState(new Date());
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [portfolioAnalysis, setPortfolioAnalysis] = useState<string | null>(null);
+  const [showAIModal, setShowAIModal] = useState(false);
+
+  const generatePortfolioAnalysis = async () => {
+    setIsAnalyzing(true);
+    try {
+      const { getPortfolioAnalysis } = await import('../services/geminiService');
+      const result = await getPortfolioAnalysis(projects);
+      setPortfolioAnalysis(result.text);
+      setShowAIModal(true);
+    } catch (e) {
+      alert('AI 診斷失敗，請稍後再試');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const availableYears = useMemo(() => {
     const years = projects
@@ -66,10 +83,35 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
     return { counts, totalBudget, totalSpent };
   }, [filteredProjects]);
 
-  // 3. 異常檢測：抓取滯留與「預算超支」案件
+  // 3. 進階異常檢測：工資超標、進度落後、預算超支
   const riskProjects = useMemo(() => {
     const now = new Date();
 
+    // 時間與進度風險 (Schedule Risk)
+    const scheduleRisks = filteredProjects
+      .filter(p => p.startDate && p.endDate && p.status === ProjectStatus.CONSTRUCTING)
+      .map(p => {
+        const start = new Date(p.startDate!).getTime();
+        const end = new Date(p.endDate!).getTime();
+        const totalDuration = end - start;
+        const elapsed = now.getTime() - start;
+        const timeRatio = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100));
+        const progressGap = timeRatio - p.progress;
+        return { ...p, riskType: 'schedule', riskValue: Math.round(progressGap) };
+      })
+      .filter(p => p.riskValue >= 20); // 如果時間消耗比進度多出 20%，則發出警訊
+
+    // 工資效率風險 (Labor Efficiency Risk)
+    const laborRisks = filteredProjects
+      .filter(p => p.budget > 0 && p.status === ProjectStatus.CONSTRUCTING)
+      .map(p => {
+        const laborCost = (p.workAssignments || []).reduce((acc, curr) => acc + curr.totalCost, 0);
+        const laborRatio = (laborCost / p.budget) * 100;
+        return { ...p, riskType: 'labor', riskValue: Math.round(laborRatio), progress: p.progress };
+      })
+      .filter(p => p.riskValue > 50 && p.progress < 40); // 如果工資已耗去預算一半但進度未達 40%
+
+    // 報價逾期風險
     const timeRisks = filteredProjects
       .filter(p => (p.statusChangedAt || p.createdDate) && (p.status === ProjectStatus.NEGOTIATING || p.status === ProjectStatus.QUOTING))
       .map(p => {
@@ -79,16 +121,16 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
       })
       .filter(p => p.riskValue >= 5);
 
-    // 財務風險
+    // 預算超支風險
     const financialRisks = filteredProjects
       .filter(p => p.budget > 0)
       .map(p => {
         const ratio = p.spent / p.budget;
         return { ...p, riskType: 'budget', riskValue: Math.round(ratio * 100) };
       })
-      .filter(p => p.riskValue >= 80);
+      .filter(p => p.riskValue >= 90);
 
-    return [...timeRisks, ...financialRisks]
+    return [...scheduleRisks, ...laborRisks, ...timeRisks, ...financialRisks]
       .sort((a, b) => b.riskValue - a.riskValue);
   }, [filteredProjects]);
 
@@ -103,6 +145,33 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
   }, [riskProjects]);
+
+  // 4. 智慧監控數據預算
+  const monitorStats = useMemo(() => {
+    const laborAtRisk = filteredProjects.filter(p => {
+      const labor = (p.workAssignments || []).reduce((a, c) => a + c.totalCost, 0);
+      return p.budget > 0 && (labor / p.budget) > 0.4 && p.progress < 30;
+    }).length;
+
+    const scheduleAtRisk = riskProjects.filter(r => r.riskType === 'schedule').length;
+
+    const totalLabor = projects.reduce((a, p) => a + (p.workAssignments || []).reduce((la, lc) => la + lc.totalCost, 0), 0);
+    const totalBudget = projects.reduce((a, p) => a + (p.budget || 0), 0);
+    const avgLaborRatio = totalBudget > 0 ? Math.round((totalLabor / totalBudget) * 100) : 0;
+
+    return { laborAtRisk, scheduleAtRisk, avgLaborRatio };
+  }, [filteredProjects, riskProjects, projects]);
+
+  const efficiencyData = useMemo(() => {
+    return filteredProjects
+      .filter(p => p.budget > 0)
+      .slice(0, 8)
+      .map(p => {
+        const labor = (p.workAssignments || []).reduce((a, c) => a + c.totalCost, 0);
+        const ratio = Math.round((labor / p.budget) * 100);
+        return { ...p, laborRatio: ratio };
+      });
+  }, [filteredProjects]);
 
   const statsCards = [
     { label: '案件總量', value: filteredProjects.length, icon: Layers, color: 'text-slate-600', bg: 'bg-slate-50' },
@@ -146,8 +215,48 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
               {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
+          <button
+            onClick={generatePortfolioAnalysis}
+            disabled={isAnalyzing}
+            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-black transition-all shadow-lg shadow-slate-200 disabled:opacity-50"
+          >
+            {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            AI 營運診斷
+          </button>
         </div>
       </header>
+
+      {/* AI Portfolio Modal */}
+      {showAIModal && portfolioAnalysis && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white w-full max-w-2xl max-h-[80vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
+                  <Activity size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">宏觀營運診斷報告</h3>
+                  <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">Global Operations Diagnosis</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAIModal(false)} className="w-10 h-10 rounded-full bg-stone-100 text-stone-400 flex items-center justify-center hover:bg-stone-200">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-4 no-scrollbar prose prose-stone max-w-none">
+              <div className="bg-slate-50 p-6 rounded-3xl border border-stone-100 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                {portfolioAnalysis}
+              </div>
+            </div>
+            <div className="mt-8 pt-8 border-t border-stone-50 flex justify-end">
+              <button onClick={() => setShowAIModal(false)} className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
+                已閱
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         {statsCards.map((stat, i) => (
@@ -184,21 +293,28 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
               <div className="lg:col-span-2 space-y-4">
                 <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2">逾期案件清單</h4>
                 <div className="space-y-2">
-                  {riskProjects.filter(r => r.riskType === 'delay').map(p => (
-                    <div key={p.id} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 hover:bg-stone-100/50 transition-all group">
+                  {riskProjects.map(p => (
+                    <div key={`${p.id}-${p.riskType}`} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 hover:bg-stone-100/50 transition-all group">
                       <div className="space-y-1">
                         <p className="text-xs font-black text-stone-900">{p.name}</p>
                         <div className="flex items-center gap-3">
                           <span className="text-[9px] font-bold text-stone-400 uppercase">ID: {p.id}</span>
-                          <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 uppercase flex items-center gap-1">
-                            逾期 {p.riskValue} 天
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase flex items-center gap-1 ${p.riskType === 'delay' ? 'text-rose-500 bg-rose-50 border-rose-100' :
+                            p.riskType === 'labor' ? 'text-orange-500 bg-orange-50 border-orange-100' :
+                              p.riskType === 'schedule' ? 'text-amber-500 bg-amber-50 border-amber-100' :
+                                'text-rose-500 bg-rose-50 border-rose-100'
+                            }`}>
+                            {p.riskType === 'delay' ? `逾期 ${p.riskValue} 天` :
+                              p.riskType === 'labor' ? `工資佔比 ${p.riskValue}%` :
+                                p.riskType === 'schedule' ? `進度滯後 ${p.riskValue}%` :
+                                  `預算執行 ${p.riskValue}%`}
                           </span>
                         </div>
                       </div>
                       <div className="text-right flex items-center gap-4">
                         <div className="hidden sm:block">
                           <p className="text-[9px] font-black text-stone-400 uppercase tracking-tighter mb-0.5">負責人</p>
-                          <p className="text-[10px] font-black text-stone-700">{p.quotationManager || '未指定'}</p>
+                          <p className="text-[10px] font-black text-stone-700">{p.quotationManager || p.manager || '未指定'}</p>
                         </div>
                         <button onClick={() => onProjectClick(p.id)} className="w-8 h-8 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-400 hover:text-stone-900 hover:border-stone-400 transition-all shadow-sm">
                           <ArrowRight size={14} />
@@ -206,10 +322,10 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
                       </div>
                     </div>
                   ))}
-                  {riskProjects.filter(r => r.riskType === 'delay').length === 0 && (
+                  {riskProjects.length === 0 && (
                     <div className="py-12 border-2 border-dashed border-stone-100 rounded-[2rem] flex flex-col items-center justify-center text-stone-300 gap-3">
                       <CheckCircle2 size={32} />
-                      <p className="text-[10px] font-black uppercase tracking-widest">目前暫無逾期報價</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest">目前暫無異常案件</p>
                     </div>
                   )}
                 </div>
@@ -247,6 +363,76 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
                   <span className="text-[8px] sm:text-[9px] font-black text-stone-400 uppercase tracking-tighter mt-1 leading-tight">{status}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* New Section: Labor Efficiency & Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-[2rem] border border-stone-100 shadow-sm overflow-hidden p-8">
+              <h3 className="text-sm font-black text-stone-900 uppercase tracking-widest flex items-center gap-2 mb-6">
+                <TrendingUp size={18} className="text-emerald-600" /> 人力成本效率分佈
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={efficiencyData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                    <XAxis dataKey="name" fontSize={9} tick={{ fontWeight: 'bold', fill: '#a8a29e' }} axisLine={false} tickLine={false} />
+                    <YAxis fontSize={9} tick={{ fontWeight: 'bold', fill: '#a8a29e' }} axisLine={false} tickLine={false} unit="%" />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      cursor={{ fill: '#fafaf9' }}
+                    />
+                    <Bar dataKey="laborRatio" name="工資佔預算比" radius={[4, 4, 0, 0]}>
+                      {efficiencyData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.laborRatio > 40 ? '#f43f5e' : '#10b981'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="mt-4 text-[9px] font-bold text-stone-400 text-center uppercase tracking-widest leading-loose">
+                紅條代表工資佔比過高 (&gt;40%)，可能存在工率低下或點工浪費風險
+              </p>
+            </div>
+
+            <div className="bg-stone-900 rounded-[2rem] shadow-xl p-8 text-white">
+              <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-6">
+                <Zap size={18} className="text-amber-400" /> 系統智慧監控摘要
+              </h3>
+              <div className="space-y-6">
+                <div className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-400 flex items-center justify-center shrink-0">
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase">工率風險預警</p>
+                    <p className="text-[10px] text-stone-400 mt-1">
+                      共有 {monitorStats.laborAtRisk} 案發生「工資超前、進度落後」現象。
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 flex items-center justify-center shrink-0">
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase">進度時效檢測</p>
+                    <p className="text-[10px] text-stone-400 mt-1">
+                      目前有 {monitorStats.scheduleAtRisk} 案時間消耗與進度不匹配。
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                    <p className="text-[11px] font-black text-emerald-400 uppercase flex items-center gap-2">
+                      <CheckCircle2 size={14} /> 營運用工效率建議
+                    </p>
+                    <p className="text-[10px] text-emerald-500/80 mt-2 font-bold leading-relaxed">
+                      目前平均工資佔比為 {monitorStats.avgLaborRatio}%。建議針對高工資佔比案件進行工序優化。
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

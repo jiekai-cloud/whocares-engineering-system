@@ -46,17 +46,27 @@ export const getPortfolioAnalysis = async (projects: Project[]) => {
       .filter(p => (p.status === '施工中' && p.progress < 20) || (p.status === '報價中'))
       .slice(0, 50); // 採樣前 50 個高風險案件
 
-    const projectSummary = criticalOnes.map(p => `- ${p.name}: 狀態 ${p.status}, 進度 ${p.progress}%, 預算 ${p.budget}`).join('\n');
+    const projectSummary = criticalOnes.map(p => {
+      const laborCost = (p.workAssignments || []).reduce((acc, curr) => acc + curr.totalCost, 0);
+      const expenseCost = (p.expenses || []).reduce((acc, curr) => acc + curr.amount, 0);
+      return `- ${p.name}: 狀態 ${p.status}, 進度 ${p.progress}%, 預算 ${p.budget}, 工資支出 ${laborCost}, 材料支出 ${expenseCost}`;
+    }).join('\n');
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: [{
         parts: [{
-          text: `妳是「生活品質工程管理系統」的首席運籌官。
-妳的分析對象是擁有 50 名成員的大型工程團隊。
-請針對整體資源分配、專案瓶頸與報價效率提供宏觀建議。
+          text: `妳是「生活品質工程管理系統」的首席營運策略官。
+妳的任務是審核公司目前正在進行的 ${totalCount} 件專案，特別是以下篩選出的潛在風險案件：
 
-目前系統共管理 ${totalCount} 件專案，以下是經初步篩選出的 50 個潛在風險案件，請針對這些數據提供營運風險報告：\n${projectSummary}`
+${projectSummary}
+
+請針對以下三個維度提供一份深度的營運診斷報告：
+1. **資源錯置分析**：哪些專案的進度與工資支出嚴重不成比例？(即進度緩慢但人力成本已耗去大半)
+2. **瓶頸案件預警**：找出最具「虧損風險」的指標案件，並說明原因。
+3. **優化調度建議**：針對目前的負載，應該如何調整人力或物力以確保公司整體利潤最大化？
+
+報告請使用簡潔、專業的繁體中文 Markdown 格式。`
         }]
       }]
     });
