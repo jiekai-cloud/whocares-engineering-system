@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Project } from "../types";
 
 // 使用 1.5-flash 作為預設穩定模型 (免費額度較高且穩定)
-const STABLE_MODEL = 'gemini-1.5-flash';
+const STABLE_MODEL = 'gemini-1.5-flash-latest';
 const EXPERIMENTAL_MODEL = 'gemini-2.0-flash';
 
 // Always use named parameter for apiKey and fetch from process.env.API_KEY
@@ -25,7 +25,7 @@ const getAI = () => {
   }
 
   // Debug log (masked)
-  console.log(`Using AI Key: ${key.substring(0, 8)}... (GenAI SDK - Gemini 2.0)`);
+  console.log(`Using AI Key: ${key.substring(0, 8)}... (GenAI SDK - ${STABLE_MODEL})`);
 
   return new GoogleGenAI({ apiKey: key });
 };
