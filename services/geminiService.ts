@@ -1,9 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Project } from "../types";
 
-// 使用 2.0-flash-exp 作為預設穩定模型 (最相容 v1beta 且免費配額大)
-const STABLE_MODEL = 'gemini-2.0-flash-exp';
-const EXPERIMENTAL_MODEL = 'gemini-2.0-flash';
+// 使用 1.5-flash 作為預設穩定模型 (最廣為支援的版本)
+const STABLE_MODEL = 'gemini-1.5-flash';
+const EXPERIMENTAL_MODEL = 'gemini-2.0-flash-exp';
 
 // Always use named parameter for apiKey and fetch from process.env.API_KEY
 const getAI = () => {
@@ -27,7 +27,29 @@ const getAI = () => {
   // Debug log (masked)
   console.log(`Using AI Key: ${key.substring(0, 8)}... (GenAI SDK - ${STABLE_MODEL})`);
 
-  return new GoogleGenAI({ apiKey: key });
+  try {
+    return new GoogleGenAI({ apiKey: key });
+  } catch (e) {
+    console.error("GenAI Initialization failed:", e);
+    throw e;
+  }
+};
+
+/**
+ * 集中處理 AI 報錯，提供更友善的資訊
+ */
+const handleAIError = (error: any, context: string) => {
+  console.error(`${context} 失敗:`, error);
+
+  const errorMsg = error?.message || "";
+  if (errorMsg.includes("limit: 0") || errorMsg.includes("RESOURCE_EXHAUSTED")) {
+    throw new Error("AI 服務暫時無法使用：您的 API Key 目前配額為 0 或已耗盡。建議確認您的 Google AI Studio 帳號是否已啟用 Generative Language API，或嘗試更換另一個 API Key。");
+  }
+  if (errorMsg.includes("404") || errorMsg.includes("not found")) {
+    throw new Error(`AI 模型連線失敗 (404)。系統目前嘗試使用 ${STABLE_MODEL}。若此錯誤持續發生，請嘗試重新配置 API Key 或稍後再試。`);
+  }
+
+  throw error;
 };
 
 /**
@@ -80,8 +102,7 @@ ${projectSummary}
     });
     return { text: response.text };
   } catch (error) {
-    console.error("全案場分析失敗:", error);
-    throw error;
+    return handleAIError(error, "全案場分析");
   }
 };
 
@@ -109,8 +130,7 @@ export const getProjectInsights = async (project: Project, question: string) => 
     });
     return { text: response.text };
   } catch (error) {
-    console.error("獲取專案洞察失敗:", error);
-    throw error;
+    return handleAIError(error, "獲取專案洞察");
   }
 };
 
@@ -143,8 +163,7 @@ export const searchEngineeringKnowledge = async (query: string) => {
 
     return { text: response.text, chunks: links };
   } catch (error) {
-    console.error("搜尋知識失敗:", error);
-    throw error;
+    return handleAIError(error, "搜尋知識");
   }
 };
 
@@ -168,8 +187,7 @@ export const suggestProjectSchedule = async (project: Project) => {
     });
     return { text: response.text };
   } catch (error) {
-    console.error("排程建議失敗:", error);
-    throw error;
+    return handleAIError(error, "排程建議");
   }
 };
 
@@ -205,8 +223,7 @@ export const getTeamLoadAnalysis = async (members: any[], projects: Project[]) =
     });
     return { text: response.text };
   } catch (error) {
-    console.error("團隊負載分析失敗:", error);
-    throw error;
+    return handleAIError(error, "團隊負載分析");
   }
 };
 
@@ -246,8 +263,7 @@ export const searchNearbyResources = async (address: string, lat: number, lng: n
 
     return { text: response.text, links };
   } catch (error) {
-    console.error("案場資源搜尋失敗:", error);
-    throw error;
+    return handleAIError(error, "案場資源搜尋");
   }
 };
 
@@ -281,8 +297,7 @@ ${memberContext}
     const jsonStr = cleanJsonString(response.text || "[]");
     return JSON.parse(jsonStr);
   } catch (error) {
-    console.error("日報解析失敗:", error);
-    return [];
+    return handleAIError(error, "日報解析");
   }
 };
 
@@ -313,8 +328,7 @@ export const scanBusinessCard = async (base64Image: string) => {
       return {};
     }
   } catch (error) {
-    console.error("名片掃描失敗:", error);
-    throw error;
+    return handleAIError(error, "名片掃描");
   }
 };
 
@@ -355,8 +369,7 @@ export const scanReceipt = async (base64Image: string) => {
       return null;
     }
   } catch (error) {
-    console.error("收據掃描失敗:", error);
-    throw error;
+    return handleAIError(error, "收據掃描");
   }
 };
 /**
@@ -400,8 +413,7 @@ export const analyzeProjectFinancials = async (project: Project) => {
     });
     return { text: response.text };
   } catch (error) {
-    console.error("財務分析失敗:", error);
-    throw error;
+    return handleAIError(error, "財務分析");
   }
 };
 
@@ -447,8 +459,7 @@ export const parseScheduleFromImage = async (base64Image: string, startDate: str
       return [];
     }
   } catch (error) {
-    console.error("排程解析失敗:", error);
-    throw error;
+    return handleAIError(error, "排程解析");
   }
 };
 
@@ -481,7 +492,6 @@ export const generatePreConstructionPrep = async (project: Project) => {
     const jsonStr = cleanJsonString(response.text || "{}");
     return JSON.parse(jsonStr);
   } catch (error) {
-    console.error("產生施工前準備失敗:", error);
-    throw error;
+    return handleAIError(error, "產生施工前準備");
   }
 };
