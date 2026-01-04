@@ -6,7 +6,7 @@ import { Project } from "../types";
 const getAI = () => {
   const savedKey = typeof window !== 'undefined' ? localStorage.getItem('GEMINI_API_KEY') : null;
   const envKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
-  const hardcodedKey = 'AIzaSyCrx4WHs8bKX9YI_-4guWJGZJfgmJip0mQ';
+  const hardcodedKey = ''; // Removed for security reasons
 
   const isInvalid = (k: string | null | undefined) => !k || k === 'PLACEHOLDER_API_KEY' || k === 'undefined' || k === '';
 
