@@ -1090,12 +1090,15 @@ const App: React.FC = () => {
             return p;
           }));
         } else {
-          // 案件編號產生規則: [來源代碼][年份(YYYY)][流水號(001)]
+          // 案件編號產生規則: [來源代碼][年份縮寫(YY)]01[流水號(001)]
           const prefix = sourcePrefixes[data.source || 'BNI'] || 'PJ';
-          const year = new Date().getFullYear().toString();
+          const year = new Date().getFullYear();
+          const yearShort = year.toString().slice(-2); // 取後兩碼，例如 2026 -> 26
 
-          // 找尋全系統當年度的最末流水號 (不分來源)
-          const sameYearProjects = projects.filter(p => p.id.includes(year));
+          // 找尋全系統當年度的最末流水號 (兼容新舊格式)
+          const sameYearProjects = projects.filter(p =>
+            p.id.includes(year.toString()) || p.id.includes(`${yearShort}01`)
+          );
           let sequence = 1;
           if (sameYearProjects.length > 0) {
             // 從所有專案中提取最後三碼流水號
@@ -1106,7 +1109,7 @@ const App: React.FC = () => {
             sequence = Math.max(...sequences) + 1;
           }
 
-          const newId = `${prefix}${year}${sequence.toString().padStart(3, '0')}`;
+          const newId = `${prefix}${yearShort}01${sequence.toString().padStart(3, '0')}`;
           addActivityLog('建立新專案', data.name, newId, 'project');
           setProjects(prev => [{ ...data, id: newId, status: ProjectStatus.NEGOTIATING, statusChangedAt: new Date().toISOString(), progress: 0, workAssignments: [], expenses: [], comments: [], files: [], phases: [], updatedAt: new Date().toISOString() } as any, ...prev]);
         }
