@@ -1,0 +1,85 @@
+{
+    "presets": {
+        "full": {
+            "name": "完整版",
+            "description": "包含所有功能模組，適合大型工程公司",
+            "modules": [
+                "auth",
+                "dashboard",
+                "settings",
+                "projects",
+                "customers",
+                "team",
+                "vendors",
+                "dispatch",
+                "analytics",
+                "ai_assistant",
+                "cloud_sync",
+                "leads"
+            ]
+        },
+        "standard": {
+            "name": "標準版",
+            "description": "核心管理功能，適合中小型工程公司",
+            "modules": [
+                "auth",
+                "dashboard",
+                "settings",
+                "projects",
+                "customers",
+                "team",
+                "cloud_sync"
+            ]
+        },
+        "lite": {
+            "name": "輕量版",
+            "description": "僅專案管理核心功能",
+            "modules": [
+                "auth",
+                "dashboard",
+                "settings",
+                "projects"
+            ]
+        },
+        "professional": {
+            "name": "專業版",
+            "description": "專案管理加上數據分析功能",
+            "modules": [
+                "auth",
+                "dashboard",
+                "settings",
+                "projects",
+                "customers",
+                "team",
+                "analytics",
+                "cloud_sync"
+            ]
+        }
+    },
+    "customConfigurations": {
+        "example_construction_company_a": {
+            "companyName": "建國工程有限公司",
+            "modules": [
+                "auth",
+                "dashboard",
+                "settings",
+                "projects",
+                "team",
+                "dispatch",
+                "cloud_sync"
+            ]
+        },
+        "example_construction_company_b": {
+            "companyName": "優質裝潢股份有限公司",
+            "modules": [
+                "auth",
+                "dashboard",
+                "settings",
+                "projects",
+                "customers",
+                "vendors",
+                "analytics"
+            ]
+        }
+    }
+}

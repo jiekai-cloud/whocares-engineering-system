@@ -1,6 +1,8 @@
 
-import React from 'react';
-import { LayoutDashboard, FolderKanban, Users, BarChart3, Settings, HelpCircle, HardHat, Contact2, ClipboardSignature, X, ShoppingBag } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { LayoutDashboard, FolderKanban, Users, BarChart3, Settings, HelpCircle, HardHat, Contact2, ClipboardSignature, X, ShoppingBag, Sparkles } from 'lucide-react';
+import { moduleService } from '../services/moduleService';
+import { ModuleId } from '../moduleConfig';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,20 +12,55 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, user, onMenuClose }) => {
-  const menuItems = [
-    { id: 'dashboard', label: '總覽面板', icon: LayoutDashboard },
-    { id: 'projects', label: '專案管理', icon: FolderKanban },
-    { id: 'dispatch', label: '派工紀錄', icon: ClipboardSignature },
-    { id: 'customers', label: '客戶資料', icon: Contact2 },
-    { id: 'team', label: '團隊成員', icon: Users },
-    { id: 'vendors', label: '廠商管理', icon: ShoppingBag },
-    { id: 'analytics', label: '數據分析', icon: BarChart3 },
+  const [enabledModules, setEnabledModules] = useState<ModuleId[]>([]);
+
+  useEffect(() => {
+    // Load initial modules
+    setEnabledModules(moduleService.getEnabledModules());
+
+    // Listen for module changes
+    const unsubscribe = moduleService.onChange((modules) => {
+      setEnabledModules(modules);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Map tab IDs to module IDs
+  const tabToModuleMap: Record<string, ModuleId> = {
+    'dashboard': ModuleId.DASHBOARD,
+    'projects': ModuleId.PROJECTS,
+    'dispatch': ModuleId.DISPATCH,
+    'customers': ModuleId.CUSTOMERS,
+    'team': ModuleId.TEAM,
+    'vendors': ModuleId.VENDORS,
+    'analytics': ModuleId.ANALYTICS
+  };
+
+  const allMenuItems = [
+    { id: 'dashboard', label: '總覽面板', icon: LayoutDashboard, moduleId: ModuleId.DASHBOARD },
+    { id: 'projects', label: '專案管理', icon: FolderKanban, moduleId: ModuleId.PROJECTS },
+    { id: 'dispatch', label: '派工紀錄', icon: ClipboardSignature, moduleId: ModuleId.DISPATCH },
+    { id: 'customers', label: '客戶資料', icon: Contact2, moduleId: ModuleId.CUSTOMERS },
+    { id: 'team', label: '團隊成員', icon: Users, moduleId: ModuleId.TEAM },
+    { id: 'vendors', label: '廠商管理', icon: ShoppingBag, moduleId: ModuleId.VENDORS },
+    { id: 'analytics', label: '數據分析', icon: BarChart3, moduleId: ModuleId.ANALYTICS },
   ];
+
+  // Filter menu items based on enabled modules
+  const menuItems = allMenuItems.filter(item =>
+    enabledModules.includes(item.moduleId)
+  );
 
   const bottomItems = [
     { id: 'settings', label: '設定', icon: Settings },
     { id: 'help', label: '協助中心', icon: HelpCircle },
   ];
+
+  // Add Module Manager for SuperAdmin
+  if (user.role === 'SuperAdmin') {
+    bottomItems.unshift({ id: 'modules', label: '模組管理', icon: Sparkles });
+  }
 
   return (
     <aside className="h-full w-full bg-stone-900 text-white flex flex-col shadow-2xl">

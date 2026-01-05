@@ -16,13 +16,16 @@ import TeamModal from './components/TeamModal';
 import VendorModal from './components/VendorModal';
 import LeadToProjectModal from './components/LeadToProjectModal';
 import Login from './components/Login';
+import ModuleManager from './components/ModuleManager';
 import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as LucideUser, Trash2, ShoppingBag, Receipt, Pencil, X, ExternalLink, Download } from 'lucide-react';
 import NotificationPanel from './components/NotificationPanel';
 import { MOCK_PROJECTS, MOCK_DEPARTMENTS, MOCK_TEAM_MEMBERS } from './constants';
 import { Project, ProjectStatus, Customer, TeamMember, User, Department, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead } from './types';
 import { googleDriveService, DEFAULT_CLIENT_ID } from './services/googleDriveService';
+import { moduleService } from './services/moduleService';
+import { ModuleId } from './moduleConfig';
 
-// Build Trigger: 2026-01-04 Secure AI Config
+// Build Trigger: 2026-01-05 Module System Integration
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -945,13 +948,13 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === 'dashboard' && <Dashboard
+              {activeTab === 'dashboard' && moduleService.isModuleEnabled(ModuleId.DASHBOARD) && <Dashboard
                 projects={filteredData.projects}
                 leads={leads}
                 onConvertLead={handleConvertLead}
                 onProjectClick={(id) => { setSelectedProjectId(id); setActiveTab('projects'); }}
               />}
-              {activeTab === 'projects' && <ProjectList
+              {activeTab === 'projects' && moduleService.isModuleEnabled(ModuleId.PROJECTS) && <ProjectList
                 projects={filteredData.projects}
                 user={user}
                 onAddClick={() => { setEditingProject(null); setIsModalOpen(true); }}
@@ -990,7 +993,8 @@ const App: React.FC = () => {
                   lastSyncTime={lastCloudSync}
                 />
               )}
-              {activeTab === 'team' && <TeamList
+              {activeTab === 'modules' && <ModuleManager userRole={user.role} />}
+              {activeTab === 'team' && moduleService.isModuleEnabled(ModuleId.TEAM) && <TeamList
                 members={filteredData.teamMembers}
                 departments={MOCK_DEPARTMENTS}
                 projects={filteredData.projects}
@@ -1004,7 +1008,7 @@ const App: React.FC = () => {
                   }
                 }}
               />}
-              {activeTab === 'customers' && <CustomerList
+              {activeTab === 'customers' && moduleService.isModuleEnabled(ModuleId.CUSTOMERS) && <CustomerList
                 customers={filteredData.customers}
                 onAddClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
                 onEditClick={(c) => { setEditingCustomer(c); setIsCustomerModalOpen(true); }}
@@ -1016,10 +1020,10 @@ const App: React.FC = () => {
                   }
                 }}
               />}
-              {activeTab === 'dispatch' && <DispatchManager projects={filteredData.projects} teamMembers={filteredData.teamMembers} onAddDispatch={(pid, ass) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: [ass, ...(p.workAssignments || [])], updatedAt: new Date().toISOString() } : p))} onDeleteDispatch={(pid, aid) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: (p.workAssignments || []).filter(a => a.id !== aid), updatedAt: new Date().toISOString() } : p))} />}
-              {activeTab === 'analytics' && <Analytics projects={filteredData.projects} />}
+              {activeTab === 'dispatch' && moduleService.isModuleEnabled(ModuleId.DISPATCH) && <DispatchManager projects={filteredData.projects} teamMembers={filteredData.teamMembers} onAddDispatch={(pid, ass) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: [ass, ...(p.workAssignments || [])], updatedAt: new Date().toISOString() } : p))} onDeleteDispatch={(pid, aid) => setProjects(prev => prev.map(p => p.id === pid ? { ...p, workAssignments: (p.workAssignments || []).filter(a => a.id !== aid), updatedAt: new Date().toISOString() } : p))} />}
+              {activeTab === 'analytics' && moduleService.isModuleEnabled(ModuleId.ANALYTICS) && <Analytics projects={filteredData.projects} />}
 
-              {activeTab === 'vendors' && (
+              {activeTab === 'vendors' && moduleService.isModuleEnabled(ModuleId.VENDORS) && (
                 <div className="p-4 lg:p-8 space-y-6">
                   <div className="flex justify-between items-center">
                     <h2 className="text-xl font-black text-stone-900 tracking-tight">廠商與工班管理</h2>

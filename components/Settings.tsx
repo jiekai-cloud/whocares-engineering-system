@@ -2,7 +2,7 @@
 import React, { useState, useMemo, FC } from 'react';
 import {
   User, ChevronRight, Download, ShieldCheck,
-  Cloud, CloudOff, RefreshCw, Database, HardDrive, FileJson, UploadCloud, RotateCcw, Zap, Info, AlertTriangle, Github, Globe, Copy, Check, ShieldAlert
+  Cloud, CloudOff, RefreshCw, Database, HardDrive, FileJson, UploadCloud, RotateCcw, Zap, Info, AlertTriangle, Github, Globe, Copy, Check, ShieldAlert, LayoutDashboard
 } from 'lucide-react';
 import { Project, Customer, TeamMember, User as UserType } from '../types';
 import { BACKUP_FILENAME } from '../services/googleDriveService';
@@ -67,6 +67,11 @@ const Settings: FC<SettingsProps> = ({
     { id: 'deploy', label: '部署助手', icon: Github },
     { id: 'data', label: '資料安全', icon: ShieldCheck },
   ];
+
+  // Add modules section for SuperAdmin
+  if (user.role === 'SuperAdmin') {
+    sections.push({ id: 'modules', label: '功能模組', icon: LayoutDashboard });
+  }
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto animate-in fade-in">
@@ -276,6 +281,32 @@ const Settings: FC<SettingsProps> = ({
                 </div>
                 <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${isReadOnly ? 'bg-stone-900 text-orange-400' : 'bg-stone-100 text-stone-500'}`}>
                   權限角色：{isReadOnly ? '訪客 (唯讀)' : user.role}
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'modules' && (
+              <div className="space-y-8 animate-in slide-in-from-right-4">
+                <div className="flex items-center gap-5">
+                  <div className="p-5 rounded-[2rem] bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg">
+                    <LayoutDashboard size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-stone-900 uppercase tracking-tight">功能模組管理</h3>
+                    <p className="text-sm text-stone-500 font-medium">為不同客戶設定所需功能</p>
+                  </div>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-100 p-8 rounded-[2rem] space-y-4 text-center">
+                  <div className="flex items-start gap-3 justify-center">
+                    <Info className="text-orange-600 mt-1" size={18} />
+                    <div className="space-y-2">
+                      <p className="text-sm font-black text-orange-900">進階模組管理功能</p>
+                      <p className="text-xs text-orange-700 leading-relaxed font-bold max-w-lg">
+                        請前往側邊欄的「模組管理」查看完整的模組配置介面，您可以在那裡啟用/停用功能模組、管理依賴關係，以及匯入/匯出配置。
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
