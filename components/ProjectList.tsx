@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, FileSpreadsheet, Pencil, Trash2, CalendarDays, FilterX, Activity, XCircle, ChevronLeft, ChevronRight, Hash, ShieldAlert, LayoutGrid, List, Zap } from 'lucide-react';
+import { Search, Plus, FileSpreadsheet, Pencil, Trash2, CalendarDays, FilterX, Activity, XCircle, ChevronLeft, ChevronRight, Hash, ShieldAlert, LayoutGrid, List, Zap, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Project, ProjectStatus, User } from '../types';
 import { exportProjectsToCSV } from '../utils/csvExport';
 
@@ -21,13 +21,31 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, user, onAddClick, o
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table'); // 新增視圖模式
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  const [sortBy, setSortBy] = useState<'id' | 'manager' | 'status' | 'progress' | 'budget' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const isReadOnly = user.role === 'Guest';
 
-  // 1. 強化搜尋與篩選邏輯
+  // Sort toggle handler
+  const handleSort = (field: 'id' | 'manager' | 'status' | 'progress' | 'budget') => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // Render sort indicator
+  const SortIndicator = ({ field }: { field: string }) => {
+    if (sortBy !== field) return <ChevronsUpDown size={12} className="text-stone-300" />;
+    return sortOrder === 'asc' ? <ChevronUp size={12} className="text-orange-600" /> : <ChevronDown size={12} className="text-orange-600" />;
+  };
+
+  // 1. 強化搜尋與篩選邏輯（含排序）
   const filteredProjects = useMemo(() => {
     setCurrentPage(1); // 搜尋時重置分頁
-    return projects.filter(p => {
+    let result = projects.filter(p => {
       const matchSearch =
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -35,7 +53,45 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, user, onAddClick, o
       const matchStatus = selectedStatus === 'all' || p.status === selectedStatus;
       return matchSearch && matchStatus;
     });
-  }, [projects, searchTerm, selectedStatus]);
+
+    // Apply sorting
+    if (sortBy) {
+      result.sort((a, b) => {
+        let aVal: any, bVal: any;
+
+        switch (sortBy) {
+          case 'id':
+            aVal = a.id;
+            bVal = b.id;
+            break;
+          case 'manager':
+            aVal = a.manager || '';
+            bVal = b.manager || '';
+            break;
+          case 'status':
+            aVal = a.status;
+            bVal = b.status;
+            break;
+          case 'progress':
+            aVal = a.progress || 0;
+            bVal = b.progress || 0;
+            break;
+          case 'budget':
+            aVal = a.budget || 0;
+            bVal = b.budget || 0;
+            break;
+        }
+
+        if (sortOrder === 'asc') {
+          return aVal > bVal ? 1 : -1;
+        } else {
+          return aVal < bVal ? 1 : -1;
+        }
+      });
+    }
+
+    return result;
+  }, [projects, searchTerm, selectedStatus, sortBy, sortOrder]);
 
   // 2. 分頁邏輯
   const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
@@ -126,11 +182,36 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, user, onAddClick, o
           <table className="w-full text-left min-w-[850px]">
             <thead className="bg-stone-50 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">案號 / 案件名稱</th>
-                <th className="px-6 py-4">業主 / 負責人</th>
-                <th className="px-6 py-4 text-center">當前狀態</th>
-                <th className="px-6 py-4">進度</th>
-                <th className="px-6 py-4 text-right">合約預算</th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('id')}>
+                  <div className="flex items-center gap-2">
+                    案號 / 案件名稱
+                    <SortIndicator field="id" />
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('manager')}>
+                  <div className="flex items-center gap-2">
+                    業主 / 負責人
+                    <SortIndicator field="manager" />
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-center cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('status')}>
+                  <div className="flex items-center justify-center gap-2">
+                    當前狀態
+                    <SortIndicator field="status" />
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('progress')}>
+                  <div className="flex items-center gap-2">
+                    進度
+                    <SortIndicator field="progress" />
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-right cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('budget')}>
+                  <div className="flex items-center justify-end gap-2">
+                    合約預算
+                    <SortIndicator field="budget" />
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-center">操作</th>
               </tr>
             </thead>
