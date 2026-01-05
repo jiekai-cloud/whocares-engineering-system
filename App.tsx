@@ -203,17 +203,33 @@ const App: React.FC = () => {
           };
 
           return projects.map(p => {
+            let updatedProject = { ...p };
+
+            // Specific fix: JW2601907 should be JW2601003
+            if (p.id === 'JW2601907') {
+              updatedProject.id = 'JW2601003';
+              console.log(`Fixed specific project ID: JW2601907 -> JW2601003`);
+            }
+
             // Check if ID is in old format (contains 4-digit year like 2026)
-            const oldFormatMatch = p.id.match(/^([A-Z]+)(\d{4})(\d{3,4})$/);
+            const oldFormatMatch = updatedProject.id.match(/^([A-Z]+)(\d{4})(\d{3,4})$/);
             if (oldFormatMatch) {
               const [, prefix, year, serial] = oldFormatMatch;
               const yearShort = year.slice(-2);
               const serialPadded = serial.padStart(3, '0');
               const newId = `${prefix}${yearShort}01${serialPadded}`;
-              console.log(`Migrating project ID: ${p.id} -> ${newId}`);
-              return { ...p, id: newId };
+              console.log(`Migrating project ID: ${updatedProject.id} -> ${newId}`);
+              updatedProject.id = newId;
             }
-            return p;
+
+            // Ensure manager field exists (fallback to quotationManager or default)
+            if (!updatedProject.manager && updatedProject.quotationManager) {
+              updatedProject.manager = updatedProject.quotationManager;
+            } else if (!updatedProject.manager && !updatedProject.quotationManager) {
+              updatedProject.manager = '未指定';
+            }
+
+            return updatedProject;
           });
         };
 
