@@ -1191,18 +1191,20 @@ const App: React.FC = () => {
           const year = new Date().getFullYear();
           const yearShort = year.toString().slice(-2); // 取後兩碼，例如 2026 -> 26
 
-          // 找尋全系統當年度的最末流水號 (兼容新舊格式)
-          const sameYearProjects = projects.filter(p =>
-            p.id.includes(year.toString()) || p.id.includes(`${yearShort}01`)
-          );
+          // 找尋全系統的最大流水號（不分來源、不分年份）
           let sequence = 1;
-          if (sameYearProjects.length > 0) {
-            // 從所有專案中提取最後三碼流水號
-            const sequences = sameYearProjects.map(p => {
-              const match = p.id.match(/\d{3}$/);
-              return match ? parseInt(match[0]) : 0;
-            });
-            sequence = Math.max(...sequences) + 1;
+          if (projects.length > 0) {
+            // 從所有專案中提取最後三碼流水號，找出最大值
+            const sequences = projects
+              .map(p => {
+                const match = p.id.match(/\d{3}$/);
+                return match ? parseInt(match[0]) : 0;
+              })
+              .filter(num => num > 0);
+
+            if (sequences.length > 0) {
+              sequence = Math.max(...sequences) + 1;
+            }
           }
 
           const newId = `${prefix}${yearShort}01${sequence.toString().padStart(3, '0')}`;
