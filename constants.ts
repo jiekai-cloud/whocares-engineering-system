@@ -13,7 +13,7 @@ export const MOCK_DEPARTMENTS: Department[] = [
 
 export const MOCK_PROJECTS: Project[] = [
   {
-    id: 'BNI202601001',
+    id: 'BNI2601001',
     departmentId: 'DEPT-6', // 業務部
     name: '台北信義室內裝修案',
     category: '室內裝修',
@@ -33,7 +33,7 @@ export const MOCK_PROJECTS: Project[] = [
     financials: { labor: 35, material: 45, subcontractor: 15, other: 5 }
   },
   {
-    id: 'CO202603001',
+    id: 'CORP2601002',
     departmentId: 'DEPT-6', // 業務部
     name: '台中商業辦公室擴建',
     category: '室內裝修',
@@ -53,7 +53,7 @@ export const MOCK_PROJECTS: Project[] = [
     financials: { labor: 25, material: 55, subcontractor: 15, other: 5 }
   },
   {
-    id: 'RE202604001',
+    id: 'AB2601003',
     departmentId: 'DEPT-6', // 業務部
     name: '高雄住宅防水工程',
     category: '防水工程',
