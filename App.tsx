@@ -1254,7 +1254,9 @@ const App: React.FC = () => {
             // 從所有專案中提取最後三碼流水號，找出最大值
             const sequences = projects
               .map(p => {
-                const match = p.id.match(/(\d{3})$/);
+                // Modified Regex: Strictly match PREFIX + (YY|YYYY) + MM + SEQ(3)
+                // This ensures we ignore 6-digit legacy IDs like YYMMDD (e.g. 251217 -> 217)
+                const match = p.id.match(/[A-Z]+(?:20\d{2}|\d{2})\d{2}(\d{3})$/);
                 return match ? parseInt(match[1], 10) : 0;
               })
               .filter(num => !isNaN(num) && num > 0 && num < 900);
