@@ -133,10 +133,85 @@ const App: React.FC = () => {
     return merged;
   }, []);
 
+  // Helper: Normalize, Correct, and Deduplicate Projects
+  // This ensures that whether data comes from LocalStorage or Cloud, it strictly follows our ID rules
+  const normalizeProjects = useCallback((projects: Project[]): Project[] => {
+    // 0. ID CORRECTION: Enforce correct IDs based on Project Name or known Legacy IDs
+    let processed = projects.map(p => {
+      // Rule 1: Fix Zhishan (User requested 001)
+      if (p.name.includes('至善') || p.id === 'BNI2601911') return { ...p, id: 'BNI2601001' };
+      // Rule 2: Fix Guishan (002)
+      if (p.name.includes('龜山')) return { ...p, id: 'BNI2601002' };
+      // Rule 3: Fix Guangfu North (004) - Fixes missing project by catching legacy ID
+      if (p.name.includes('光復北路') || p.id === 'BNI2601908') return { ...p, id: 'BNI2601004' };
+      // Rule 4: Fix Guangfu South (005) - Fixes legacy ID persistence
+      if (p.name.includes('光復南路') || p.id === 'OC2601909') return { ...p, id: 'OC2601005' };
+      return p;
+    });
+
+    // Migration: Update old project ID format to new format
+    const sourcePrefixes: Record<string, string> = {
+      'BNI': 'BNI', '台塑集團': 'FPC', '士林電機': 'SE', '信義居家': 'SY',
+      '企業': 'CORP', '新建工程': 'NEW', '網路客': 'OC', '住宅': 'AB',
+      'JW': 'JW', '台灣美光晶圓': 'MIC'
+    };
+
+    processed = processed.map(p => {
+      let updatedProject = { ...p };
+      // CLEANUP: Fix incorrectly migrated IDs (format: PREFIX0101XXX)
+      const brokenFormatMatch = updatedProject.id.match(/^([A-Z]+)0101(\d{3})$/);
+      if (brokenFormatMatch) {
+        const [, prefix, serial] = brokenFormatMatch;
+        const year = new Date().getFullYear();
+        const yearShort = year.toString().slice(-2);
+        updatedProject.id = `${prefix}${yearShort}01${serial}`;
+      }
+      // Specific fix: JW2601907 should be JW2601003
+      if (p.id === 'JW2601907') updatedProject.id = 'JW2601003';
+
+      // Old format migration
+      const oldFormatMatch = updatedProject.id.match(/^([A-Z]+)(20\d{2})(\d{3,4})$/);
+      if (oldFormatMatch) {
+        const [, prefix, year, serial] = oldFormatMatch;
+        const yearShort = year.slice(-2);
+        const serialPadded = serial.padStart(3, '0');
+        updatedProject.id = `${prefix}${yearShort}01${serialPadded}`;
+      }
+      return updatedProject;
+    });
+
+    // Deduplicate projects by ID
+    const projectMap = new Map<string, Project>();
+    processed.forEach(p => {
+      if (!projectMap.has(p.id)) {
+        projectMap.set(p.id, p);
+      } else {
+        const existing = projectMap.get(p.id)!;
+        // Conflict Resolution: Prefer "Canonical Name"
+        const isCurrentCanonical = MOCK_PROJECTS.some(mp => mp.id === p.id && mp.name === p.name);
+        const isExistingCanonical = MOCK_PROJECTS.some(mp => mp.id === existing.id && mp.name === existing.name);
+        if (isCurrentCanonical && !isExistingCanonical) {
+          projectMap.set(p.id, p);
+        } else if (!isExistingCanonical) {
+          // If neither is canonical, prefer the one with later update time, or just keep existing
+          const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+          const currentTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+          if (currentTime > existingTime) projectMap.set(p.id, p);
+        }
+      }
+    });
+
+    return Array.from(projectMap.values());
+  }, []);
+
   const updateStateWithMerge = useCallback((cloudData: any) => {
     if (!cloudData) return;
 
-    setProjects(prev => mergeData(prev, cloudData.projects || []));
+    // Apply rigorous normalization to cloud data BEFORE merging
+    // This prevents "bad" IDs from the cloud (e.g. BNI2601911) from bypassing local checks and creating duplicates
+    const cleanCloudProjects = normalizeProjects(cloudData.projects || []);
+
+    setProjects(prev => mergeData(prev, cleanCloudProjects));
     setCustomers(prev => mergeData(prev, cloudData.customers || []));
     setTeamMembers(prev => mergeData(prev, cloudData.teamMembers || []));
     setVendors(prev => mergeData(prev, cloudData.vendors || []));
@@ -152,7 +227,7 @@ const App: React.FC = () => {
         return true;
       }).slice(0, 100);
     });
-  }, [mergeData]);
+  }, [mergeData, normalizeProjects]);
 
   // 正式上線初始化邏輯
   useEffect(() => {
@@ -190,88 +265,9 @@ const App: React.FC = () => {
           }
         };
 
-        // Migration: Update old project ID format to new format
-        const migrateProjectIds = (projects: Project[]): Project[] => {
-          const sourcePrefixes: Record<string, string> = {
-            'BNI': 'BNI',
-            '台塑集團': 'FPC',
-            '士林電機': 'SE',
-            '信義居家': 'SY',
-            '企業': 'CORP',
-            '新建工程': 'NEW',
-            '網路客': 'OC',
-            '住宅': 'AB',
-            'JW': 'JW',
-            '台灣美光晶圓': 'MIC'
-          };
-
-          return projects.map(p => {
-            let updatedProject = { ...p };
-
-            // CLEANUP: Fix incorrectly migrated IDs (format: PREFIX0101XXX)
-            const brokenFormatMatch = updatedProject.id.match(/^([A-Z]+)0101(\d{3})$/);
-            if (brokenFormatMatch) {
-              const [, prefix, serial] = brokenFormatMatch;
-              const year = new Date().getFullYear();
-              const yearShort = year.toString().slice(-2);
-              const fixedId = `${prefix}${yearShort}01${serial}`;
-              console.log(`Fixing broken ID: ${updatedProject.id} -> ${fixedId}`);
-              updatedProject.id = fixedId;
-            }
-
-            // Specific fix: JW2601907 should be JW2601003
-            if (p.id === 'JW2601907') {
-              updatedProject.id = 'JW2601003';
-              console.log(`Fixed specific project ID: JW2601907 -> JW2601003`);
-            }
-
-            // Check if ID is in old format (must have 20XX year, not already migrated)
-            // Old format: PREFIX + 20XX + serial (e.g., BNI2026001)
-            // New format: PREFIX + YY + 01 + serial (e.g., BNI2601001)
-            const oldFormatMatch = updatedProject.id.match(/^([A-Z]+)(20\d{2})(\d{3,4})$/);
-            if (oldFormatMatch) {
-              const [, prefix, year, serial] = oldFormatMatch;
-              const yearShort = year.slice(-2);
-              const serialPadded = serial.padStart(3, '0');
-              const newId = `${prefix}${yearShort}01${serialPadded}`;
-              console.log(`Migrating project ID: ${updatedProject.id} -> ${newId}`);
-              updatedProject.id = newId;
-            }
-
-            // Ensure manager field exists (fallback to quotationManager or default)
-            if (!updatedProject.manager && updatedProject.quotationManager) {
-              updatedProject.manager = updatedProject.quotationManager;
-            } else if (!updatedProject.manager && !updatedProject.quotationManager) {
-              updatedProject.manager = '未指定';
-            }
-
-            return updatedProject;
-          });
-        };
-
-        let initialProjects = parseSafely('bt_projects', MOCK_PROJECTS);
-
-        // RECOVERY: Force restore specific projects if they are missing from localStorage
-        // This handles the case where localStorage has 'valid' but incomplete data (e.g. after a reset)
-        // RECOVERY: Force restore specific projects
+        // 0. Force Restore Critical Projects (Missing from localStorage)
+        // This handles cases where localStorage has 'valid' but incomplete data
         const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005'];
-
-        // 0. ID CORRECTION: Enforce correct IDs based on Project Name or known Legacy IDs
-        initialProjects = initialProjects.map((p: any) => {
-          // Rule 1: Fix Zhishan (User requested 001)
-          if (p.name.includes('至善') || p.id === 'BNI2601911') return { ...p, id: 'BNI2601001' };
-
-          // Rule 2: Fix Guishan (002)
-          if (p.name.includes('龜山')) return { ...p, id: 'BNI2601002' };
-
-          // Rule 3: Fix Guangfu North (004) - Fixes missing project by catching legacy ID
-          if (p.name.includes('光復北路') || p.id === 'BNI2601908') return { ...p, id: 'BNI2601004' };
-
-          // Rule 4: Fix Guangfu South (005) - Fixes legacy ID persistence
-          if (p.name.includes('光復南路') || p.id === 'OC2601909') return { ...p, id: 'OC2601005' };
-
-          return p;
-        });
 
         // 1. Recover Soft-Deleted Projects (Undo delete)
         initialProjects = initialProjects.map((p: any) => {
@@ -286,7 +282,12 @@ const App: React.FC = () => {
         // 2. Restore Missing Projects (Completely missing)
         const missingProjects = MOCK_PROJECTS.filter(mockP =>
           criticalRestorationIds.includes(mockP.id) &&
-          !initialProjects.some((p: Project) => p.id === mockP.id)
+          !initialProjects.some((p: Project) =>
+            // Check against both ID and potentially un-migrated ID/Name to be safe, 
+            // but normalizeProjects will handle the ID fix later.
+            // Here we just want to ensure we inject if absolutely missing.
+            p.id === mockP.id || (p.name === mockP.name)
+          )
         );
 
         if (missingProjects.length > 0) {
@@ -294,33 +295,9 @@ const App: React.FC = () => {
           initialProjects = [...initialProjects, ...missingProjects];
         }
 
-        const migratedProjects = migrateProjectIds(initialProjects);
-
-        // Deduplicate projects by ID (Strict: Only ONE project per ID allowed)
-        // This handles cases where remapping produced identical IDs from different source names
-        const projectMap = new Map<string, Project>();
-
-        migratedProjects.forEach((p: Project) => {
-          if (!projectMap.has(p.id)) {
-            projectMap.set(p.id, p);
-          } else {
-            const existing = projectMap.get(p.id)!;
-
-            // Conflict Resolution:
-            // 1. Prefer the version with the "Canonical Name" (matches official records)
-            //    This fixes "桃園市..." vs "桃園..." duplication
-            const isCurrentCanonical = MOCK_PROJECTS.some(mp => mp.id === p.id && mp.name === p.name);
-            const isExistingCanonical = MOCK_PROJECTS.some(mp => mp.id === existing.id && mp.name === existing.name);
-
-            if (isCurrentCanonical && !isExistingCanonical) {
-              projectMap.set(p.id, p);
-            }
-            // 2. If both are non-canonical, prefer the one with more data (e.g. has financials)
-            //    (Simplified: just keep existing unless canonical found)
-          }
-        });
-
-        const deduplicatedProjects = Array.from(projectMap.values());
+        // 3. Normalize and Deduplicate
+        // Use the same shared logic as cloud sync
+        const deduplicatedProjects = normalizeProjects(initialProjects);
 
         // CRITICAL FIX: Update State FIRST before attempting to save to localStorage
         // This ensures that even if storage is full (QuotaExceededError), the user still sees their data.
