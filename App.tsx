@@ -254,6 +254,18 @@ const App: React.FC = () => {
         // RECOVERY: Force restore specific projects if they are missing from localStorage
         // This handles the case where localStorage has 'valid' but incomplete data (e.g. after a reset)
         const criticalRestorationIds = ['BNI2601001', 'BNI2601002'];
+
+        // 1. Recover Soft-Deleted Projects (Undo delete)
+        initialProjects = initialProjects.map((p: any) => {
+          if (criticalRestorationIds.includes(p.id) && p.deletedAt) {
+            console.log(`Force recovering soft-deleted project: ${p.id}`);
+            const { deletedAt, ...rest } = p; // Remove deletedAt
+            return { ...rest, updatedAt: new Date().toISOString() };
+          }
+          return p;
+        });
+
+        // 2. Restore Missing Projects (Completely missing)
         const missingProjects = MOCK_PROJECTS.filter(mockP =>
           criticalRestorationIds.includes(mockP.id) &&
           !initialProjects.some((p: Project) => p.id === mockP.id)
