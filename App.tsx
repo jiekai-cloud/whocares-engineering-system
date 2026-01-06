@@ -288,31 +288,36 @@ const App: React.FC = () => {
         const migratedProjects = migrateProjectIds(initialProjects);
 
         // Deduplicate projects by name (keep the one with newer format ID)
-        const deduplicatedProjects = migratedProjects.reduce((acc: Project[], current: Project) => {
-          const existingIndex = acc.findIndex(p => p.name === current.name);
-          if (existingIndex >= 0) {
-            // Keep the one with the new format (contains '01' after year)
-            const existing = acc[existingIndex];
-            if (current.id.includes('01') && !existing.id.includes('01')) {
-              acc[existingIndex] = current; // Replace with new format
-              console.log(`Deduplicating: keeping ${current.id} over ${existing.id}`);
-            } else if (!current.id.includes('01') && existing.id.includes('01')) {
-              console.log(`Deduplicating: keeping ${existing.id} over ${current.id}`);
-              // Keep existing, don't add current
-            } else if (current.id.includes('01') && existing.id.includes('01')) {
-              // Both are new format, keep the one with smaller serial number
-              const currentSerial = parseInt(current.id.slice(-3));
-              const existingSerial = parseInt(existing.id.slice(-3));
-              if (currentSerial < existingSerial) {
-                acc[existingIndex] = current;
-                console.log(`Deduplicating: keeping ${current.id} over ${existing.id}`);
-              }
-            }
+        // Deduplicate projects by name (Aggressive: Only ONE project per name allowed)
+        const projectMap = new Map<string, Project>();
+
+        migratedProjects.forEach((p: Project) => {
+          if (!projectMap.has(p.name)) {
+            projectMap.set(p.name, p);
           } else {
-            acc.push(current);
+            const existing = projectMap.get(p.name)!;
+
+            // Conflict Resolution Rules:
+            // 1. Prefer correct IDs for critical projects
+            if (p.id === 'BNI2601001' && existing.id !== 'BNI2601001') {
+              projectMap.set(p.name, p); // Zhishan 001 wins
+            } else if (p.id === 'BNI2601002' && existing.id !== 'BNI2601002') {
+              projectMap.set(p.name, p); // Guishan 002 wins
+            } else if (p.id === 'BNI2601004' && existing.id !== 'BNI2601004') {
+              projectMap.set(p.name, p); // Guangfu 004 wins
+            }
+            // 2. Prefer '01' format over '19' format if IDs are different but same project
+            else if (p.id.includes('01') && !existing.id.includes('01')) {
+              projectMap.set(p.name, p);
+            }
+            // 3. Fallback: Prefer newer updated date or generic tie-break
+            else {
+              // Keep existing (first one found usually fine, or could compare dates)
+            }
           }
-          return acc;
-        }, []);
+        });
+
+        const deduplicatedProjects = Array.from(projectMap.values());
 
         // CRITICAL FIX: Update State FIRST before attempting to save to localStorage
         // This ensures that even if storage is full (QuotaExceededError), the user still sees their data.
