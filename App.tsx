@@ -261,6 +261,7 @@ const App: React.FC = () => {
           if (p.name.includes('至善')) return { ...p, id: 'BNI2601001' };
           if (p.name.includes('龜山')) return { ...p, id: 'BNI2601002' };
           if (p.name.includes('光復北路')) return { ...p, id: 'BNI2601004' }; // Added Rule
+          if (p.name.includes('光復南路')) return { ...p, id: 'OC2601005' }; // Added Rule for Guangfu South Road
           return p;
         });
 
