@@ -256,12 +256,20 @@ const App: React.FC = () => {
         // RECOVERY: Force restore specific projects
         const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005'];
 
-        // 0. ID CORRECTION: Enforce correct IDs based on Project Name (User Request: Zhishan -> 001)
+        // 0. ID CORRECTION: Enforce correct IDs based on Project Name or known Legacy IDs
         initialProjects = initialProjects.map((p: any) => {
-          if (p.name.includes('至善')) return { ...p, id: 'BNI2601001' };
+          // Rule 1: Fix Zhishan (User requested 001)
+          if (p.name.includes('至善') || p.id === 'BNI2601911') return { ...p, id: 'BNI2601001' };
+
+          // Rule 2: Fix Guishan (002)
           if (p.name.includes('龜山')) return { ...p, id: 'BNI2601002' };
-          if (p.name.includes('光復北路')) return { ...p, id: 'BNI2601004' }; // Added Rule
-          if (p.name.includes('光復南路')) return { ...p, id: 'OC2601005' }; // Added Rule for Guangfu South Road
+
+          // Rule 3: Fix Guangfu North (004) - Fixes missing project by catching legacy ID
+          if (p.name.includes('光復北路') || p.id === 'BNI2601908') return { ...p, id: 'BNI2601004' };
+
+          // Rule 4: Fix Guangfu South (005) - Fixes legacy ID persistence
+          if (p.name.includes('光復南路') || p.id === 'OC2601909') return { ...p, id: 'OC2601005' };
+
           return p;
         });
 
