@@ -22,7 +22,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, user, onAddClick, o
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
-  const [sortBy, setSortBy] = useState<'id' | 'manager' | 'status' | 'progress' | 'budget' | null>(null);
+  const [sortBy, setSortBy] = useState<'id' | 'manager' | 'status' | 'progress' | 'budget' | null>('id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const isReadOnly = user.role === 'Guest';
 
