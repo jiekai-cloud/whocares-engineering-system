@@ -13,7 +13,7 @@ export const MOCK_DEPARTMENTS: Department[] = [
 
 export const MOCK_PROJECTS: Project[] = [
   {
-    id: 'BNI2601001',
+    id: 'BNI2601002', // Swapped: Now 002
     departmentId: 'DEPT-6', // 業務部
     name: '桃園龜山民安街11號防水工程',
     category: '防水工程',
@@ -33,7 +33,7 @@ export const MOCK_PROJECTS: Project[] = [
     financials: { labor: 40, material: 30, subcontractor: 20, other: 10 }
   },
   {
-    id: 'BNI2601002',
+    id: 'BNI2601001', // Swapped: Now 001 as requested
     departmentId: 'DEPT-6', // 業務部
     name: '桃園至善街290號防水工程',
     category: '防水工程',

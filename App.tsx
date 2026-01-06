@@ -253,7 +253,15 @@ const App: React.FC = () => {
 
         // RECOVERY: Force restore specific projects if they are missing from localStorage
         // This handles the case where localStorage has 'valid' but incomplete data (e.g. after a reset)
+        // RECOVERY: Force restore specific projects
         const criticalRestorationIds = ['BNI2601001', 'BNI2601002'];
+
+        // 0. ID CORRECTION: Enforce correct IDs based on Project Name (User Request: Zhishan -> 001)
+        initialProjects = initialProjects.map((p: any) => {
+          if (p.name.includes('至善')) return { ...p, id: 'BNI2601001' };
+          if (p.name.includes('龜山')) return { ...p, id: 'BNI2601002' };
+          return p;
+        });
 
         // 1. Recover Soft-Deleted Projects (Undo delete)
         initialProjects = initialProjects.map((p: any) => {
