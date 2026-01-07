@@ -81,8 +81,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
             }
             break;
           case 'manager':
-            aVal = a.manager || '';
-            bVal = b.manager || '';
+            aVal = a.quotationManager || a.manager || '';
+            bVal = b.quotationManager || b.manager || '';
             break;
           case 'status':
             aVal = a.status;
@@ -258,11 +258,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="font-bold text-stone-700 text-xs">{p.client}</span>
-                      <div className="flex flex-col gap-0.5">
-                        {p.quotationManager && <span className="text-[9px] text-stone-400 font-medium">報價：{p.quotationManager}</span>}
-                        {p.engineeringManager && <span className="text-[9px] text-stone-400 font-medium">工程：{p.engineeringManager}</span>}
-                        {!p.quotationManager && !p.engineeringManager && <span className="text-[9px] text-stone-300 font-medium italic">未指定負責人</span>}
-                      </div>
+                      <span className="text-[10px] text-stone-400 font-medium whitespace-nowrap">負責人：{p.quotationManager || '未指定'}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -352,14 +348,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
 
                 <div className="grid grid-cols-2 gap-4 py-4 border-y border-stone-50">
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">業主</span>
-                    <p className="text-xs font-bold text-stone-900 truncate">{p.client}</p>
-                  </div>
-                  <div className="space-y-1">
                     <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">負責人</span>
                     <p className="text-xs font-bold text-stone-900 truncate">
-                      {p.engineeringManager || p.quotationManager || '未指定'}
+                      {p.quotationManager || '未指定'}
                     </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">業主</span>
+                    <p className="text-xs font-bold text-stone-900 truncate">{p.client}</p>
                   </div>
                 </div>
 

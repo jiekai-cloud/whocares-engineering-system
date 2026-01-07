@@ -290,8 +290,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight tracking-tight">{project.name}</h1>
           <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 font-bold uppercase">
             <span className="flex items-center gap-1"><MapPin size={12} className="text-slate-400" /> {project.location?.address || '無地址'}</span>
-            {project.quotationManager && <span className="bg-stone-100 px-2 py-0.5 rounded-full">報價：{project.quotationManager}</span>}
-            {project.engineeringManager && <span className="bg-stone-100 px-2 py-0.5 rounded-full font-black text-slate-700">工程：{project.engineeringManager}</span>}
+            <span className="bg-stone-100 px-2 py-0.5 rounded-full">負責人：{project.quotationManager || '未指定'}</span>
             <div className="flex items-center gap-1">
               <Activity size={12} />
               <select
