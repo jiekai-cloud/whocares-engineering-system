@@ -318,12 +318,11 @@ const App: React.FC = () => {
         const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005', 'JW2601003'];
 
         // 0a. AUTOMATED BACKUP SYSTEM (Safeguard)
-        // Before doing anything destructive, save a snapshot of current localStorage
+        // 使用 IndexedDB 備份，不佔用有限的 LocalStorage 空間
         try {
-          // If valid data exists, back it up to 'bt_backup_projects'
           if (initialProjects && initialProjects.length > 0) {
-            localStorage.setItem('bt_projects_backup', JSON.stringify(initialProjects));
-            console.log('✅ Auto-backup created: bt_projects_backup');
+            await storageService.setItem('bt_projects_backup', initialProjects);
+            console.log('✅ Auto-backup created in IndexedDB');
           }
         } catch (e) { console.error('Backup failed', e); }
 
@@ -979,8 +978,8 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               <div className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-2xl shadow-lg ${user.role === 'Guest' ? 'bg-stone-900 text-orange-400' : 'bg-stone-900 text-white'}`}>
                 <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${user.role === 'Guest' ? 'bg-orange-500' : 'bg-emerald-400'}`}></div>
-                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{user.role === 'Guest' ? '訪客唯讀' : 'v2.6 Cloud Engine'}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">v2.6</span>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{user.role === 'Guest' ? '訪客唯讀' : 'v2.7 Super-Sync'}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">v2.7</span>
               </div>
 
               {user.role !== 'Guest' && (
@@ -1140,22 +1139,22 @@ const App: React.FC = () => {
                   onDownloadBackup={() => {
                     googleDriveService.exportAsFile({ projects, customers, teamMembers, vendors });
                   }}
-                  onRestoreLocalBackup={() => {
+                  onRestoreLocalBackup={async () => {
                     try {
-                      const backupStr = localStorage.getItem('bt_projects_backup');
-                      if (backupStr) {
-                        const backupProjects = JSON.parse(backupStr);
-                        if (confirm(`找到備份 ${backupProjects.length} 個專案。\n確定要還原嗎？\n(這將覆蓋當前顯示的專案)`)) {
-                          setProjects(backupProjects);
-                          localStorage.setItem('bt_projects', backupStr);
-                          alert('✅ 已還原至本地備份！');
+                      const backupData = await storageService.getItem<Project[]>('bt_projects_backup', []);
+                      if (backupData && backupData.length > 0) {
+                        if (confirm(`找到備份 ${backupData.length} 個專案。\n確定要還原嗎？\n(這將覆蓋當前顯示的專案)`)) {
+                          setProjects(backupData);
+                          await storageService.setItem('bt_projects', backupData);
+                          alert('✅ 已從無限量空間還原備份！\n頁面即將重新整理。');
                           window.location.reload();
                         }
                       } else {
                         alert('找不到可用的本地備份。');
                       }
                     } catch (e) {
-                      alert('還原失敗：備份檔案損毀');
+                      console.error('Backup recovery failed', e);
+                      alert('還原失敗：備份內容可能已損毀');
                     }
                   }}
                   onDisconnectCloud={() => { setIsCloudConnected(false); localStorage.removeItem('bt_cloud_connected'); }}
