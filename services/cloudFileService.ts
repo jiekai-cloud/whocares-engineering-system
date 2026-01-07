@@ -137,7 +137,7 @@ class CloudFileService {
 
             return {
                 id: result.id,
-                url: `https://drive.google.com/thumbnail?id=${result.id}&sz=w1600`
+                url: `https://docs.google.com/uc?export=view&id=${result.id}&t=${Date.now()}`
             };
         } catch (e) {
             console.error('檔案上傳失敗:', e);
