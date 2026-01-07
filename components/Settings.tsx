@@ -308,6 +308,42 @@ const Settings: FC<SettingsProps> = ({
                         </button>
                       </div>
 
+                      {/* ID Correction Helper */}
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-[10px] text-orange-500 font-bold mb-2">案號修正助手：</p>
+                        <button
+                          onClick={() => {
+                            try {
+                              // Find projects with ID ending in 008
+                              const affectedProjects = projects.filter(p => p.id.endsWith('008'));
+                              if (affectedProjects.length === 0) {
+                                alert('找不到編號為 008 的案件。');
+                                return;
+                              }
+
+                              const targetId = affectedProjects[0].id.replace('008', '006');
+                              const confirmFix = confirm(`確定要將案件 ${affectedProjects[0].id} 的編號更正為 ${targetId} 嗎？`);
+
+                              if (confirmFix) {
+                                const updatedProjects = projects.map(p => {
+                                  if (p.id === affectedProjects[0].id) {
+                                    return { ...p, id: targetId, updatedAt: new Date().toISOString() };
+                                  }
+                                  return p;
+                                });
+                                onImportData({ projects: updatedProjects }, 'overwrite');
+                                alert('✅ 編號已成功更正為 006！');
+                              }
+                            } catch (e) {
+                              alert('修正失敗：' + (e as Error).message);
+                            }
+                          }}
+                          className="w-full bg-orange-50 hover:bg-orange-100 text-orange-600 py-2 rounded-lg text-xs font-bold transition-colors"
+                        >
+                          將案號 008 更正為 006
+                        </button>
+                      </div>
+
                       {/* Selective Import Handling */}
                     </div>
                   )}
