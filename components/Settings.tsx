@@ -291,8 +291,21 @@ const Settings: FC<SettingsProps> = ({
                               const response = await fetch('/backup_JW2601003.json');
                               if (!response.ok) throw new Error('Backup file not found');
                               const json = await response.json();
+
+                              // EMERGENCY DATA REPAIR
+                              if (json.projects) {
+                                json.projects = json.projects.map((p: any) => {
+                                  // 1. Force undelete JW2601003 / JW2601907
+                                  if (p.id === 'JW2601003' || p.id === 'JW2601907' || p.id === 'JW2026907') {
+                                    const { deletedAt, ...rest } = p;
+                                    return { ...rest, id: 'JW2601003' }; // Normalize ID and remove deletedAt
+                                  }
+                                  return p;
+                                });
+                              }
+
                               onImportData(json, 'overwrite');
-                              alert('已成功從緊急備份還原資料！');
+                              alert('已成功從緊急備份還原資料！\n(已自動修復刪除標記)');
                             } catch (e) {
                               alert('還原失敗：找不到備份檔案');
                             }
