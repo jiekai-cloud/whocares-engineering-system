@@ -256,16 +256,16 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
           <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-bold text-sm">
             <ArrowLeft size={16} /> <span className="hidden sm:inline">返回</span>
           </button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar touch-scroll sm:overflow-visible pb-1 sm:pb-0">
             {!isReadOnly && (
-              <>
-                <button onClick={() => setIsReportMode(true)} className="flex items-center gap-2 bg-white border border-blue-200 text-blue-600 px-3 py-1.5 rounded-xl text-[10px] font-black"><FileText size={14} /> 績效報表</button>
-                <button onClick={() => setIsCompletionReportMode(true)} className="flex items-center gap-2 bg-white border border-emerald-200 text-emerald-600 px-3 py-1.5 rounded-xl text-[10px] font-black"><CheckCircle size={14} /> 完工報告書</button>
-                <button onClick={() => onEdit(project)} className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-[10px] font-black"><Pencil size={14} /> 編輯</button>
-              </>
+              <div className="flex gap-2 whitespace-nowrap">
+                <button onClick={() => setIsReportMode(true)} className="flex items-center gap-2 bg-white border border-blue-200 text-blue-600 px-3 py-1.5 rounded-xl text-[10px] font-black shrink-0"><FileText size={14} /> 績效報表</button>
+                <button onClick={() => setIsCompletionReportMode(true)} className="flex items-center gap-2 bg-white border border-emerald-200 text-emerald-600 px-3 py-1.5 rounded-xl text-[10px] font-black shrink-0"><CheckCircle size={14} /> 完工報告書</button>
+                <button onClick={() => onEdit(project)} className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-[10px] font-black shrink-0"><Pencil size={14} /> 編輯</button>
+              </div>
             )}
             {isReadOnly && (
-              <div className="flex items-center gap-2 bg-stone-100 text-stone-400 px-3 py-1.5 rounded-xl text-[10px] font-black border border-stone-200">
+              <div className="flex items-center gap-2 bg-stone-100 text-stone-400 px-3 py-1.5 rounded-xl text-[10px] font-black border border-stone-200 whitespace-nowrap shrink-0">
                 <ShieldAlert size={14} /> 訪客唯讀權限
               </div>
             )}
@@ -314,8 +314,8 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
       </div>
 
       {/* 導覽標籤列 */}
-      <div className="px-4 py-3 bg-white border-b border-stone-100 shrink-0 no-print">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar touch-scroll pb-1">
+      <div className="px-0 sm:px-4 py-3 bg-white border-b border-stone-100 shrink-0 no-print relative">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar touch-scroll pb-1 px-4 sm:px-0 flex-nowrap w-full">
           {[
             { id: 'logs', label: '討論區', icon: MessageSquare },
             { id: 'inspection', label: 'AI 會勘', icon: Sparkles },
