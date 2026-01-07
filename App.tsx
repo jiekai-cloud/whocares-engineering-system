@@ -550,19 +550,30 @@ const App: React.FC = () => {
 
       const cloudData = await googleDriveService.loadFromCloud();
       if (cloudData && cloudData.projects && confirm('雲端發現現有數據，是否要切換為雲端版本？')) {
+        const teamData = cloudData.teamMembers || [];
         setProjects(cloudData.projects);
         setCustomers(cloudData.customers || []);
-        setTeamMembers(cloudData.teamMembers || []);
+        setTeamMembers(teamData);
         setActivityLogs(cloudData.activityLogs || []);
         setVendors(cloudData.vendors || []);
         setLastCloudSync(new Date().toLocaleTimeString());
 
+        // 重要：在自動登出前，強制將下載的資料存入 IndexedDB
+        // 否則 useEffect 可能來不及在登出前存檔，導致登入時找不到帳號
+        await Promise.all([
+          storageService.setItem('bt_projects', cloudData.projects),
+          storageService.setItem('bt_team', teamData),
+          storageService.setItem('bt_customers', cloudData.customers || []),
+          storageService.setItem('bt_vendors', cloudData.vendors || []),
+          storageService.setItem('bt_logs', cloudData.activityLogs || [])
+        ]);
+
         // 如果是初始化帳號，切換完數據後自動登出
         if (user?.role === 'SyncOnly') {
           setTimeout(() => {
-            alert('✅ 數據已還原！系統即將登出，請使用您的個人帳號進入。');
+            alert('✅ 數據同步完成！請使用您的「員工編號」正式登入。');
             handleLogout(true); // Force logout without confirmation
-          }, 1500);
+          }, 800);
         }
       } else {
         await handleCloudSync();
@@ -994,8 +1005,8 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               <div className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-2xl shadow-lg ${user.role === 'Guest' ? 'bg-stone-900 text-orange-400' : 'bg-stone-900 text-white'}`}>
                 <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${user.role === 'Guest' ? 'bg-orange-500' : 'bg-emerald-400'}`}></div>
-                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{user.role === 'Guest' ? '訪客唯讀' : 'v2.8 Hotfix'}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">v2.8</span>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{user.role === 'Guest' ? '訪客唯讀' : 'v2.9 Sync-Shield'}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">v2.9</span>
               </div>
 
               {user.role !== 'Guest' && (
