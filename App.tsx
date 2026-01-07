@@ -1394,22 +1394,22 @@ const App: React.FC = () => {
             return p;
           }));
         } else {
-          // 案件編號產生規則: [來源代碼][年份縮寫(YY)][月份(MM)][流水號(001)]
+          // 案件編號產生規則: [來源代碼][年份縮寫(YY)][月(MM)][流水號(001)]
           const prefix = sourcePrefixes[data.source || 'BNI'] || 'PJ';
           const now = new Date();
           const yearShort = now.getFullYear().toString().slice(-2);
           const month = (now.getMonth() + 1).toString().padStart(2, '0');
 
-          // 找尋全系統的最大流水號（不分來源、不分年份），確保流水號連貫
+          // 流水號計數改為「依字首+年份」獨立計數，且排除已永久刪除(isPurged)的案件以避免跳號
           let sequence = 1;
           if (projects.length > 0) {
+            const targetPattern = new RegExp(`^${prefix}${yearShort}`);
             const sequences = projects
+              .filter(p => !p.isPurged && targetPattern.test(p.id)) // 只計算同來源、同年份且未被永久刪除的案件
               .map(p => {
-                // Modified Regex: Strictly match PREFIX + (YY|YYYY) + MM + SEQ(3)
-                const match = p.id.match(/[A-Z]+(?:20\d{2}|\d{2})\d{2}(\d{3})$/);
+                const match = p.id.match(/(\d{3})$/);
                 return match ? parseInt(match[1], 10) : 0;
               })
-              // Valid sequences range 001-999
               .filter(num => !isNaN(num) && num > 0 && num < 1000);
 
             if (sequences.length > 0) {
