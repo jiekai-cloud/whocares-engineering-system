@@ -179,8 +179,16 @@ const App: React.FC = () => {
         const [, prefix, year, serial] = oldFormatMatch;
         const yearShort = year.slice(-2);
         const serialPadded = serial.padStart(3, '0');
+
+        // Special Case: JW projects should retain 4 digit year or handle specifically if needed
+        // But per request "JW2026907" -> "JW260907" (standard) or "JW2601003" (mapped)
+        // If it's already mapped above (Rule 0/Specific fix), this won't run.
+
         updatedProject.id = `${prefix}${yearShort}01${serialPadded}`;
       }
+
+      // CRITICAL FIX: If ID became "JW2601907", remap it to "JW2601003" immediately
+      if (updatedProject.id === 'JW2601907') updatedProject.id = 'JW2601003';
       return updatedProject;
     });
 
@@ -274,8 +282,8 @@ const App: React.FC = () => {
         let initialProjects = parseSafely('bt_projects', MOCK_PROJECTS);
 
         // 0. Force Restore Critical Projects
-        // CRITICAL CHANGE: Removed AB2601003 and JW2601003 to prevent overwriting user data with mock data.
-        const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005'];
+        // CRITICAL CHANGE: Updated to include JW2601003 as user reported it missing.
+        const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005', 'JW2601003'];
 
         // 0a. AUTOMATED BACKUP SYSTEM (Safeguard)
         // Before doing anything destructive, save a snapshot of current localStorage
