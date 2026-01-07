@@ -308,68 +308,7 @@ const Settings: FC<SettingsProps> = ({
                         </button>
                       </div>
 
-                      {/* Emergency Restore Button */}
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <p className="text-[10px] text-red-500 font-bold mb-2">緊急救援：</p>
-                        <button
-                          onClick={() => {
-                            try {
-                              // DIRECT EMBEDDED BACKUP RESTORE
-                              // This bypasses network fetch issues
-                              const json = {
-                                "projects": [
-                                  {
-                                    "id": "JW2601003",
-                                    "name": "樹林區三龍街24巷16號國為海砂屋頂補強工程",
-                                    "category": "補強工程",
-                                    "source": "JW",
-                                    "status": "洽談中",
-                                    "client": "邱金福",
-                                    "manager": "余家慶",
-                                    "startDate": "2026-01-05",
-                                    "createdDate": "2026-01-05",
-                                    "dailyLogs": [
-                                      {
-                                        "id": "1767574860533",
-                                        "date": "2026-01-05T01:01:00.533Z",
-                                        "content": "我剛剛聯繫我爸爸，他想先找他認識的朋友幫忙，所以暫時不考慮，不好意思造成你們的困擾。\n\n業主暫不處理。\n",
-                                        "authorName": "余咏儒"
-                                      },
-                                      {
-                                        "id": "1767572514233",
-                                        "date": "2026-01-05T00:21:54.233Z",
-                                        "content": "1.完整地址:新北市樹林區三龍街24巷16號\n2聯絡人：邱金福，\n電話:0980-109-096",
-                                        "authorName": "余咏儒"
-                                      }
-                                    ],
-                                    "deletedAt": undefined // Force remove delete flag
-                                  }
-                                ]
-                              };
-
-                              // EMERGENCY DATA REPAIR
-                              if (json.projects) {
-                                json.projects = json.projects.map((p: any) => {
-                                  // 1. Force undelete JW2601003 / JW2601907
-                                  if (p.id === 'JW2601003' || p.id === 'JW2601907' || p.id === 'JW2026907') {
-                                    const { deletedAt, ...rest } = p;
-                                    return { ...rest, id: 'JW2601003' }; // Normalize ID and remove deletedAt
-                                  }
-                                  return p;
-                                });
-                              }
-
-                              onImportData(json, 'merge'); // Use MERGE mode to avoid overwriting existing
-                              alert('✅ 已強制寫入 JW2601003 專案資料！\n請至專案列表查看。');
-                            } catch (e) {
-                              alert('還原失敗：' + (e as Error).message);
-                            }
-                          }}
-                          className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-lg text-xs font-bold transition-colors"
-                        >
-                          還原 JW2601003 專案資料
-                        </button>
-                      </div>
+                      {/* Selective Import Handling */}
                     </div>
                   )}
                 </div>
@@ -472,8 +411,8 @@ const Settings: FC<SettingsProps> = ({
                   <label
                     key={project.id}
                     className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all cursor-pointer ${selectedProjectIds.has(project.id)
-                        ? 'border-orange-500 bg-orange-50/50 shadow-md'
-                        : 'border-stone-100 hover:border-stone-200 bg-white'
+                      ? 'border-orange-500 bg-orange-50/50 shadow-md'
+                      : 'border-stone-100 hover:border-stone-200 bg-white'
                       }`}
                   >
                     <input
