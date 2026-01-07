@@ -83,6 +83,28 @@
             overflow-y: auto;
         }
 
+        /* 桌面版自定義橫向捲軸 */
+        @media (min-width: 1024px) {
+            .desktop-scrollbar::-webkit-scrollbar {
+                height: 5px;
+            }
+
+            .desktop-scrollbar::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.03);
+                border-radius: 10px;
+            }
+
+            .desktop-scrollbar::-webkit-scrollbar-thumb {
+                background: rgba(0, 0, 0, 0.1);
+                border-radius: 10px;
+                transition: background 0.3s;
+            }
+
+            .desktop-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: rgba(0, 0, 0, 0.2);
+            }
+        }
+
         @media print {
 
             aside,
