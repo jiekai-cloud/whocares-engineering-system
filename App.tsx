@@ -269,9 +269,19 @@ const App: React.FC = () => {
         // This was missing, causing data loss on reload.
         let initialProjects = parseSafely('bt_projects', MOCK_PROJECTS);
 
-        // 0. Force Restore Critical Projects (Missing from localStorage)
-        // This handles cases where localStorage has 'valid' but incomplete data
-        const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005', 'AB2601003', 'JW2601003'];
+        // 0. Force Restore Critical Projects
+        // CRITICAL CHANGE: Removed AB2601003 and JW2601003 to prevent overwriting user data with mock data.
+        const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005'];
+
+        // 0a. AUTOMATED BACKUP SYSTEM (Safeguard)
+        // Before doing anything destructive, save a snapshot of current localStorage
+        try {
+          // If valid data exists, back it up to 'bt_backup_projects'
+          if (initialProjects && initialProjects.length > 0) {
+            localStorage.setItem('bt_projects_backup', JSON.stringify(initialProjects));
+            console.log('✅ Auto-backup created: bt_projects_backup');
+          }
+        } catch (e) { console.error('Backup failed', e); }
 
         // 0b. Deep Clone to PREVENT READ-ONLY ERRORS (Fix for "Cannot assign to read only property")
         // This ensures that whether data comes from localStorage or MOCK_PROJECTS, it is fully mutable.
@@ -1098,6 +1108,24 @@ const App: React.FC = () => {
                   onConnectCloud={handleConnectCloud}
                   onDownloadBackup={() => {
                     googleDriveService.exportAsFile({ projects, customers, teamMembers, vendors });
+                  }}
+                  onRestoreLocalBackup={() => {
+                    try {
+                      const backupStr = localStorage.getItem('bt_projects_backup');
+                      if (backupStr) {
+                        const backupProjects = JSON.parse(backupStr);
+                        if (confirm(`找到備份 ${backupProjects.length} 個專案。\n確定要還原嗎？\n(這將覆蓋當前顯示的專案)`)) {
+                          setProjects(backupProjects);
+                          localStorage.setItem('bt_projects', backupStr);
+                          alert('✅ 已還原至本地備份！');
+                          window.location.reload();
+                        }
+                      } else {
+                        alert('找不到可用的本地備份。');
+                      }
+                    } catch (e) {
+                      alert('還原失敗：備份檔案損毀');
+                    }
                   }}
                   onDisconnectCloud={() => { setIsCloudConnected(false); localStorage.removeItem('bt_cloud_connected'); }}
                   lastSyncTime={lastCloudSync}

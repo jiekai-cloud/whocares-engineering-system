@@ -19,12 +19,13 @@ interface SettingsProps {
   onDisconnectCloud: () => void;
   lastSyncTime: string | null;
   onDownloadBackup?: () => void;
+  onRestoreLocalBackup?: () => void;
 }
 
 const Settings: FC<SettingsProps> = ({
   user, projects, customers, teamMembers, onResetData,
   isCloudConnected, onConnectCloud, onDisconnectCloud, lastSyncTime,
-  onDownloadBackup
+  onDownloadBackup, onRestoreLocalBackup
 }) => {
   const [activeSection, setActiveSection] = useState('cloud');
   const [isExporting, setIsExporting] = useState(false);
@@ -256,6 +257,23 @@ const Settings: FC<SettingsProps> = ({
                       </button>
                     </div>
                   )}
+                </div>
+
+                <div className="bg-stone-50 border border-stone-200 p-6 rounded-[2rem] shadow-sm space-y-3">
+                  <div className="flex items-center gap-3">
+                    <RotateCcw size={20} className="text-stone-600" />
+                    <h4 className="text-sm font-black text-stone-900">本機自動備份還原</h4>
+                  </div>
+                  <p className="text-[11px] text-stone-500 leading-relaxed font-bold">
+                    如果雲端同步發生錯誤，您可以嘗試還原到上一次啟動時的自動備份。
+                  </p>
+                  <button
+                    onClick={onRestoreLocalBackup}
+                    className="w-full bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                  >
+                    <RefreshCw size={14} />
+                    立即還原上次備份
+                  </button>
                 </div>
 
                 {!isReadOnly && (
