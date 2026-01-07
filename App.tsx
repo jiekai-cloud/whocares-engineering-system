@@ -267,7 +267,6 @@ const App: React.FC = () => {
     if (!cloudData) return;
 
     // Apply rigorous normalization to cloud data BEFORE merging
-    // This prevents "bad" IDs from the cloud (e.g. BNI2601911) from bypassing local checks and creating duplicates
     const cleanCloudProjects = normalizeProjects(cloudData.projects || []);
 
     setProjects(prev => mergeData(prev, cleanCloudProjects));
@@ -287,6 +286,14 @@ const App: React.FC = () => {
       }).slice(0, 100);
     });
   }, [mergeData, normalizeProjects]);
+
+  const handleLogout = useCallback((forced = false) => {
+    if (forced || confirm('確定要安全登出生產系統嗎？')) {
+      setUser(null);
+      localStorage.removeItem('bt_user');
+      setActiveTab('dashboard');
+    }
+  }, []);
 
   // 正式上線初始化邏輯
   useEffect(() => {
@@ -514,7 +521,7 @@ const App: React.FC = () => {
         if (user?.role === 'SyncOnly') {
           setTimeout(() => {
             alert('✅ 同步完成！系統即將登出，請使用您個人的員工編號正式登入。');
-            handleLogout();
+            handleLogout(true); // Force logout without confirmation
           }, 1500);
         }
       } else {
@@ -554,7 +561,7 @@ const App: React.FC = () => {
         if (user?.role === 'SyncOnly') {
           setTimeout(() => {
             alert('✅ 數據已還原！系統即將登出，請使用您的個人帳號進入。');
-            handleLogout();
+            handleLogout(true); // Force logout without confirmation
           }, 1500);
         }
       } else {
@@ -823,13 +830,6 @@ const App: React.FC = () => {
     setActivityLogs(prev => prev.map(log => ({ ...log, isRead: true })));
   };
 
-  const handleLogout = () => {
-    if (confirm('確定要安全登出生產系統嗎？')) {
-      setUser(null);
-      localStorage.removeItem('bt_user');
-      setActiveTab('dashboard');
-    }
-  };
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
@@ -994,8 +994,8 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               <div className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-2xl shadow-lg ${user.role === 'Guest' ? 'bg-stone-900 text-orange-400' : 'bg-stone-900 text-white'}`}>
                 <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${user.role === 'Guest' ? 'bg-orange-500' : 'bg-emerald-400'}`}></div>
-                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{user.role === 'Guest' ? '訪客唯讀' : 'v2.7 Super-Sync'}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">v2.7</span>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{user.role === 'Guest' ? '訪客唯讀' : 'v2.8 Hotfix'}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">v2.8</span>
               </div>
 
               {user.role !== 'Guest' && (
@@ -1379,17 +1379,14 @@ const App: React.FC = () => {
           // 找尋全系統的最大流水號（不分來源、不分年份），確保流水號連貫
           let sequence = 1;
           if (projects.length > 0) {
-            // 從所有專案中提取最後三碼流水號，找出最大值
             const sequences = projects
               .map(p => {
                 // Modified Regex: Strictly match PREFIX + (YY|YYYY) + MM + SEQ(3)
-                // This ensures we ignore 6-digit legacy IDs like YYMMDD (e.g. 251217 -> 217)
                 const match = p.id.match(/[A-Z]+(?:20\d{2}|\d{2})\d{2}(\d{3})$/);
                 return match ? parseInt(match[1], 10) : 0;
               })
-              // Filter out sequences >= 100 to avoid artifacts from legacy YYMMDD dates (e.g. 251217 -> 217)
-              // Valid sequences are currently low (001-006)
-              .filter(num => !isNaN(num) && num > 0 && num < 100);
+              // Valid sequences range 001-999
+              .filter(num => !isNaN(num) && num > 0 && num < 1000);
 
             if (sequences.length > 0) {
               sequence = Math.max(...sequences) + 1;
