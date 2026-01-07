@@ -249,12 +249,35 @@ const Settings: FC<SettingsProps> = ({
                       <p className="text-[11px] text-stone-500 leading-relaxed font-bold">
                         從現有的備份檔恢復數據。
                       </p>
-                      <button
-                        className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
-                      >
-                        <RotateCcw size={14} />
-                        選擇檔案匯入
-                      </button>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept=".json"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              try {
+                                const json = event.target?.result as string;
+                                onImportData(json, 'overwrite');
+                              } catch (err) {
+                                alert('檔案讀取失敗');
+                              }
+                            };
+                            reader.readAsText(file);
+                            // Clear input so same file can be selected again
+                            e.target.value = '';
+                          }}
+                        />
+                        <button
+                          className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all pointer-events-none"
+                        >
+                          <RotateCcw size={14} />
+                          選擇檔案匯入
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
