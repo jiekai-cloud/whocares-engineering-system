@@ -282,7 +282,7 @@ const App: React.FC = () => {
         let initialProjects = parseSafely('bt_projects', MOCK_PROJECTS);
 
         // 0. Force Restore Critical Projects
-        // CRITICAL CHANGE: Updated to include JW2601003 as user reported it missing.
+        // CRITICAL CHANGE: Updated to include JW2601003 and ensure BNI2601004 is present.
         const criticalRestorationIds = ['BNI2601001', 'BNI2601002', 'BNI2601004', 'OC2601005', 'JW2601003'];
 
         // 0a. AUTOMATED BACKUP SYSTEM (Safeguard)
