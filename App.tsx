@@ -1389,7 +1389,9 @@ const App: React.FC = () => {
                 updatedId = p.id.replace(oldPrefix, newPrefix);
               }
               const statusChangedAt = data.status !== p.status ? new Date().toISOString() : (p.statusChangedAt || p.updatedAt || p.createdDate);
-              return { ...p, ...data, id: updatedId, statusChangedAt, updatedAt: new Date().toISOString() };
+              // 優先使用手動輸入的 ID，若無更動則使用自動更換字首後的 ID
+              const finalId = data.id && data.id !== editingProject.id ? data.id : updatedId;
+              return { ...p, ...data, id: finalId, statusChangedAt, updatedAt: new Date().toISOString() };
             }
             return p;
           }));
