@@ -419,12 +419,19 @@ const App: React.FC = () => {
     setActivityLogs(prev => [newLog, ...prev].slice(0, 50)); // 保留最近 50 筆
   }, [user]);
 
+
   const handleCloudSync = useCallback(async () => {
     if (!isCloudConnected || isSyncingRef.current || user?.role === 'Guest') return;
 
     isSyncingRef.current = true;
-    setIsSyncing(true);
+    setIsSyncing(true); // TRIGGER UI SPINNER
+
     try {
+      if (cloudError === '會話已過期') {
+        await googleDriveService.authenticate('none');
+        setCloudError(null);
+      }
+
       // 在存檔前先檢查雲端是否有更新
       const metadata = await googleDriveService.getFileMetadata();
       if (metadata && lastRemoteModifiedTime.current && metadata.modifiedTime !== lastRemoteModifiedTime.current) {
@@ -454,14 +461,17 @@ const App: React.FC = () => {
       } else {
         const status = googleDriveService.getLastErrorStatus();
         setCloudError(`同步失敗(${status || '?'})`);
+        if (isSyncing) alert(`上傳失敗 (${status})，請檢查網路或稍後再試。`);
       }
-    } catch (err) {
-      setCloudError('連線異常');
+    } catch (e) {
+      console.error('Cloud sync failed:', e);
+      setCloudError('同步發生錯誤');
+      if (isSyncing) alert('同步發生錯誤，請檢查網路連線。');
     } finally {
       isSyncingRef.current = false;
-      setIsSyncing(false);
+      setIsSyncing(false); // STOP UI SPINNER
     }
-  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, activityLogs, updateStateWithMerge]);
+  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, activityLogs, updateStateWithMerge, cloudError]);
 
   const handleConnectCloud = async () => {
     if (user?.role === 'Guest') return;
@@ -520,6 +530,7 @@ const App: React.FC = () => {
           return true;
         } catch (retryError) {
           console.error('[Storage] Retry failed. storage is full.');
+          alert('⚠️ 嚴重警告：系統儲存空間已滿！\n\n您的最新變更無法儲存到本機，請暫停作業並聯繫管理員。\n(建議嘗試清除瀏覽器快取)');
           // CRITICAL CHANGE: 絕對不執行 localStorage.clear()，避免遺失專案資料。
           // 僅在 console 報錯，並依賴雲端同步作為備份。
           return false;
@@ -883,7 +894,7 @@ const App: React.FC = () => {
       )}
 
       <div className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static transition-transform duration-500 z-[101] w-64 h-full shrink-0`}>
-        <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setSelectedProjectId(null); setIsSidebarOpen(false); }} user={user} onMenuClose={() => setIsSidebarOpen(false)} />
+        <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setSelectedProjectId(null); setIsSidebarOpen(false); }} user={user} onMenuClose={() => setIsSidebarOpen(false)} isSyncing={isSyncing} />
       </div>
 
       <main className="flex-1 flex flex-col h-full w-full min-0 relative">
