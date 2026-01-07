@@ -1785,16 +1785,51 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                 )}
               </div>
 
-              <div className="mt-8 text-center space-y-2">
+              <div className="mt-8 text-center space-y-4">
                 <h3 className="text-white text-lg font-black tracking-tight">{selectedImage.name}</h3>
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex flex-wrap items-center justify-center gap-4">
                   <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">
                     {selectedImage.uploadedAt ? new Date(selectedImage.uploadedAt).toLocaleString() : '無日期'}
                   </p>
                   <span className="w-1 h-1 bg-white/20 rounded-full" />
                   <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">上傳者: {selectedImage.uploadedBy}</p>
                   <span className="w-1 h-1 bg-white/20 rounded-full" />
-                  <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
+                  {!isReadOnly && onUpdateFiles ? (
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <select
+                          value={selectedImage.category}
+                          onChange={(e) => {
+                            const newCategory = e.target.value;
+                            const updatedFiles = project.files?.map(f => f.id === selectedImage.id ? { ...f, category: newCategory } : f) || [];
+                            onUpdateFiles(updatedFiles);
+                            setSelectedImage({ ...selectedImage, category: newCategory });
+                          }}
+                          className="appearance-none bg-stone-800 text-orange-500 text-[10px] font-black uppercase tracking-widest border border-stone-700 rounded-xl px-4 py-1.5 pr-8 outline-none cursor-pointer hover:bg-stone-700 transition-all"
+                        >
+                          {PHOTO_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.label}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-orange-500/50">
+                          <Layers size={10} />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (confirm('確定要從雲端刪除這張照片嗎？')) {
+                            onUpdateFiles(project.files!.filter(f => f.id !== selectedImage.id));
+                            setSelectedImage(null);
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-rose-500/20"
+                      >
+                        <Trash2 size={12} /> 刪除檔案
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
+                  )}
                 </div>
               </div>
             </div>
