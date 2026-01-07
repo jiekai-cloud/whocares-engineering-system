@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { HardHat, ShieldCheck, Sparkles, User, Lock, ArrowRight, Layers, Check, AlertCircle, Hash, Info, UserCheck, Cloud } from 'lucide-react';
 import { MOCK_DEPARTMENTS } from '../constants';
+import { storageService } from '../services/storageService';
 
 interface LoginProps {
   onLoginSuccess: (userData: any, departmentId: string) => void;
@@ -13,7 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -24,72 +25,72 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     setIsLoading(true);
 
-    // 模擬驗證流程
-    setTimeout(() => {
-      const cleanId = employeeId.trim();
-      const cleanPassword = password.trim();
+    // 模擬驗證流程 (延遲一下增加儀式感)
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-      // 1. 檢查管理員
-      if (cleanId.toLowerCase() === 'admin' && cleanPassword === '1234') {
+    const cleanId = employeeId.trim();
+    const cleanPassword = password.trim();
+
+    // 1. 檢查管理員
+    if (cleanId.toLowerCase() === 'admin' && cleanPassword === '1234') {
+      onLoginSuccess({
+        id: 'ADMIN-ROOT',
+        name: "管理總監",
+        email: "admin@lifequality.ai",
+        picture: `https://ui-avatars.com/api/?name=Admin&background=ea580c&color=fff`,
+        role: 'SuperAdmin'
+      }, 'all');
+      return;
+    }
+
+    // 1.5 增加通用測試/同步專用帳號 (用於新設備初始化)
+    if (cleanId.toLowerCase() === 'test' && cleanPassword === 'test') {
+      onLoginSuccess({
+        id: 'SYNC-ONLY',
+        name: "系統初始化員",
+        email: "sync@lifequality.ai",
+        picture: `https://ui-avatars.com/api/?name=Sync&background=0ea5e9&color=fff`,
+        role: 'SyncOnly'
+      }, 'all');
+      return;
+    }
+
+    // 2. 檢查團隊成員 (從 IndexedDB 載入已同步的團隊資料)
+    let team = [];
+    try {
+      // 使用 storageService 取得資料，這包含了雲端同步下來的新成員
+      team = await storageService.getItem<any[]>('bt_team', []);
+      if (!Array.isArray(team)) team = [];
+    } catch (e) {
+      console.error('Error loading team during login', e);
+      team = [];
+    }
+
+    const member = team.find((m: any) => m && m.employeeId === cleanId.toUpperCase());
+
+    if (member) {
+      const expectedPassword = member.password || '1234';
+      if (cleanPassword === expectedPassword) {
+        // 強制使用該員工設定的部門和權限
+        const finalRole = member.systemRole || (member.role === '工務主管' || member.role === '專案經理' ? 'DeptAdmin' : 'Staff');
+        const finalDept = finalRole === 'SuperAdmin' ? 'all' : (member.departmentId || 'DEPT-1');
+
         onLoginSuccess({
-          id: 'ADMIN-ROOT',
-          name: "管理總監",
-          email: "admin@lifequality.ai",
-          picture: `https://ui-avatars.com/api/?name=Admin&background=ea580c&color=fff`,
-          role: 'SuperAdmin'
-        }, 'all');
-        return;
-      }
-
-      // 1.5 增加通用測試/同步專用帳號 (用於新設備初始化)
-      if (cleanId.toLowerCase() === 'test' && cleanPassword === 'test') {
-        onLoginSuccess({
-          id: 'SYNC-ONLY',
-          name: "系統初始化員",
-          email: "sync@lifequality.ai",
-          picture: `https://ui-avatars.com/api/?name=Sync&background=0ea5e9&color=fff`,
-          role: 'SyncOnly'
-        }, 'all');
-        return;
-      }
-
-      // 2. 檢查團隊成員
-      let team = [];
-      try {
-        const savedTeam = localStorage.getItem('bt_team');
-        team = savedTeam ? JSON.parse(savedTeam) : [];
-        if (!Array.isArray(team)) team = [];
-      } catch (e) {
-        console.error('Error parsing team during login', e);
-        team = [];
-      }
-
-      const member = team.find((m: any) => m && m.employeeId === cleanId.toUpperCase());
-
-      if (member) {
-        const expectedPassword = member.password || '1234';
-        if (cleanPassword === expectedPassword) {
-          // 強制使用該員工設定的部門和權限
-          const finalRole = member.systemRole || (member.role === '工務主管' || member.role === '專案經理' ? 'DeptAdmin' : 'Staff');
-          const finalDept = finalRole === 'SuperAdmin' ? 'all' : (member.departmentId || 'DEPT-1');
-
-          onLoginSuccess({
-            id: member.id,
-            name: member.name,
-            email: member.email,
-            picture: member.avatar,
-            role: finalRole,
-            roleName: member.role
-          }, finalDept);
-        } else {
-          setError('密碼輸入錯誤');
-          setIsLoading(false);
-        }
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          picture: member.avatar,
+          role: finalRole,
+          roleName: member.role
+        }, finalDept);
       } else {
-        setError('找不到該員工編號 (新設備請先以 admin 登入)');
+        setError('密碼輸入錯誤');
         setIsLoading(false);
       }
-    }, 1000);
+    } else {
+      setError('找不到該員工編號 (新設備請先以 test 下載團隊清單)');
+      setIsLoading(false);
+    }
   };
 
   const handleQuickAccess = () => {
