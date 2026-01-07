@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { HardHat, ShieldCheck, Sparkles, User, Lock, ArrowRight, Layers, Check, AlertCircle, Hash, Info, UserCheck } from 'lucide-react';
+import { HardHat, ShieldCheck, Sparkles, User, Lock, ArrowRight, Layers, Check, AlertCircle, Hash, Info, UserCheck, Cloud } from 'lucide-react';
 import { MOCK_DEPARTMENTS } from '../constants';
 
 interface LoginProps {
@@ -41,27 +41,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      // 1.5 檢查同步專用帳號 (用於新設備初始化，權限受限)
-      if (cleanId.toLowerCase() === 'text' && cleanPassword === 'text') {
+      // 1.5 增加通用測試/同步專用帳號 (用於新設備初始化)
+      if (cleanId.toLowerCase() === 'test' && cleanPassword === 'test') {
         onLoginSuccess({
           id: 'SYNC-ONLY',
-          name: "系統同步員",
+          name: "系統初始化員",
           email: "sync@lifequality.ai",
           picture: `https://ui-avatars.com/api/?name=Sync&background=0ea5e9&color=fff`,
           role: 'SyncOnly'
         }, 'all');
-        return;
-      }
-
-      // 1.6 增加通用測試帳號 (供新進人員初步瀏覽系統)
-      if (cleanId.toLowerCase() === 'test' && cleanPassword === '1234') {
-        onLoginSuccess({
-          id: 'TEST-USER',
-          name: "系統測試員",
-          email: "test@lifequality.ai",
-          picture: `https://ui-avatars.com/api/?name=Test&background=8b5cf6&color=fff`,
-          role: 'Guest' // 設為訪客權限，確保安全
-        }, 'DEPT-1');
         return;
       }
 
@@ -248,13 +236,25 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 訪客模式預覽 (唯讀)
               </button>
 
-              <div className="pt-2 flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
-                <p className="text-[9px] font-bold text-stone-600 uppercase tracking-widest">
-                  初次登入 / 新設備提示
-                </p>
-                <div className="flex gap-4">
-                  <span className="text-[9px] text-stone-500">同步專用: <code className="text-orange-500/80">text</code></span>
-                  <span className="text-[9px] text-stone-500">系統體驗: <code className="text-orange-500/80">test</code></span>
+              <div className="pt-6 relative">
+                <div className="absolute inset-x-0 top-0 flex items-center justify-center">
+                  <span className="bg-[#1c1917] px-4 text-[9px] font-black text-stone-600 uppercase tracking-[0.3em]">First Time Login</span>
+                </div>
+                <div className="pt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmployeeId('test');
+                      setPassword('test');
+                    }}
+                    className="w-full py-6 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 hover:from-blue-600/30 hover:to-indigo-600/30 border border-blue-500/30 rounded-[2rem] flex flex-col items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Cloud size={20} className="text-blue-400 group-hover:animate-bounce" />
+                      <span className="text-sm font-black text-white tracking-widest uppercase">新設備同步初始化</span>
+                    </div>
+                    <p className="text-[10px] text-blue-300/60 font-medium">使用 test / test 帳號快速啟動</p>
+                  </button>
                 </div>
               </div>
             </div>

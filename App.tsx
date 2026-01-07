@@ -509,6 +509,14 @@ const App: React.FC = () => {
         if (newMetadata) lastRemoteModifiedTime.current = newMetadata.modifiedTime;
         setLastCloudSync(new Date().toLocaleTimeString());
         setCloudError(null);
+
+        // 如果是初始化帳號且同步成功，自動登出以引導使用個人帳戶
+        if (user?.role === 'SyncOnly') {
+          setTimeout(() => {
+            alert('✅ 同步完成！系統即將登出，請使用您個人的員工編號正式登入。');
+            handleLogout();
+          }, 1500);
+        }
       } else {
         const status = googleDriveService.getLastErrorStatus();
         setCloudError(`同步失敗(${status || '?'})`);
@@ -522,7 +530,7 @@ const App: React.FC = () => {
       isSyncingRef.current = false;
       setIsSyncing(false); // STOP UI SPINNER
     }
-  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, activityLogs, updateStateWithMerge, cloudError]);
+  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, activityLogs, updateStateWithMerge, cloudError, handleLogout]);
 
   const handleConnectCloud = async () => {
     if (user?.role === 'Guest') return;
@@ -536,11 +544,19 @@ const App: React.FC = () => {
       const cloudData = await googleDriveService.loadFromCloud();
       if (cloudData && cloudData.projects && confirm('雲端發現現有數據，是否要切換為雲端版本？')) {
         setProjects(cloudData.projects);
-        setCustomers(cloudData.customers);
-        setTeamMembers(cloudData.teamMembers);
+        setCustomers(cloudData.customers || []);
+        setTeamMembers(cloudData.teamMembers || []);
         setActivityLogs(cloudData.activityLogs || []);
         setVendors(cloudData.vendors || []);
         setLastCloudSync(new Date().toLocaleTimeString());
+
+        // 如果是初始化帳號，切換完數據後自動登出
+        if (user?.role === 'SyncOnly') {
+          setTimeout(() => {
+            alert('✅ 數據已還原！系統即將登出，請使用您的個人帳號進入。');
+            handleLogout();
+          }, 1500);
+        }
       } else {
         await handleCloudSync();
       }
