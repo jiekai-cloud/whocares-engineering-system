@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   ClipboardSignature, Plus, User, Briefcase, Calendar,
   Trash2, Search, FilterX, CreditCard, Users, Hammer, TrendingUp,
-  Sparkles, Loader2, Check, ArrowRight, Info, AlertCircle, AlertTriangle, ChevronDown, Upload, FileSpreadsheet
+  Sparkles, Loader2, Check, ArrowRight, Info, AlertCircle, AlertTriangle, ChevronDown, Upload, FileSpreadsheet, LayoutList
 } from 'lucide-react';
 import { Project, TeamMember, WorkAssignment } from '../types';
 import { parseWorkDispatchText } from '../services/geminiService';
