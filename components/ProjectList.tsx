@@ -27,6 +27,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('2026');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [sortBy, setSortBy] = useState<'id' | 'manager' | 'status' | 'progress' | 'budget' | null>('id');
@@ -58,7 +59,19 @@ const ProjectList: React.FC<ProjectListProps> = ({
         p.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchStatus = selectedStatus === 'all' || p.status === selectedStatus;
-      return matchSearch && matchStatus;
+
+      // Year extraction logic (from createdDate or ID)
+      let projectYear = '2026';
+      if (p.createdDate) {
+        projectYear = p.createdDate.split('-')[0];
+      } else {
+        const idMatch = p.id.match(/^[A-Z]+(\d{2})/);
+        if (idMatch) projectYear = '20' + idMatch[1];
+      }
+
+      const matchYear = projectYear === selectedYear;
+
+      return matchSearch && matchStatus && matchYear;
     });
 
     // Apply sorting
@@ -107,7 +120,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
     }
 
     return result;
-  }, [projects, searchTerm, selectedStatus, sortBy, sortOrder]);
+  }, [projects, searchTerm, selectedStatus, selectedYear, sortBy, sortOrder]);
 
   // 2. 分頁邏輯
   const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
@@ -177,6 +190,35 @@ const ProjectList: React.FC<ProjectListProps> = ({
             </div>
           )}
         </div>
+      </div>
+
+      {/* 年度大類別切換 */}
+      <div className="flex flex-wrap gap-2 mb-2">
+        {['2024', '2025', '2026'].map(year => {
+          const yearCount = projects.filter(p => {
+            if (p.createdDate) return p.createdDate.split('-')[0] === year;
+            const idMatch = p.id.match(/^[A-Z]+(\d{2})/);
+            return idMatch ? ('20' + idMatch[1]) === year : year === '2026';
+          }).length;
+
+          return (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedYear === year
+                ? 'bg-orange-600 text-white border-orange-600 shadow-md scale-105 z-10'
+                : 'bg-white text-stone-400 border-stone-200 hover:border-stone-300 hover:text-stone-600'
+                }`}
+            >
+              <CalendarDays size={14} className={selectedYear === year ? 'text-orange-200' : 'text-stone-300'} />
+              {year} 年度
+              <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${selectedYear === year ? 'bg-orange-500 text-white' : 'bg-stone-100 text-stone-400'}`}>
+                {yearCount}
+              </span>
+              {selectedYear === year && <div className="w-1 h-1 rounded-full bg-white ml-0.5 animate-pulse" />}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
