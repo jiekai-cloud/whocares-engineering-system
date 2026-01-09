@@ -764,87 +764,148 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
               </div>
             </div>
 
+            {/* 列表內容區域 - 使用新的分組顯示邏輯 */}
             <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar pr-2 min-h-[450px]">
-              {pendingAssignments.length > 0 ? pendingAssignments.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-5 pl-12 rounded-2xl border transition-all space-y-3 relative group ${item.matchedProjectId ? 'bg-stone-50 border-stone-100' : 'bg-rose-50 border-rose-100 ring-2 ring-rose-500/20'
-                    }`}
-                >
-                  <div className="absolute top-0 left-0 bottom-0 w-10 flex items-center justify-center border-r border-stone-100/50">
-                    <input
-                      type="checkbox"
-                      checked={selectedPendingIds.has(item.id)}
-                      onChange={() => toggleSelection(item.id)}
-                      className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                  </div>
 
-                  <button onClick={() => setPendingAssignments(prev => prev.filter(p => p.id !== item.id))} className="absolute top-4 right-4 text-stone-300 hover:text-rose-500 z-10">
-                    <Trash2 size={14} />
-                  </button>
-
+              {/* 1. 專案匯總摘要區塊 (V3.0 新增) */}
+              {pendingAssignments.length > 0 && (
+                <div className="mb-6 p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                  <h4 className="text-xs font-black text-stone-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <LayoutList size={14} className="text-stone-500" />
+                    匯入專案列表 ({Object.keys(groupedPendingAssignments).length})
+                  </h4>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      {item.matchedProjectId ? (
-                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">匹配成功: {item.matchedProjectId}</span>
-                      ) : (
-                        <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 flex items-center gap-1">
-                          <AlertTriangle size={10} /> 找不到案號: {item.projectId}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 專案選擇/修正下拉選單 */}
-                    <div className="relative">
-                      <select
-                        className={`w-full bg-white border rounded-xl px-3 py-2 text-xs font-black text-black outline-none ${item.matchedProjectId ? 'border-stone-200' : 'border-rose-300 ring-2 ring-rose-500/10'}`}
-                        value={item.matchedProjectId}
-                        onChange={e => updatePendingItem(item.id, 'matchedProjectId', e.target.value)}
-                      >
-                        <option value="">請手動指定所屬專案...</option>
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
-                      </select>
-                    </div>
-
-                    <div className="flex justify-between items-end">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-white border border-stone-200 rounded-lg flex items-center justify-center font-black text-xs text-stone-700">{item.memberName.charAt(0)}</div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs font-black text-stone-900">{item.memberName}</p>
-                            {item.isSpiderMan && (
-                              <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">🕷️ 蜘蛛人</span>
-                            )}
+                    {Object.entries(groupedPendingAssignments).map(([groupName, items]) => {
+                      const isUnmatched = groupName.startsWith('未匹配');
+                      return (
+                        <div key={groupName} className="flex items-center justify-between p-3 bg-white rounded-xl border border-stone-100 shadow-sm hover:shadow-md transition-all">
+                          <div className="flex flex-col gap-1">
+                            <span className={`text-xs font-black ${isUnmatched ? 'text-rose-600' : 'text-stone-900'}`}>
+                              {groupName}
+                            </span>
+                            <span className="text-[10px] text-stone-400 font-bold">{items.length} 筆派工紀錄</span>
                           </div>
-                          <p className="text-[9px] text-stone-400 font-bold">{item.date}</p>
+                          <button
+                            onClick={() => {
+                              // 找出這個群組的所有 ID
+                              const groupIds = new Set(items.map(i => i.id));
+                              // 執行匯入
+                              handleImportSpecific(groupIds);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border flex items-center gap-1 transition-all ${isUnmatched
+                              ? 'bg-stone-100 text-stone-300 border-stone-200 cursor-not-allowed'
+                              : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
+                              }`}
+                            disabled={isUnmatched}
+                            title={isUnmatched ? "請先在下方手動選擇正確專案" : "只匯入此專案的紀錄"}
+                          >
+                            {isUnmatched ? '待修正' : '匯入此案'}
+                            {!isUnmatched && <ArrowRight size={10} />}
+                          </button>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-100">
-                    <div>
-                      <label className="block text-[8px] font-black text-stone-400 uppercase mb-1">單日薪資 (TWD)</label>
-                      <input
-                        type="number"
-                        className="w-full bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs font-black text-black outline-none"
-                        value={item.wagePerDay}
-                        onChange={e => updatePendingItem(item.id, 'wagePerDay', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[8px] font-black text-stone-400 uppercase mb-1">派工天數</label>
-                      <input
-                        type="number" step="0.5"
-                        className="w-full bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs font-black text-black outline-none"
-                        value={item.days}
-                        onChange={e => updatePendingItem(item.id, 'days', e.target.value)}
-                      />
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
-              )) : (
+              )}
+
+              {/* 2. 詳細列表 (分組顯示) */}
+              {pendingAssignments.length > 0 ? (
+                Object.entries(groupedPendingAssignments).map(([groupName, items]) => (
+                  <div key={groupName} className="mb-6">
+                    <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-2 mb-2 border-b border-stone-200 flex items-center justify-between">
+                      <h4 className={`text-xs font-black uppercase tracking-widest pl-3 border-l-4 ${groupName.startsWith('未匹配') ? 'border-rose-500 text-rose-600' : 'border-emerald-500 text-emerald-700'
+                        }`}>
+                        {groupName}
+                      </h4>
+                      <span className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded-full">{items.length} 筆</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {items.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`p-5 pl-12 rounded-2xl border transition-all space-y-3 relative group ${item.matchedProjectId ? 'bg-stone-50 border-stone-100' : 'bg-rose-50 border-rose-100 ring-2 ring-rose-500/20'
+                            }`}
+                        >
+                          <div className="absolute top-0 left-0 bottom-0 w-10 flex items-center justify-center border-r border-stone-100/50">
+                            <input
+                              type="checkbox"
+                              checked={selectedPendingIds.has(item.id)}
+                              onChange={() => toggleSelection(item.id)}
+                              className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                          </div>
+
+                          <button onClick={() => setPendingAssignments(prev => prev.filter(p => p.id !== item.id))} className="absolute top-4 right-4 text-stone-300 hover:text-rose-500 z-10">
+                            <Trash2 size={14} />
+                          </button>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              {item.matchedProjectId ? (
+                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">匹配成功: {item.matchedProjectId}</span>
+                              ) : (
+                                <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 flex items-center gap-1">
+                                  <AlertTriangle size={10} /> 找不到案號: {item.projectId}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* 專案選擇/修正下拉選單 */}
+                            <div className="relative">
+                              <select
+                                className={`w-full bg-white border rounded-xl px-3 py-2 text-xs font-black text-black outline-none ${item.matchedProjectId ? 'border-stone-200' : 'border-rose-300 ring-2 ring-rose-500/10'}`}
+                                value={item.matchedProjectId}
+                                onChange={e => updatePendingItem(item.id, 'matchedProjectId', e.target.value)}
+                              >
+                                <option value="">請手動指定所屬專案...</option>
+                                {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
+                              </select>
+                            </div>
+
+                            <div className="flex justify-between items-end">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-white border border-stone-200 rounded-lg flex items-center justify-center font-black text-xs text-stone-700">{item.memberName.charAt(0)}</div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs font-black text-stone-900">{item.memberName}</p>
+                                    {item.isSpiderMan && (
+                                      <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">🕷️ 蜘蛛人</span>
+                                    )}
+                                  </div>
+                                  <p className="text-[9px] text-stone-400 font-bold">{item.date}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-100">
+                            <div>
+                              <label className="block text-[8px] font-black text-stone-400 uppercase mb-1">單日薪資 (TWD)</label>
+                              <input
+                                type="number"
+                                className="w-full bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs font-black text-black outline-none"
+                                value={item.wagePerDay}
+                                onChange={e => updatePendingItem(item.id, 'wagePerDay', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-black text-stone-400 uppercase mb-1">派工天數</label>
+                              <input
+                                type="number" step="0.5"
+                                className="w-full bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs font-black text-black outline-none"
+                                value={item.days}
+                                onChange={e => updatePendingItem(item.id, 'days', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
                 <div className="h-full flex flex-col items-center justify-center opacity-30 italic text-stone-400 space-y-3">
                   <AlertCircle size={48} />
                   <p className="text-xs font-black uppercase tracking-widest">Excel 解析結果將顯示於此</p>
