@@ -4,7 +4,7 @@ import {
   ArrowLeft, CheckCircle2, Clock, DollarSign, Pencil, Sparkles, Trash2, Activity,
   MessageSquare, Send, Receipt, X, ZoomIn, FileText, ImageIcon, Upload, MapPin,
   Navigation, ShoppingBag, Utensils, Building2, ExternalLink, CalendarDays, Loader2, Check, DownloadCloud, ShieldAlert,
-  Layers, Camera, HardHat, CheckCircle, ShieldCheck, Edit2, Wrench, ClipboardList, Construction, FileImage, Zap, Lock
+  Layers, Camera, HardHat, CheckCircle, ShieldCheck, Edit2, Wrench, ClipboardList, Construction, FileImage, Zap, Lock, ChevronDown
 } from 'lucide-react';
 import { Project, ProjectStatus, Task, ProjectComment, Expense, WorkAssignment, TeamMember, ProjectFile, ProjectPhase, User, ChecklistTask, PaymentStage } from '../types';
 import { suggestProjectSchedule, searchNearbyResources, analyzeProjectFinancials, parseScheduleFromImage, generatePreConstructionPrep, scanReceipt } from '../services/geminiService';
@@ -80,6 +80,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
 
   const [isAnalyzingFinancials, setIsAnalyzingFinancials] = useState(false);
   const [financialAnalysis, setFinancialAnalysis] = useState<string | null>(null);
+  const [isLaborDetailsExpanded, setIsLaborDetailsExpanded] = useState(false); // 派工明細展開狀態
 
   // Local state for Pre-construction Prep to ensure smooth typing
   const [localMaterials, setLocalMaterials] = useState(project.preConstruction?.materialsAndTools || '');
@@ -671,30 +672,45 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                       </p>
                       <p className="text-[11px] font-bold text-stone-400 mt-1">累積施工成本 (自動計算)</p>
 
-                      {/* 派工明細表 */}
+
+                      {/* 派工明細表 - 可折疊 */}
                       {(project.workAssignments || []).length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-stone-100">
-                          <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-3">派工明細 ({(project.workAssignments || []).length} 筆)</p>
-                          <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar">
-                            {(project.workAssignments || []).map((assignment, idx) => (
-                              <div key={assignment.id || idx} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-100">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-xs font-black text-stone-900 truncate">{assignment.memberName}</p>
-                                    {assignment.isSpiderMan && (
-                                      <span className="text-[7px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 flex-shrink-0">🕷️</span>
-                                    )}
+                        <>
+                          <button
+                            onClick={() => setIsLaborDetailsExpanded(!isLaborDetailsExpanded)}
+                            className="w-full mt-4 pt-4 border-t border-stone-100 flex items-center justify-between hover:bg-stone-50 -mx-2 px-2 py-2 rounded-xl transition-colors"
+                          >
+                            <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest">
+                              派工明細 ({(project.workAssignments || []).length} 筆)
+                            </p>
+                            <ChevronDown
+                              size={16}
+                              className={`text-stone-400 transition-transform ${isLaborDetailsExpanded ? 'rotate-180' : ''}`}
+                            />
+                          </button>
+
+                          {isLaborDetailsExpanded && (
+                            <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar mt-3 animate-in slide-in-from-top-2 duration-200">
+                              {(project.workAssignments || []).map((assignment, idx) => (
+                                <div key={assignment.id || idx} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-100">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-black text-stone-900 truncate">{assignment.memberName}</p>
+                                      {assignment.isSpiderMan && (
+                                        <span className="text-[7px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 flex-shrink-0">🕷️</span>
+                                      )}
+                                    </div>
+                                    <p className="text-[9px] text-stone-400 font-medium">{assignment.date}</p>
                                   </div>
-                                  <p className="text-[9px] text-stone-400 font-medium">{assignment.date}</p>
+                                  <div className="text-right flex-shrink-0 ml-2">
+                                    <p className="text-xs font-black text-stone-900">NT$ {(assignment.totalCost || 0).toLocaleString()}</p>
+                                    <p className="text-[8px] text-stone-400 font-medium">{assignment.wagePerDay}元 × {assignment.days}天</p>
+                                  </div>
                                 </div>
-                                <div className="text-right flex-shrink-0 ml-2">
-                                  <p className="text-xs font-black text-stone-900">NT$ {(assignment.totalCost || 0).toLocaleString()}</p>
-                                  <p className="text-[8px] text-stone-400 font-medium">{assignment.wagePerDay}元 × {assignment.days}天</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
