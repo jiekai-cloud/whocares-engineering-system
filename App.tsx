@@ -187,7 +187,7 @@ const App: React.FC = () => {
     const sourcePrefixes: Record<string, string> = {
       'BNI': 'BNI', '台塑集團': 'FPC', '士林電機': 'SE', '信義居家': 'SY',
       '企業': 'CORP', '新建工程': 'NEW', '網路客': 'OC', '住宅': 'AB',
-      'JW': 'JW', '台灣美光晶圓': 'MIC'
+      'JW': 'JW', '台灣美光晶圓': 'MIC', 'AI會勘系統': 'AI'
     };
 
     processed = processed.map(p => {
@@ -472,7 +472,8 @@ const App: React.FC = () => {
       targetId,
       targetName,
       type,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isRead: false
     };
     setActivityLogs(prev => [newLog, ...prev].slice(0, 50)); // 保留最近 50 筆
   }, [user]);
@@ -651,12 +652,8 @@ const App: React.FC = () => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status, statusChangedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : p));
   };
 
-  // Fixed ReferenceError: handleMarkLogAsRead
   const handleMarkLogAsRead = (logId: string) => {
-    // Logic to mark log as read (if applicable) or just remove it
-    // For now, we just ensure the function exists to prevent crash.
-    // In a real app, maybe update a 'read' status.
-    console.log('Marking log read:', logId);
+    setActivityLogs(prev => prev.map(log => log.id === logId ? { ...log, isRead: true } : log));
   };
 
   // Listen for Trigger Cloud Restore (Crisis Management)
@@ -1374,7 +1371,8 @@ const App: React.FC = () => {
           '網路客': 'OC',
           '住宅': 'AB',
           'JW': 'JW',
-          '台灣美光晶圓': 'MIC'
+          '台灣美光晶圓': 'MIC',
+          'AI會勘系統': 'AI'
         };
 
         if (editingProject) {

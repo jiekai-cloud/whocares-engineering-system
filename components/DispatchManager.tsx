@@ -3,10 +3,11 @@ import React, { useState, useMemo } from 'react';
 import {
   ClipboardSignature, Plus, User, Briefcase, Calendar,
   Trash2, Search, FilterX, CreditCard, Users, Hammer, TrendingUp,
-  Sparkles, Loader2, Check, ArrowRight, Info, AlertCircle, AlertTriangle, ChevronDown
+  Sparkles, Loader2, Check, ArrowRight, Info, AlertCircle, AlertTriangle, ChevronDown, Upload, FileSpreadsheet
 } from 'lucide-react';
 import { Project, TeamMember, WorkAssignment } from '../types';
 import { parseWorkDispatchText } from '../services/geminiService';
+import * as XLSX from 'xlsx';
 
 interface DispatchManagerProps {
   projects: Project[];
@@ -27,10 +28,11 @@ interface PendingAssignment {
 }
 
 const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers, onAddDispatch, onDeleteDispatch }) => {
-  const [activeMode, setActiveMode] = useState<'manual' | 'ai'>('manual');
+  const [activeMode, setActiveMode] = useState<'manual' | 'ai' | 'excel'>('manual');
   const [isParsing, setIsParsing] = useState(false);
   const [rawLog, setRawLog] = useState('');
   const [pendingAssignments, setPendingAssignments] = useState<PendingAssignment[]>([]);
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
 
   const [filterProject, setFilterProject] = useState('all');
   const [formData, setFormData] = useState({
@@ -81,6 +83,74 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
     }
   };
 
+
+  // Excel 導入處理
+  const handleExcelImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+        const mapped = jsonData.map((row: any, idx: number) => {
+          // 從Excel欄位提取資料
+          const projectName = row['案件編號及名稱'] || '';
+          const dateStr = row['施工日期'] || row['申請日期'] || '';
+          const workersStr = row['施工人員'] || '';
+
+          // 嘗試解析多個施工人員（可能用逗號、頓號或空格分隔）
+          const workers = workersStr.split(/[,、，\s]+/).filter((w: string) => w.trim());
+
+          // 解析日期格式
+          let parsedDate = new Date().toISOString().split('T')[0];
+          if (dateStr) {
+            const dateMatch = dateStr.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+            if (dateMatch) {
+              parsedDate = `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`;
+            }
+          }
+
+          // 嘗試匹配專案
+          const matched = projects.find(p =>
+            p.name.includes(projectName) ||
+            projectName.includes(p.name) ||
+            p.id.toLowerCase().includes(projectName.toLowerCase())
+          );
+
+          // 為每個工人創建一筆派工記錄
+          return workers.map((workerName: string, workerIdx: number) => {
+            const matchedMember = teamMembers.find(m =>
+              m.name === workerName.trim() || (m.nicknames || []).includes(workerName.trim())
+            );
+
+            return {
+              id: `excel-${idx}-${workerIdx}-${Date.now()}`,
+              projectId: projectName,
+              matchedProjectId: matched?.id || '',
+              date: parsedDate,
+              memberName: workerName.trim(),
+              wagePerDay: matchedMember?.dailyRate?.toString() || '2500',
+              days: '1',
+              description: row['施工進度說明'] || row['施工項目'] || ''
+            };
+          });
+        }).flat();
+
+        setPendingAssignments(mapped);
+        setUploadedFileName(file.name);
+      } catch (error: any) {
+        alert(`Excel 解析失敗: ${error.message || '請確認檔案格式正確'}`);
+        setUploadedFileName('');
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const handleBulkImport = () => {
     const validItems = pendingAssignments.filter(item => item.matchedProjectId !== '');
     if (validItems.length === 0) {
@@ -107,6 +177,7 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
     if (successCount === pendingAssignments.length) {
       setPendingAssignments([]);
       setRawLog('');
+      setUploadedFileName('');
       setActiveMode('manual');
     } else {
       // 留下那些還沒匹配成功的
@@ -155,7 +226,7 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-xl lg:text-2xl font-black text-stone-900 tracking-tight">成本管理與派工系統</h1>
-          <p className="text-stone-500 text-xs lg:text-sm font-medium">您可以手動輸入或貼上日報，AI 將自動為您計算案件成本。</p>
+          <p className="text-stone-500 text-xs lg:text-sm font-medium">您可以手動輸入、貼上日報，或上傳 Excel 施工日誌，AI 將自動為您計算案件成本。</p>
         </div>
         <div className="flex bg-stone-100 p-1 rounded-xl border border-stone-200">
           <button
@@ -169,6 +240,12 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
             className={`px-4 py-2 rounded-lg text-xs font-black flex items-center gap-2 transition-all ${activeMode === 'ai' ? 'bg-white text-orange-600 shadow-sm' : 'text-stone-400'}`}
           >
             <Sparkles size={14} /> AI 智慧解析日報
+          </button>
+          <button
+            onClick={() => setActiveMode('excel')}
+            className={`px-4 py-2 rounded-lg text-xs font-black flex items-center gap-2 transition-all ${activeMode === 'excel' ? 'bg-white text-emerald-600 shadow-sm' : 'text-stone-400'}`}
+          >
+            <FileSpreadsheet size={14} /> Excel 匯入
           </button>
         </div>
       </div>
@@ -282,6 +359,177 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
                 <div className="h-full flex flex-col items-center justify-center opacity-30 italic text-stone-400 space-y-3">
                   <AlertCircle size={48} />
                   <p className="text-xs font-black uppercase tracking-widest">AI 解析結果將顯示於此</p>
+                </div>
+              )}
+            </div>
+
+            {pendingAssignments.length > 0 && (
+              <div className="mt-6 p-4 bg-orange-50 rounded-2xl border border-orange-100 flex items-start gap-3">
+                <Info size={16} className="text-orange-600 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-orange-700 font-bold leading-relaxed">
+                  如果顯示紅色，表示系統內找不到對應案號。請點擊選單手動選擇正確的案件名稱，否則該筆紀錄將無法匯入。
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Excel 匯入介面 */}
+      {activeMode === 'excel' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in zoom-in-95">
+          {/* 左側：上傳Excel */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-stone-200 shadow-sm space-y-6">
+            <h3 className="text-sm font-black text-stone-900 flex items-center gap-2 uppercase tracking-widest">
+              <FileSpreadsheet size={20} className="text-emerald-600" /> 第一步：上傳施工日誌 Excel
+            </h3>
+
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-2xl border-2 border-dashed border-emerald-200 space-y-4">
+              <div className="flex flex-col items-center justify-center py-8">
+                <Upload size={48} className="text-emerald-400 mb-4" />
+                <p className="text-sm font-bold text-stone-700 mb-2">拖放Excel檔案至此，或點擊下方按鈕上傳</p>
+                <p className="text-xs text-stone-500 mb-6">支援 .xlsx, .xls 格式</p>
+
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleExcelImport}
+                    className="hidden"
+                  />
+                  <div className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center gap-3">
+                    <Upload size={20} />
+                    選擇 Excel 檔案
+                  </div>
+                </label>
+              </div>
+
+              {/* 上傳成功提示 */}
+              {uploadedFileName && (
+                <div className="bg-white p-5 rounded-2xl border-2 border-emerald-500 shadow-lg animate-in slide-in-from-top-2">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center">
+                      <Check size={24} className="text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-black text-emerald-900 mb-1">✓ 上傳成功</h4>
+                      <p className="text-xs font-bold text-stone-700 mb-2 break-all">{uploadedFileName}</p>
+                      <p className="text-[11px] text-emerald-700 font-medium">
+                        成功解析 <span className="font-black text-emerald-900">{pendingAssignments.length}</span> 筆施工紀錄
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-3">
+              <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                <Info size={16} />
+                Excel 格式說明
+              </h4>
+              <div className="text-[11px] text-blue-800 font-medium space-y-2 leading-relaxed">
+                <p>✓ <strong>必要欄位：</strong></p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li><strong>案件編號及名稱</strong> - 用於匹配專案</li>
+                  <li><strong>施工日期</strong> - 派工日期</li>
+                  <li><strong>施工人員</strong> - 工人名稱（多人用逗號分隔）</li>
+                </ul>
+                <p className="mt-3">✓ <strong>選用欄位：</strong></p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li><strong>施工進度說明</strong> - 工作描述</li>
+                  <li><strong>施工項目</strong> - 工作項目</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* 右側：解析預覽與匹配修正（與AI模式共用） */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-stone-200 shadow-sm flex flex-col h-full">
+            <div className="flex justify-between items-center mb-6 shrink-0">
+              <h3 className="text-sm font-black text-stone-900 flex items-center gap-2 uppercase tracking-widest">
+                <Check size={20} className="text-emerald-600" /> 第二步：確認並匯入
+              </h3>
+              {pendingAssignments.length > 0 && (
+                <button
+                  onClick={handleBulkImport}
+                  className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-100 flex items-center gap-2"
+                >
+                  匯入紀錄 ({pendingAssignments.filter(i => i.matchedProjectId !== '').length})
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar pr-2 min-h-[450px]">
+              {pendingAssignments.length > 0 ? pendingAssignments.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-5 rounded-2xl border transition-all space-y-3 relative group ${item.matchedProjectId ? 'bg-stone-50 border-stone-100' : 'bg-rose-50 border-rose-100 ring-2 ring-rose-500/20'
+                    }`}
+                >
+                  <button onClick={() => setPendingAssignments(prev => prev.filter(p => p.id !== item.id))} className="absolute top-4 right-4 text-stone-300 hover:text-rose-500">
+                    <Trash2 size={14} />
+                  </button>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      {item.matchedProjectId ? (
+                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">匹配成功: {item.matchedProjectId}</span>
+                      ) : (
+                        <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 flex items-center gap-1">
+                          <AlertTriangle size={10} /> 找不到案號: {item.projectId}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 專案選擇/修正下拉選單 */}
+                    <div className="relative">
+                      <select
+                        className={`w-full bg-white border rounded-xl px-3 py-2 text-xs font-black text-black outline-none ${item.matchedProjectId ? 'border-stone-200' : 'border-rose-300 ring-2 ring-rose-500/10'}`}
+                        value={item.matchedProjectId}
+                        onChange={e => updatePendingItem(item.id, 'matchedProjectId', e.target.value)}
+                      >
+                        <option value="">請手動指定所屬專案...</option>
+                        {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex justify-between items-end">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-white border border-stone-200 rounded-lg flex items-center justify-center font-black text-xs text-stone-700">{item.memberName.charAt(0)}</div>
+                        <div>
+                          <p className="text-xs font-black text-stone-900">{item.memberName}</p>
+                          <p className="text-[9px] text-stone-400 font-bold">{item.date}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-100">
+                    <div>
+                      <label className="block text-[8px] font-black text-stone-400 uppercase mb-1">單日薪資 (TWD)</label>
+                      <input
+                        type="number"
+                        className="w-full bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs font-black text-black outline-none"
+                        value={item.wagePerDay}
+                        onChange={e => updatePendingItem(item.id, 'wagePerDay', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[8px] font-black text-stone-400 uppercase mb-1">派工天數</label>
+                      <input
+                        type="number" step="0.5"
+                        className="w-full bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs font-black text-black outline-none"
+                        value={item.days}
+                        onChange={e => updatePendingItem(item.id, 'days', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="h-full flex flex-col items-center justify-center opacity-30 italic text-stone-400 space-y-3">
+                  <AlertCircle size={48} />
+                  <p className="text-xs font-black uppercase tracking-widest">Excel 解析結果將顯示於此</p>
                 </div>
               )}
             </div>
