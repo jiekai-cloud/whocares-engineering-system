@@ -89,15 +89,15 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
     if (!text) return null;
 
     // 常見的專案 ID 格式：
-    // 1. BNI2024773 (字母+年份+編號)
-    // 2. BNI2024773_專案名稱
-    // 3. [BNI2024773] 專案名稱
-    // 4. 專案名稱 (BNI2024773)
+    // 1. BNI2024773 (字母+年份+編號) - 2024/2025年保持原樣
+    // 2. BNI2601001 (字母+年份後兩位+編號) - 2026年格式
+    // 3. BNI2024773_專案名稱
+    // 4. [BNI2024773] 專案名稱
+    // 5. 專案名稱 (BNI2024773)
 
     // 嘗試多種模式
     const patterns = [
-      /([A-Z]+\d{4,})/i,           // 字母+數字組合 (BNI2024773)
-      /([A-Z]+\d{2}\d{2}\d{3})/i,  // 特定格式 (BNI2601001)
+      /([A-Z]+\d{4,})/i,           // 字母+數字組合 (BNI2024773 或 BNI2601001)
       /\[([A-Z0-9]+)\]/i,           // 方括號內 ([BNI2024773])
       /\(([A-Z0-9]+)\)/i,           // 圓括號內 ((BNI2024773))
     ];
@@ -105,7 +105,19 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match && match[1]) {
-        return match[1].toUpperCase();
+        const extractedId = match[1].toUpperCase();
+
+        // 檢查是否為 2024 或 2025 年的案號
+        // 格式：BNI2024XXX 或 BNI2025XXX (2024/2025 緊接在字母後面)
+        const is2024or2025 = /^[A-Z]+2024\d+$|^[A-Z]+2025\d+$/i.test(extractedId);
+
+        if (is2024or2025) {
+          // 2024/2025 年案號：保持原樣，這些是手動編號，格式可能不一致
+          return extractedId;
+        } else {
+          // 2026 及以後的案號：使用標準格式
+          return extractedId;
+        }
       }
     }
 
