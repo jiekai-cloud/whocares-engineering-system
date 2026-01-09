@@ -99,16 +99,23 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
     // 5. 專案名稱 (BNI2024773)
 
     // 嘗試多種模式
+    // 1. BNI2024773 (字母+年份+編號)
+    // 2. BNI-2025057 (帶分隔符)
+    // 3. [BNI2024773]
+
     const patterns = [
-      /([A-Z]+\d{4,})/i,           // 字母+數字組合 (BNI2024773 或 BNI2601001)
-      /\[([A-Z0-9]+)\]/i,           // 方括號內 ([BNI2024773])
-      /\(([A-Z0-9]+)\)/i,           // 圓括號內 ((BNI2024773))
+      // 強力模式：字母 + (可選分隔符 -, _, 空格) + 4位以上數字
+      /([A-Z]+[-_\s]?\d{4,})/i,
+      // 括號模式
+      /\[([A-Z0-9\s-]+)\]/i,
+      /\(([A-Z0-9\s-]+)\)/i,
     ];
 
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match && match[1]) {
-        const extractedId = match[1].toUpperCase();
+        // 移除所有分隔符，標準化為純字母+數字 (例如 BNI-2025057 -> BNI2025057)
+        const extractedId = match[1].replace(/[-_\s]/g, '').toUpperCase();
 
         // 檢查是否為 2024 或 2025 年的案號
         // 格式：BNI2024XXX 或 BNI2025XXX (2024/2025 緊接在字母後面)
