@@ -207,13 +207,11 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
             );
 
             // 檢查是否為蜘蛛人作業（繩索吊掛作業）
-            const spiderManFields = [
-              row['繩索吊掛作業未滿半小時之人員'],
-              row['繩索吊掛作業達半小時，但未達3小時之人員'],
-              row['工業繩索技術員吊掛施工，已超過3小時之人員'],
-              row['工業繩索技術員吊掛施工，進度超前，沒受到時間束縛之人員'],
-              row['工業繩索技術員備援人員']
-            ];
+            // 優化：動態偵測所有包含關鍵字的欄位，不再依賴完全精確的欄位名稱
+            const spiderManKeywords = ['繩索', '吊掛', '蜘蛛人', '高空'];
+            const spiderManFields = Object.keys(row)
+              .filter(key => spiderManKeywords.some(keyword => key.includes(keyword)))
+              .map(key => row[key]);
 
             // 判斷此工人是否在任何蜘蛛人欄位中
             const isSpiderManWork = spiderManFields.some(field => {
