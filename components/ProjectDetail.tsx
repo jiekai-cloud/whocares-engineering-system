@@ -81,6 +81,22 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const [isAnalyzingFinancials, setIsAnalyzingFinancials] = useState(false);
   const [financialAnalysis, setFinancialAnalysis] = useState<string | null>(null);
   const [isLaborDetailsExpanded, setIsLaborDetailsExpanded] = useState(false); // 派工明細展開狀態
+  const [editingAssignment, setEditingAssignment] = useState<WorkAssignment | null>(null); // 編輯中的派工
+
+  const handleDeleteAssignment = (assignmentId: string) => {
+    if (window.confirm('確定要刪除這筆派工紀錄嗎？此動作無法復原。')) {
+      const newAssignments = (project.workAssignments || []).filter(a => a.id !== assignmentId);
+      props.onUpdateWorkAssignments(newAssignments);
+    }
+  };
+
+  const handleSaveAssignment = (updated: WorkAssignment) => {
+    const newAssignments = (project.workAssignments || []).map(a =>
+      a.id === updated.id ? { ...updated, totalCost: Number(updated.wagePerDay) * Number(updated.days) } : a
+    );
+    props.onUpdateWorkAssignments(newAssignments);
+    setEditingAssignment(null);
+  };
 
   // Local state for Pre-construction Prep to ensure smooth typing
   const [localMaterials, setLocalMaterials] = useState(project.preConstruction?.materialsAndTools || '');
@@ -705,6 +721,22 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                                   <div className="text-right flex-shrink-0 ml-2">
                                     <p className="text-xs font-black text-stone-900">NT$ {(assignment.totalCost || 0).toLocaleString()}</p>
                                     <p className="text-[8px] text-stone-400 font-medium">{assignment.wagePerDay}元 × {assignment.days}天</p>
+                                  </div>
+                                  <div className="flex items-center gap-1 ml-2 pl-2 border-l border-stone-100">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setEditingAssignment(assignment); }}
+                                      className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                      title="編輯"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteAssignment(assignment.id); }}
+                                      className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="刪除"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -2409,6 +2441,98 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 編輯派工 Modal */}
+      {editingAssignment && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-[#2c3e50] p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                  <Pencil size={18} /> 編輯派工
+                </h3>
+                <p className="text-[10px] font-medium opacity-80 mt-1">修改工時、日期或薪資資料</p>
+              </div>
+              <button onClick={() => setEditingAssignment(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">施工人員</label>
+                  <input
+                    readOnly
+                    value={editingAssignment.memberName}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold text-stone-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">日期</label>
+                    <input
+                      type="date"
+                      value={editingAssignment.date}
+                      onChange={e => setEditingAssignment({ ...editingAssignment, date: e.target.value })}
+                      className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">工時 (天)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={editingAssignment.days}
+                      onChange={e => setEditingAssignment({ ...editingAssignment, days: Number(e.target.value) })}
+                      className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">日薪 (TWD)</label>
+                  <input
+                    type="number"
+                    value={editingAssignment.wagePerDay}
+                    onChange={e => setEditingAssignment({ ...editingAssignment, wagePerDay: Number(e.target.value) })}
+                    className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
+                  />
+                </div>
+
+                <label className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={editingAssignment.isSpiderMan || false}
+                    onChange={e => setEditingAssignment({ ...editingAssignment, isSpiderMan: e.target.checked })}
+                    className="w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-600 transition-colors"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-black text-blue-900 group-hover:text-blue-700 transition-colors">🕷️ 蜘蛛人作業 (繩索吊掛)</span>
+                    <p className="text-[10px] text-blue-600 mt-0.5">勾選後將標記為特殊高空作業</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setEditingAssignment(null)}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold text-stone-500 hover:bg-stone-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => handleSaveAssignment(editingAssignment)}
+                  className="flex-1 px-4 py-3 bg-[#2c3e50] text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  儲存變更
+                </button>
               </div>
             </div>
           </div>
