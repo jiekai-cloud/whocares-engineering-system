@@ -352,18 +352,7 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
     return allAssignments.filter(a => a.projectId === filterProject);
   }, [allAssignments, filterProject]);
 
-  // Check for stored pending assignments on mount
-  useEffect(() => {
-    alert("系統已更新成功！版本 V3.0 (如果看到此訊息，代表新功能已載入)");
-    const stored = localStorage.getItem(STORAGE_KEYS.PENDING_ASSIGNMENTS);
-    if (stored) {
-      try {
-        setPendingAssignments(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse stored assignments', e);
-      }
-    }
-  }, []);
+
 
   const groupedPendingAssignments = useMemo(() => {
     return pendingAssignments.reduce((acc, item) => {
