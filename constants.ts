@@ -13,7 +13,7 @@ export const MOCK_DEPARTMENTS: Department[] = [
 
 export const MOCK_PROJECTS: Project[] = [
   {
-    id: 'BNI2601001',
+    id: 'BNI2401001',
     departmentId: 'DEPT-6',
     name: '桃園至善街290號防水工程',
     category: '防水工程',
@@ -21,9 +21,9 @@ export const MOCK_PROJECTS: Project[] = [
     client: '冠亨商設計',
     referrer: '舊客介紹',
     manager: '陳信寬',
-    startDate: '2026-01-05',
-    endDate: '2026-03-05',
-    createdDate: '2026-01-05',
+    startDate: '2024-01-05',
+    endDate: '2024-03-05',
+    createdDate: '2024-01-05',
     budget: 0,
     spent: 0,
     progress: 0,
@@ -33,7 +33,7 @@ export const MOCK_PROJECTS: Project[] = [
     financials: { labor: 40, material: 30, subcontractor: 20, other: 10 }
   },
   {
-    id: 'BNI2601002',
+    id: 'BNI2501002',
     departmentId: 'DEPT-6',
     name: '桃園龜山民安街11號防水工程',
     category: '防水工程',
@@ -41,9 +41,9 @@ export const MOCK_PROJECTS: Project[] = [
     client: '璇凱伯修',
     referrer: '網站預約',
     manager: '陳文凱',
-    startDate: '2026-01-05',
-    endDate: '2026-03-10',
-    createdDate: '2026-01-05',
+    startDate: '2025-01-05',
+    endDate: '2025-03-10',
+    createdDate: '2025-01-05',
     budget: 0,
     spent: 0,
     progress: 0,

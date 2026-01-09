@@ -168,14 +168,15 @@ const App: React.FC = () => {
 
     // 0. ID CORRECTION: Enforce correct IDs based on Project Name or known Legacy IDs
     let processed = validProjects.map(p => {
-      // Rule 0: Specific fix for legacy IDs (BNI2026001->002, BNI2026002->001)
-      if (p.id === 'BNI2026001') return { ...p, id: 'BNI2601002' };
-      if (p.id === 'BNI2026002') return { ...p, id: 'BNI2601001' };
+      // Rule 1: Restore Zhishan Legacy ID (2024)
+      if (p.name.includes('至善') && (p.id === 'BNI2601001' || p.id === 'BNI2601911')) {
+        return { ...p, id: 'BNI2401001', startDate: p.startDate?.replace('2026', '2024'), createdDate: p.createdDate?.replace('2026', '2024') };
+      }
+      // Rule 2: Restore Guishan Legacy ID (2025)
+      if (p.name.includes('龜山') && p.id === 'BNI2601002') {
+        return { ...p, id: 'BNI2501002', startDate: p.startDate?.replace('2026', '2025'), createdDate: p.createdDate?.replace('2026', '2025') };
+      }
 
-      // Rule 1: Fix Zhishan (User requested 001)
-      if (p.name.includes('至善') || p.id === 'BNI2601911') return { ...p, id: 'BNI2601001' };
-      // Rule 2: Fix Guishan (002)
-      if (p.name.includes('龜山')) return { ...p, id: 'BNI2601002' };
       // Rule 3: Fix Guangfu North (004) - Fixes missing project by catching legacy ID
       if (p.name.includes('光復北路') || p.id === 'BNI2601908') return { ...p, id: 'BNI2601004' };
       // Rule 4: Fix Guangfu South (005) - Fixes legacy ID persistence
