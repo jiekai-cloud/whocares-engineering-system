@@ -901,8 +901,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                                         amount: Number(result.amount) || 0
                                       });
                                     }
-                                  } catch (err) {
-                                    alert('掃描失敗，請手動輸入');
+                                  } catch (err: any) {
+                                    console.error('收據辨識錯誤:', err);
+                                    alert(`辨識失敗: ${err.message || '請確認網路連線或稍後再試'}`);
                                   } finally {
                                     setIsScanningReceipt(false);
                                   }

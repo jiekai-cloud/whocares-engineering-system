@@ -5,16 +5,16 @@ import { Project } from "../types";
 // 優先採用的穩定模型列表 (依序備援，涵蓋穩定版與最新版)
 const FALLBACK_MODELS = [
   'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
+  'gemini-1.5-flash-latest',
+  'gemini-2.0-flash-exp',
   'gemini-1.5-pro',
   'gemini-1.5-flash-001',
-  'gemini-1.5-flash-002',
-  'gemini-2.0-flash-exp'
+  'gemini-1.5-flash-002'
 ];
 const STABLE_MODEL = 'gemini-1.5-flash';
-const EXPERIMENTAL_MODEL = 'gemini-2.0-flash';
+const EXPERIMENTAL_MODEL = 'gemini-2.0-flash-exp';
 
-// Always use named parameter for apiKey and fetch from process.env.API_KEY
+// Always use an named parameter for apiKey and fetch from process.env.API_KEY
 const getAI = () => {
   const savedKey = typeof window !== 'undefined' ? localStorage.getItem('GEMINI_API_KEY') : null;
   // Vite environment variables or process.env (fallback)
@@ -53,8 +53,9 @@ const handleAIError = (error: any, context: string, modelUsed: string) => {
   const errorMsg = error?.message || "";
 
   // 如果是配額問題，直接拋出，不進行備援
-  if (errorMsg.includes("limit: 0") || errorMsg.includes("RESOURCE_EXHAUSTED")) {
-    throw new Error(`AI 服務配額已耗盡 (使用 ${modelUsed})：您的 API Key 目前配額不足。請確認您的 Google AI Studio 帳號狀態，或更換另一個 API Key。`);
+  // 429: Too Many Requests / Resource Exhausted
+  if (errorMsg.includes("limit: 0") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("429")) {
+    throw new Error(`AI 服務配額已耗盡 (429)。這是因為免費版 API Key 有使用限制，請稍候再試，或更換 API Key。`);
   }
 
   // 404 代表模型不存在或未被授權
