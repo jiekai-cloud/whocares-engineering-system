@@ -279,6 +279,65 @@ const DispatchManager: React.FC<DispatchManagerProps> = ({ projects, teamMembers
     setSelectedPendingIds(newSet);
   };
 
+  // 處理特定群組匯入 (V3.0 New Feature)
+  const handleImportSpecific = (targetIds: Set<string>) => {
+    // 過濾出目標項目
+    const targets = pendingAssignments.filter(p => targetIds.has(p.id));
+
+    // 檢查是否有未匹配的項目 (理論上按鈕狀態已阻擋，但做雙重檢查)
+    const invalidItems = targets.filter(p => !p.matchedProjectId);
+    if (invalidItems.length > 0) {
+      alert(`尚有 ${invalidItems.length} 筆資料未指定所屬專案，請先手動選擇。`);
+      return;
+    }
+
+    const newAssignments: WorkAssignment[] = [];
+    const updatedProjects = [...projects];
+
+    targets.forEach(item => {
+      const projectIndex = updatedProjects.findIndex(p => p.id === item.matchedProjectId);
+      if (projectIndex > -1) {
+        const cost = parseInt(item.wagePerDay) * parseFloat(item.days);
+        const newAssignment: WorkAssignment = {
+          id: `WA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          date: item.date,
+          memberId: teamMembers.find(m => m.name === item.memberName)?.id || 'unknown',
+          memberName: item.memberName,
+          wagePerDay: parseInt(item.wagePerDay),
+          days: parseFloat(item.days),
+          totalCost: cost,
+          isSpiderMan: item.isSpiderMan
+        };
+        newAssignments.push(newAssignment);
+
+        // Update project
+        const project = updatedProjects[projectIndex];
+        const currentAssignments = project.workAssignments || [];
+        updatedProjects[projectIndex] = {
+          ...project,
+          workAssignments: [...currentAssignments, newAssignment],
+          financials: {
+            ...project.financials,
+            labor: (project.financials?.labor || 0) + cost
+          },
+          spent: (project.spent || 0) + cost,
+          updatedAt: new Date().toISOString()
+        };
+      }
+    });
+
+    onProjectsUpdate(updatedProjects);
+
+    // 從待處理清單中移除已匯入的項目
+    setPendingAssignments(prev => prev.filter(p => !targetIds.has(p.id)));
+    // 清除這些項目的選取狀態
+    const newSelected = new Set(selectedPendingIds);
+    targetIds.forEach(id => newSelected.delete(id));
+    setSelectedPendingIds(newSelected);
+
+    alert(`成功匯入 ${newAssignments.length} 筆施工紀錄！`);
+  };
+
   const handleBulkImport = () => {
     const validItems = pendingAssignments.filter(item => item.matchedProjectId !== '');
     if (validItems.length === 0) {
