@@ -86,47 +86,66 @@ const ScanTransferModal: React.FC<ScanTransferModalProps> = ({ inventoryItems, l
             if (!isScanning) return;
 
             // Wait for DOM
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 200));
             if (!isMounted) return;
 
             const elementId = "reader";
-            if (!document.getElementById(elementId)) {
+            const readerElem = document.getElementById(elementId);
+            if (!readerElem) {
                 console.error("Reader element not found");
                 return;
             }
 
             try {
+                // Clear any existing instance just in case
+                if (html5QrCode) {
+                    await html5QrCode.stop().catch(() => { });
+                    html5QrCode.clear();
+                }
+
                 html5QrCode = new Html5Qrcode(elementId);
 
-                // Explicitly request back camera
-                const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-
-                await html5QrCode.start(
-                    { facingMode: "environment" }, // Prefer back camera
-                    config,
-                    (decodedText) => {
-                        handleCodeDetected(decodedText);
-                    },
-                    (errorMessage) => {
-                        // ignore parsing errors
+                // Dynamic QR Box Config for better mobile support
+                const config = {
+                    fps: 10,
+                    qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                        const dim = Math.floor(minEdge * 0.7);
+                        return { width: dim, height: dim };
                     }
+                    // No aspectRatio enforced
+                };
+
+                // Try strictly environment first
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => handleCodeDetected(decodedText),
+                    (errorMessage) => { /* ignore */ }
                 );
             } catch (err: any) {
-                console.error("Start failed", err);
-                if (isMounted) {
-                    let msg = "啟動失敗";
-                    if (typeof err === 'string') msg = err;
-                    if (err?.name === 'NotAllowedError') msg = "🔒 請允許相機權限";
-                    if (err?.name === 'NotFoundError') msg = "找不到相機裝置";
-                    if (err?.name === 'NotReadableError') msg = "相機目前被其他程式佔用";
+                console.error("Primary start failed", err);
+                // Fallback: try without specific constraints if the first one failed
+                if (isMounted && html5QrCode) {
+                    try {
+                        console.log("Attempting fallback config...");
+                        await html5QrCode.start(
+                            { facingMode: "user" }, // Try user facing or generic if environment fails
+                            config,
+                            (decodedText) => handleCodeDetected(decodedText),
+                            (errorMessage) => { /* ignore */ }
+                        );
+                    } catch (fallbackErr: any) {
+                        console.error("Fallback failed", fallbackErr);
+                        if (isMounted) {
+                            let msg = "啟動失敗，請確認相機權限或使用 HTTPS 連線";
+                            if (err?.name === 'NotAllowedError') msg = "🔒 請允許相機權限";
+                            if (err?.name === 'NotFoundError') msg = "找不到相機裝置";
 
-                    // Specific check for HTTP
-                    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
-                        msg = "❌ 安全限制：相機功能僅支援 HTTPS (安全連線) 或本機測試";
+                            setErrorMsg(msg);
+                            setIsScanning(false);
+                        }
                     }
-
-                    setErrorMsg(msg);
-                    setIsScanning(false);
                 }
             }
         };
@@ -138,11 +157,7 @@ const ScanTransferModal: React.FC<ScanTransferModalProps> = ({ inventoryItems, l
         return () => {
             isMounted = false;
             if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    html5QrCode?.clear();
-                }).catch(err => {
-                    console.error("Failed to stop scanner", err);
-                });
+                html5QrCode.stop().then(() => html5QrCode?.clear()).catch(err => console.error(err));
             }
         };
     }, [isScanning]);
