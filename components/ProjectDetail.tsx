@@ -83,6 +83,12 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const [isLaborDetailsExpanded, setIsLaborDetailsExpanded] = useState(false); // 派工明細展開狀態
   const [editingAssignment, setEditingAssignment] = useState<WorkAssignment | null>(null); // 編輯中的派工
 
+  // Daily Log Upload State
+  const [logContent, setLogContent] = useState('');
+  const [logPhotos, setLogPhotos] = useState<string[]>([]);
+  const [isUploadingLog, setIsUploadingLog] = useState(false);
+  const logFileInputRef = useRef<HTMLInputElement>(null);
+
   const handleDeleteAssignment = (assignmentId: string) => {
     if (window.confirm('確定要刪除這筆派工紀錄嗎？此動作無法復原。')) {
       const newAssignments = (project.workAssignments || []).filter(a => a.id !== assignmentId);
@@ -96,6 +102,30 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
     );
     props.onUpdateWorkAssignments(newAssignments);
     setEditingAssignment(null);
+  };
+
+  const handleLogPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    setIsUploadingLog(true);
+    const files = Array.from(e.target.files);
+    const newWorkerPhotoUrls: string[] = [];
+
+    try {
+      for (const file of files) {
+        const result = await cloudFileService.uploadFile(file);
+        if (result && result.url) {
+          newWorkerPhotoUrls.push(result.url);
+        }
+      }
+      setLogPhotos(prev => [...prev, ...newWorkerPhotoUrls]);
+    } catch (err) {
+      console.error('上傳失敗:', err);
+      alert('照片上傳失敗，請稍後再試');
+    } finally {
+      setIsUploadingLog(false);
+      if (logFileInputRef.current) logFileInputRef.current.value = '';
+    }
   };
 
   // Local state for Pre-construction Prep to ensure smooth typing
@@ -505,33 +535,64 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                   </h4>
                   <form onSubmit={(e) => {
                     e.preventDefault();
-                    const form = e.target as HTMLFormElement;
-                    const content = (form.elements.namedItem('content') as HTMLTextAreaElement).value;
-                    const photoUrl = (form.elements.namedItem('photoUrl') as HTMLInputElement).value;
-                    if (!content.trim()) return;
-                    onAddDailyLog({ content, photoUrls: photoUrl ? [photoUrl] : [] });
-                    form.reset();
+                    if (!logContent.trim()) return;
+                    onAddDailyLog({ content: logContent, photoUrls: logPhotos });
+                    setLogContent('');
+                    setLogPhotos([]);
                   }} className="space-y-4">
                     <textarea
-                      name="content"
+                      value={logContent}
+                      onChange={(e) => setLogContent(e.target.value)}
                       required
                       placeholder="輸入討論內容或紀錄..."
                       className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 text-xs font-bold text-stone-900 outline-none focus:ring-2 focus:ring-blue-600/20 placeholder:text-stone-300 resize-none h-32"
                     ></textarea>
+
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1">現場照片網址 (選填)</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1">現場照片 (可多選)</label>
+                        <span className="text-[9px] text-stone-400">{logPhotos.length} 張照片</span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {logPhotos.map((url, idx) => (
+                          <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-stone-200 group">
+                            <img src={url} alt={`Photo ${idx}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setLogPhotos(prev => prev.filter((_, i) => i !== idx))}
+                              className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => logFileInputRef.current?.click()}
+                          disabled={isUploadingLog}
+                          className="w-16 h-16 rounded-lg border-2 border-dashed border-stone-200 flex flex-col items-center justify-center gap-1 text-stone-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all disabled:opacity-50"
+                        >
+                          {isUploadingLog ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+                          <span className="text-[9px] font-bold">{isUploadingLog ? '上傳中' : '新增'}</span>
+                        </button>
+                      </div>
                       <input
-                        name="photoUrl"
-                        type="url"
-                        placeholder="https://example.com/photo.jpg"
-                        className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-[10px] font-bold text-stone-900 outline-none"
+                        type="file"
+                        ref={logFileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        multiple
+                        onChange={handleLogPhotoUpload}
                       />
                     </div>
+
                     <button
                       type="submit"
-                      className="w-full py-3 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-stone-200"
+                      disabled={isUploadingLog || !logContent.trim()}
+                      className="w-full py-3 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-stone-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      提交內容
+                      {isUploadingLog ? '照片上傳中...' : '提交內容'}
                     </button>
                   </form>
                 </div>
