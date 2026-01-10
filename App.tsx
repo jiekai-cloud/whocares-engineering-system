@@ -16,13 +16,15 @@ import TeamModal from './components/TeamModal';
 import VendorModal from './components/VendorModal';
 import InventoryModal from './components/InventoryModal';
 import InventoryList from './components/InventoryList';
+import LocationManagerModal from './components/LocationManagerModal';
+import TransferModal from './components/TransferModal';
 import LeadToProjectModal from './components/LeadToProjectModal';
 import Login from './components/Login';
 import ModuleManager from './components/ModuleManager';
 import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as LucideUser, Trash2, ShoppingBag, Receipt, Pencil, X, ExternalLink, Download } from 'lucide-react';
 import NotificationPanel from './components/NotificationPanel';
 import { MOCK_PROJECTS, MOCK_DEPARTMENTS, MOCK_TEAM_MEMBERS } from './constants';
-import { Project, ProjectStatus, Customer, TeamMember, User, Department, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead, InventoryItem } from './types';
+import { Project, ProjectStatus, Customer, TeamMember, User, Department, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead, InventoryItem, InventoryCategory, InventoryLocation, InventoryTransaction } from './types';
 import { googleDriveService, DEFAULT_CLIENT_ID } from './services/googleDriveService';
 import { moduleService } from './services/moduleService';
 import { ModuleId } from './moduleConfig';
@@ -90,7 +92,11 @@ const App: React.FC = () => {
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+
+  const [inventoryLocations, setInventoryLocations] = useState<InventoryLocation[]>([]);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
+  const [transferItem, setTransferItem] = useState<InventoryItem | null>(null);
   const [editingInventoryItem, setEditingInventoryItem] = useState<InventoryItem | null>(null);
 
   // 系統狀態
@@ -261,10 +267,13 @@ const App: React.FC = () => {
     setCustomers(prev => mergeData(prev, cloudData.customers || []));
     setTeamMembers(prev => mergeData(prev, cloudData.teamMembers || []));
     setVendors(prev => mergeData(prev, cloudData.vendors || []));
-    setVendors(prev => mergeData(prev, cloudData.vendors || []));
-    setLeads(prev => mergeData(prev, cloudData.leads || []));
-    setInventoryItems(prev => mergeData(prev, cloudData.inventory || []));
-
+    // Update inventory and locations from cloud
+    if (cloudData.inventory) {
+      setInventoryItems(prev => mergeData(prev, cloudData.inventory || []));
+    }
+    if (cloudData.locations) {
+      setInventoryLocations(prev => mergeData(prev, cloudData.locations || []));
+    }
     // Activity logs 採取單純合併去重
     setActivityLogs(prev => {
       const combined = [...(cloudData.activityLogs || []), ...prev];
@@ -376,13 +385,14 @@ const App: React.FC = () => {
           payments: p.payments || []
         })));
 
-        const [customersData, initialTeam, vendorsData, leadsData, logsData, inventoryData] = await Promise.all([
+        const [customersData, initialTeam, vendorsData, leadsData, logsData, inventoryData, locationsData] = await Promise.all([
           storageService.getItem<Customer[]>('bt_customers', []),
           storageService.getItem<TeamMember[]>('bt_team', MOCK_TEAM_MEMBERS),
           storageService.getItem<Vendor[]>('bt_vendors', []),
           storageService.getItem<Lead[]>('bt_leads', []),
           storageService.getItem<any[]>('bt_logs', []),
-          storageService.getItem<InventoryItem[]>('bt_inventory', [])
+          storageService.getItem<InventoryItem[]>('bt_inventory', []),
+          storageService.getItem<InventoryLocation[]>('bt_locations', [{ id: 'MAIN', name: '總倉庫', type: 'Main', isDefault: true }])
         ]);
 
         setCustomers(customersData);
@@ -394,9 +404,8 @@ const App: React.FC = () => {
         })));
         setVendors(vendorsData);
         setLeads(leadsData);
-        setVendors(vendorsData);
-        setLeads(leadsData);
         setInventoryItems(inventoryData);
+        setInventoryLocations(locationsData);
         setActivityLogs(logsData);
 
         // 儲存至 IndexedDB
@@ -449,10 +458,10 @@ const App: React.FC = () => {
   };
 
   // 使用 Ref 追蹤最新數據與同步狀態，避免頻繁觸發 useEffect 重新整理
-  const dataRef = React.useRef({ projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems });
+  const dataRef = React.useRef({ projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations });
   React.useEffect(() => {
-    dataRef.current = { projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems };
-  }, [projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems]);
+    dataRef.current = { projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations };
+  }, [projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations]);
 
   const addActivityLog = useCallback((action: string, targetName: string, targetId: string, type: ActivityLog['type']) => {
     if (!user) return;
@@ -501,6 +510,7 @@ const App: React.FC = () => {
         vendors,
         leads,
         inventory: inventoryItems,
+        locations: inventoryLocations,
         activityLogs,
         lastUpdated: new Date().toISOString(),
         userEmail: user?.email
@@ -532,7 +542,7 @@ const App: React.FC = () => {
       isSyncingRef.current = false;
       setIsSyncing(false); // STOP UI SPINNER
     }
-  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, inventoryItems, activityLogs, updateStateWithMerge, cloudError, handleLogout]);
+  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, inventoryItems, inventoryLocations, activityLogs, updateStateWithMerge, cloudError, handleLogout]);
 
   const handleConnectCloud = async () => {
     if (user?.role === 'Guest') return;
@@ -552,6 +562,7 @@ const App: React.FC = () => {
         setActivityLogs(cloudData.activityLogs || []);
         setVendors(cloudData.vendors || []);
         setInventoryItems(cloudData.inventory || []);
+        setInventoryLocations(cloudData.locations || []);
         setLastCloudSync(new Date().toLocaleTimeString());
 
         // 重要：在自動登出前，強制將下載的資料存入 IndexedDB
@@ -562,6 +573,7 @@ const App: React.FC = () => {
           storageService.setItem('bt_customers', cloudData.customers || []),
           storageService.setItem('bt_vendors', cloudData.vendors || []),
           storageService.setItem('bt_inventory', cloudData.inventory || []),
+          storageService.setItem('bt_locations', cloudData.locations || []),
           storageService.setItem('bt_logs', cloudData.activityLogs || [])
         ]);
 
@@ -598,6 +610,7 @@ const App: React.FC = () => {
           storageService.setItem('bt_vendors', vendors),
           storageService.setItem('bt_leads', leads),
           storageService.setItem('bt_inventory', inventoryItems),
+          storageService.setItem('bt_locations', inventoryLocations),
           storageService.setItem('bt_logs', activityLogs.slice(0, 50))
         ]);
         setLastLocalSave(new Date().toLocaleTimeString());
@@ -612,7 +625,7 @@ const App: React.FC = () => {
         handleCloudSync();
       }, 3000);
     }
-  }, [projects, customers, teamMembers, activityLogs, vendors, isCloudConnected, cloudError, initialSyncDone, handleCloudSync, user?.role, leads, inventoryItems]);
+  }, [projects, customers, teamMembers, activityLogs, vendors, isCloudConnected, cloudError, initialSyncDone, handleCloudSync, user?.role, leads, inventoryItems, inventoryLocations]);
 
   // 背景心跳監測 (Heartbeat Polling) - 每 45 秒檢查一次雲端是否有新更動
   useEffect(() => {
@@ -670,9 +683,9 @@ const App: React.FC = () => {
           setProjects(normalizeProjects(cloudData.projects || [])); // No merging, just replacing
           setCustomers(cloudData.customers || []);
           setTeamMembers(cloudData.teamMembers || []);
-          setTeamMembers(cloudData.teamMembers || []);
           setVendors(cloudData.vendors || []);
           setInventoryItems(cloudData.inventory || []);
+          setInventoryLocations(cloudData.locations || []);
           // Force save to IndexedDB immediately to prevent reversion
           setTimeout(async () => {
             await Promise.all([
@@ -680,7 +693,8 @@ const App: React.FC = () => {
               storageService.setItem('bt_customers', cloudData.customers || []),
               storageService.setItem('bt_team', cloudData.teamMembers || []),
               storageService.setItem('bt_vendors', cloudData.vendors || []),
-              storageService.setItem('bt_inventory', cloudData.inventory || [])
+              storageService.setItem('bt_inventory', cloudData.inventory || []),
+              storageService.setItem('bt_locations', cloudData.locations || [])
             ]);
             alert('✅ 雲端還原成功！\n\n所有本地資料已強制覆蓋為雲端版本。頁面將重新整理。');
             window.location.reload();
@@ -971,7 +985,7 @@ const App: React.FC = () => {
             </p>
             <button
               onClick={handleLogout}
-              className="w-full py-5 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] transition-all shadow-2xl shadow-stone-950/20 flex items-center justify-center gap-3"
+              className="w-full py-5 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-stone-950/20 flex items-center justify-center gap-3"
             >
               登出並完成初始化
               <LogOut size={16} />
@@ -1240,6 +1254,8 @@ const App: React.FC = () => {
                     setInventoryItems(prev => prev.map(i => i.id === id ? { ...i, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : i));
                   }
                 }}
+                onManageLocations={() => setIsLocationManagerOpen(true)}
+                onTransferClick={(item) => setTransferItem(item)}
               />}
 
               {activeTab === 'vendors' && moduleService.isModuleEnabled(ModuleId.VENDORS) && (
@@ -1490,6 +1506,72 @@ const App: React.FC = () => {
           setEditingInventoryItem(null);
         }}
         initialData={editingInventoryItem}
+        // Pass available locations names for suggestion
+        availableLocationNames={inventoryLocations.map(l => l.name)}
+      />}
+
+      {isLocationManagerOpen && <LocationManagerModal
+        locations={inventoryLocations}
+        onClose={() => setIsLocationManagerOpen(false)}
+        onAdd={(data) => {
+          const newId = 'LOC' + Date.now().toString().slice(-6);
+          setInventoryLocations(prev => [...prev, { ...data, id: newId } as InventoryLocation]);
+          addActivityLog('新增倉庫', data.name, newId, 'system');
+        }}
+        onDelete={(id) => {
+          const loc = inventoryLocations.find(l => l.id === id);
+          if (loc) {
+            setInventoryLocations(prev => prev.filter(l => l.id !== id));
+            addActivityLog('移除倉庫', loc.name, id, 'system');
+          }
+        }}
+      />}
+
+      {transferItem && <TransferModal
+        item={transferItem}
+        allLocations={inventoryLocations}
+        onClose={() => setTransferItem(null)}
+        onConfirm={(from, to, qty, notes) => {
+          // Perform Transfer
+          setInventoryItems(prev => prev.map(item => {
+            if (item.id !== transferItem.id) return item;
+
+            const newLocations = [...(item.locations || [])];
+
+            // Decrease Source
+            const sourceIdx = newLocations.findIndex(l => l.name === from);
+            if (sourceIdx >= 0) {
+              newLocations[sourceIdx] = {
+                ...newLocations[sourceIdx],
+                quantity: Math.max(0, newLocations[sourceIdx].quantity - qty)
+              };
+            }
+
+            // Increase Dest
+            const destIdx = newLocations.findIndex(l => l.name === to);
+            if (destIdx >= 0) {
+              newLocations[destIdx] = {
+                ...newLocations[destIdx],
+                quantity: newLocations[destIdx].quantity + qty
+              };
+            } else {
+              newLocations.push({ name: to, quantity: qty });
+            }
+
+            // Update Item total quantity (should technically remain same, but recalc to be safe)
+            const total = newLocations.reduce((sum, l) => sum + (l.quantity || 0), 0);
+
+            addActivityLog('庫存調撥', `${item.name} (${qty} ${item.unit}) from ${from} to ${to}`, item.id, 'inventory');
+
+            return {
+              ...item,
+              quantity: total,
+              locations: newLocations,
+              updatedAt: new Date().toISOString()
+            };
+          }));
+          setTransferItem(null);
+        }}
       />}
 
       <VendorModal

@@ -10,14 +10,16 @@ interface InventoryModalProps {
     onClose: () => void;
     onConfirm: (data: Partial<InventoryItem>) => void;
     initialData?: InventoryItem | null;
+    availableLocationNames?: string[];
 }
 
-const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, initialData }) => {
+const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, initialData, availableLocationNames }) => {
     const [activeTab, setActiveTab] = useState<'info' | 'stock'>('info');
 
     const [formData, setFormData] = useState<Partial<InventoryItem>>({
         name: '',
         sku: '',
+        barcode: '', // Custom Barcode / Asset ID
         category: '材料',
         quantity: 0,
         unit: '個',
@@ -250,10 +252,14 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                                                     <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
                                                     <input
                                                         placeholder="儲位名稱 (如: 倉庫A-01)"
+                                                        list={`loc-suggestions-${idx}`}
                                                         className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
                                                         value={loc.name}
                                                         onChange={(e) => handleLocationChange(idx, 'name', e.target.value)}
                                                     />
+                                                    <datalist id={`loc-suggestions-${idx}`}>
+                                                        {availableLocationNames?.map(name => <option key={name} value={name} />)}
+                                                    </datalist>
                                                 </div>
                                                 <div className="w-24 relative">
                                                     <input
@@ -292,10 +298,23 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                     {activeTab === 'barcode' && (
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col items-center justify-center space-y-8 py-8">
                             <div className="bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-xl flex flex-col items-center gap-4 max-w-sm w-full mx-auto">
+                                <div className="w-full">
+                                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 text-center">自訂條碼內容 (資產編號)</label>
+                                    <div className="relative">
+                                        <QrCode size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                        <input
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-center font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            placeholder="輸入條碼編號..."
+                                            value={formData.barcode || ''}
+                                            onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="w-full aspect-square bg-slate-50 rounded-2xl flex items-center justify-center p-4">
                                     {/* Using bwip-js API for DataMatrix generation */}
                                     <img
-                                        src={`https://bwipjs-api.metafloor.com/?bcid=datamatrix&text=${formData.id || formData.sku || 'NEW-ITEM'}&scale=3&includetext&backgroundcolor=ffffff`}
+                                        src={`https://bwipjs-api.metafloor.com/?bcid=datamatrix&text=${formData.barcode || formData.id || formData.sku || 'NEW-ITEM'}&scale=3&includetext&backgroundcolor=ffffff`}
                                         alt="DataMatrix"
                                         className="w-full h-full object-contain mix-blend-multiply"
                                         onError={(e) => {
@@ -307,7 +326,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                                 </div>
                                 <div className="text-center">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">DATA MATRIX</p>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight font-mono">{formData.sku || formData.id || 'Pending ID'}</h3>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight font-mono">{formData.barcode || formData.sku || formData.id || 'Pending ID'}</h3>
                                     <p className="text-xs font-bold text-slate-500 mt-2">{formData.name}</p>
                                 </div>
                             </div>

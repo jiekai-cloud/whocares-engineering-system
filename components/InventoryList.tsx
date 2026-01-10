@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
     Search, Plus, Package, Ruler, Archive, AlertTriangle,
     MoreHorizontal, Pencil, Trash2, Tag, Box, Hash, Filter,
-    ShieldAlert, ShoppingBag, Truck, LayoutList, MapPin
+    ShieldAlert, ShoppingBag, Truck, LayoutList, MapPin, Building2, ArrowRightLeft
 } from 'lucide-react';
 import { InventoryItem, User as UserType, InventoryCategory } from '../types';
 
@@ -12,9 +12,11 @@ interface InventoryListProps {
     onAddClick: () => void;
     onEditClick: (item: InventoryItem) => void;
     onDeleteClick: (id: string) => void;
+    onManageLocations: () => void;
+    onTransferClick: (item: InventoryItem) => void;
 }
 
-const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, onEditClick, onDeleteClick }) => {
+const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, onEditClick, onDeleteClick, onManageLocations, onTransferClick }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -80,13 +82,22 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                 </div>
                 <div className="flex items-center gap-3">
                     {!isReadOnly ? (
-                        <button
-                            onClick={onAddClick}
-                            className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3.5 rounded-2xl flex items-center gap-2 transition-all shadow-xl shadow-slate-200 active:scale-95 font-black text-sm"
-                        >
-                            <Plus size={20} />
-                            <span>新增項目</span>
-                        </button>
+                        <>
+                            <button
+                                onClick={onManageLocations}
+                                className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-4 py-3.5 rounded-2xl flex items-center gap-2 transition-all font-bold text-sm"
+                            >
+                                <Building2 size={18} />
+                                <span className="hidden sm:inline">倉庫管理</span>
+                            </button>
+                            <button
+                                onClick={onAddClick}
+                                className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3.5 rounded-2xl flex items-center gap-2 transition-all shadow-xl shadow-slate-200 active:scale-95 font-black text-sm"
+                            >
+                                <Plus size={20} />
+                                <span>新增項目</span>
+                            </button>
+                        </>
                     ) : (
                         <div className="bg-stone-50 text-stone-400 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-stone-200">
                             <ShieldAlert size={16} /> 訪客唯讀模式
@@ -244,6 +255,13 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                                                 className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-md hover:border-blue-100 border border-transparent rounded-xl transition-all"
                                             >
                                                 <Pencil size={18} />
+                                            </button>
+                                            <button
+                                                title="庫存調撥"
+                                                onClick={() => onTransferClick(item)}
+                                                className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-white hover:shadow-md hover:border-emerald-100 border border-transparent rounded-xl transition-all"
+                                            >
+                                                <ArrowRightLeft size={18} />
                                             </button>
                                             <button
                                                 onClick={() => onDeleteClick(item.id)}

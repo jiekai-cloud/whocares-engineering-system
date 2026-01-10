@@ -308,6 +308,7 @@ export interface InventoryItem {
   id: string;
   name: string;
   sku?: string; // 料號
+  barcode?: string; // 條碼編號 / 資產標籤
   category: InventoryCategory;
   quantity: number;
   unit: string;
@@ -323,12 +324,23 @@ export interface InventoryItem {
   notes?: string;
 }
 
+
+export interface InventoryLocation {
+  id: string;
+  name: string;
+  type: 'Main' | 'Temporary' | 'Project';
+  description?: string;
+  isDefault?: boolean; // Default location for new items
+}
+
 export interface InventoryTransaction {
   id: string;
   itemId: string;
   itemName: string;
-  type: 'In' | 'Out' | 'Adjust';
+  type: 'In' | 'Out' | 'Adjust' | 'Transfer';
   quantity: number;
+  fromLocation?: string;
+  toLocation?: string;
   date: string;
   performedBy: string; // User Name
   notes?: string;
