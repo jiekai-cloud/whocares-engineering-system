@@ -405,6 +405,54 @@ export const scanReceipt = async (base64Image: string) => {
     return handleAIError(error, "收據掃描");
   }
 };
+
+/**
+ * 智慧報價單分析 - 提取材料明細 (價格由用戶後續輸入)
+ */
+export const analyzeQuotationItems = async (base64Image: string) => {
+  try {
+    const response = await callAIWithFallback({
+      contents: [
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: base64Image
+          }
+        },
+        `妳是專業的工程估價單分析師。請分析這張「廠商報價單」或「材料單」，並列出所有獨立的品項。
+        
+        重點需求：
+        1. 使用者後續會自行輸入價格，因此請將所有項目的金額 (amount) 預設為 0。
+        2. 請盡可能準確識別品項名稱 (name)。
+        3. 自動分類 (category) 為：'機具材料'、'委託工程' 或 '其他'。
+        4. 如果能識別供應商名稱 (supplier)，請填入；否則留空。
+
+        請僅回傳 JSON 陣列，格式如下：
+        [
+          {
+            "name": "品項名稱",
+            "category": "類別",
+            "supplier": "供應商(選填)",
+            "amount": 0
+          }
+        ]
+        
+        請直接回傳 JSON，不要 markdown 標記。`
+      ]
+    }, "報價單分析");
+
+    try {
+      const jsonStr = cleanJsonString(response.text || "[]");
+      const result = JSON.parse(jsonStr);
+      return Array.isArray(result) ? result : [];
+    } catch (e) {
+      console.error("JSON 解析失敗:", response.text);
+      return [];
+    }
+  } catch (error) {
+    return handleAIError(error, "報價單分析");
+  }
+};
 /**
  * 專案財務與盈虧預測分析
  */

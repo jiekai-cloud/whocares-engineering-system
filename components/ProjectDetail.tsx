@@ -7,7 +7,7 @@ import {
   Layers, Camera, HardHat, CheckCircle, ShieldCheck, Edit2, Wrench, ClipboardList, Construction, FileImage, Zap, Lock, ChevronDown
 } from 'lucide-react';
 import { Project, ProjectStatus, Task, ProjectComment, Expense, WorkAssignment, TeamMember, ProjectFile, ProjectPhase, User, ChecklistTask, PaymentStage } from '../types';
-import { suggestProjectSchedule, searchNearbyResources, analyzeProjectFinancials, parseScheduleFromImage, generatePreConstructionPrep, scanReceipt } from '../services/geminiService';
+import { suggestProjectSchedule, searchNearbyResources, analyzeProjectFinancials, parseScheduleFromImage, generatePreConstructionPrep, scanReceipt, analyzeQuotationItems } from '../services/geminiService';
 import GanttChart from './GanttChart';
 import MapLocation from './MapLocation';
 import { cloudFileService } from '../services/cloudFileService';
@@ -67,8 +67,10 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const scheduleFileInputRef = useRef<HTMLInputElement>(null);
   const scopeDrawingInputRef = useRef<HTMLInputElement>(null);
   const receiptInputRef = useRef<HTMLInputElement>(null);
+  const quotationInputRef = useRef<HTMLInputElement>(null);
   const [isGeneratingPrep, setIsGeneratingPrep] = useState(false);
   const [isScanningReceipt, setIsScanningReceipt] = useState(false);
+  const [isAnalyzingQuotation, setIsAnalyzingQuotation] = useState(false);
   const [isMandatoryUploadOpen, setIsMandatoryUploadOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<ProjectStatus | null>(null);
   const contractFileInputRef = useRef<HTMLInputElement>(null);
@@ -875,14 +877,68 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                       <h4 className="text-[10px] font-black text-stone-900 uppercase tracking-widest flex items-center gap-2">
                         <Receipt size={14} className="text-rose-600" /> 專案支出明細
                       </h4>
-                      {!isReadOnly && (
-                        <button
-                          onClick={() => setIsAddingExpense(true)}
-                          className="bg-stone-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black hover:bg-stone-800 transition-all active:scale-95"
-                        >
-                          + 新增支出
-                        </button>
-                      )}
+                      <div className="flex gap-2">
+                        {!isReadOnly && (
+                          <>
+                            <input
+                              type="file"
+                              className="hidden"
+                              ref={quotationInputRef}
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setIsAnalyzingQuotation(true);
+                                  const reader = new FileReader();
+                                  reader.onload = async (event) => {
+                                    try {
+                                      const base64 = (event.target?.result as string).split(',')[1];
+                                      const items = await analyzeQuotationItems(base64);
+                                      if (items && items.length > 0) {
+                                        const newExpenses = items.map((item: any) => ({
+                                          id: `EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                          date: new Date().toISOString().split('T')[0],
+                                          category: item.category || '機具材料',
+                                          status: '尚未請款',
+                                          name: item.name,
+                                          amount: 0, // Explicitly 0 as requested
+                                          supplier: item.supplier || '',
+                                          note: '來自報價單分析'
+                                        }));
+                                        onUpdateExpenses([...(project.expenses || []), ...newExpenses]);
+                                        alert(`✅ 成功匯入 ${items.length} 筆項目！請記得補填金額。`);
+                                      } else {
+                                        alert('無法識別項目，請確認圖片清晰度。');
+                                      }
+                                    } catch (err) {
+                                      console.error(err);
+                                      alert('分析失敗，請稍後再試');
+                                    } finally {
+                                      setIsAnalyzingQuotation(false);
+                                      if (quotationInputRef.current) quotationInputRef.current.value = '';
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => quotationInputRef.current?.click()}
+                              disabled={isAnalyzingQuotation}
+                              className="bg-white border border-stone-200 text-stone-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-50 transition-all flex items-center gap-2"
+                            >
+                              {isAnalyzingQuotation ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                              {isAnalyzingQuotation ? '分析中...' : '匯入報價單'}
+                            </button>
+                            <button
+                              onClick={() => setIsAddingExpense(true)}
+                              className="bg-stone-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black hover:bg-stone-800 transition-all active:scale-95"
+                            >
+                              + 新增支出
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {isAddingExpense && (
