@@ -79,59 +79,70 @@ const ScanTransferModal: React.FC<ScanTransferModalProps> = ({ inventoryItems, l
     };
 
     useEffect(() => {
-        let scanner: Html5QrcodeScanner | null = null;
+        let html5QrCode: Html5Qrcode | null = null;
         let isMounted = true;
 
-        const checkPermissionAndInit = async () => {
+        const startScanning = async () => {
+            if (!isScanning) return;
+
+            // Wait for DOM
+            await new Promise(r => setTimeout(r, 100));
+            if (!isMounted) return;
+
+            const elementId = "reader";
+            if (!document.getElementById(elementId)) {
+                console.error("Reader element not found");
+                return;
+            }
+
             try {
-                // Pre-check permissions
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                // Stop the stream immediately as we just wanted to check permission
-                stream.getTracks().forEach(track => track.stop());
+                html5QrCode = new Html5Qrcode(elementId);
 
-                if (!isMounted) return;
+                // Explicitly request back camera
+                const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
 
-                // Initialize Scanner
-                // Small delay to ensure DOM is ready
-                setTimeout(() => {
-                    if (!isMounted || !document.getElementById('reader')) return;
-
-                    try {
-                        scanner = new Html5QrcodeScanner(
-                            "reader",
-                            {
-                                fps: 10,
-                                qrbox: { width: 250, height: 250 },
-                                aspectRatio: 1.0
-                            },
-                            /* verbose= */ false
-                        );
-                        scanner.render(handleCodeDetected, (error) => {
-                            // ignore scan errors
-                        });
-                    } catch (e) {
-                        console.error("Scanner init error", e);
+                await html5QrCode.start(
+                    { facingMode: "environment" }, // Prefer back camera
+                    config,
+                    (decodedText) => {
+                        handleCodeDetected(decodedText);
+                    },
+                    (errorMessage) => {
+                        // ignore parsing errors
                     }
-                }, 100);
-
+                );
             } catch (err: any) {
-                console.error("Permission error", err);
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    setErrorMsg("🔒 請允許相機權限。請至手機「設定 > 瀏覽器 > 允許相機」開啟。");
-                } else {
-                    setErrorMsg("相機啟動失敗，請確認裝置支援或使用手動輸入。");
+                console.error("Start failed", err);
+                if (isMounted) {
+                    let msg = "啟動失敗";
+                    if (typeof err === 'string') msg = err;
+                    if (err?.name === 'NotAllowedError') msg = "🔒 請允許相機權限";
+                    if (err?.name === 'NotFoundError') msg = "找不到相機裝置";
+                    if (err?.name === 'NotReadableError') msg = "相機目前被其他程式佔用";
+
+                    // Specific check for HTTP
+                    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+                        msg = "❌ 安全限制：相機功能僅支援 HTTPS (安全連線) 或本機測試";
+                    }
+
+                    setErrorMsg(msg);
+                    setIsScanning(false);
                 }
             }
         };
 
         if (isScanning) {
-            checkPermissionAndInit();
+            startScanning();
         }
 
         return () => {
             isMounted = false;
-            if (scanner) {
-                scanner.clear().catch(err => console.error("Failed to clear scanner", err));
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode?.clear();
+                }).catch(err => {
+                    console.error("Failed to stop scanner", err);
+                });
             }
         };
     }, [isScanning]);
