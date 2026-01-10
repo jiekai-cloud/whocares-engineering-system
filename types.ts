@@ -307,6 +307,7 @@ export type InventoryCategory = '材料' | '工具' | '設備' | '其他';
 export interface InventoryItem {
   id: string;
   name: string;
+  simpleName?: string; // 簡稱
   sku?: string; // 料號
   barcode?: string; // 條碼編號 / 資產標籤
   category: InventoryCategory;

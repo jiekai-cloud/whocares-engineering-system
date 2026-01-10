@@ -27,6 +27,7 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
         return items.filter(item => {
             const matchesSearch =
                 item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.simpleName && item.simpleName.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (item.locations?.some(l => l.name.toLowerCase().includes(searchTerm.toLowerCase())) || item.location?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -184,7 +185,14 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                                     </div>
                                     <div>
                                         <h3 className="font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors tracking-tight">
-                                            {item.name}
+                                            {item.simpleName ? (
+                                                <span className="flex flex-col">
+                                                    <span className="text-lg">{item.simpleName}</span>
+                                                    <span className="text-[10px] text-slate-400 font-normal line-clamp-1 mt-0.5">{item.name}</span>
+                                                </span>
+                                            ) : (
+                                                item.name
+                                            )}
                                         </h3>
                                         <div className="flex items-center gap-2 mt-1.5">
                                             {item.sku && (

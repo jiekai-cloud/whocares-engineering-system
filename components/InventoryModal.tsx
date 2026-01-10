@@ -18,6 +18,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
 
     const [formData, setFormData] = useState<Partial<InventoryItem>>({
         name: '',
+        simpleName: '', // 簡稱
         sku: '',
         barcode: '', // Custom Barcode / Asset ID
         category: '材料',
@@ -130,6 +131,19 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-black font-bold"
                                             value={formData.name}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">簡稱 (選填)</label>
+                                    <div className="relative">
+                                        <Tag size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                        <input
+                                            placeholder="例如: PU膠, 止洩帶..."
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-black font-bold"
+                                            value={formData.simpleName || ''}
+                                            onChange={e => setFormData({ ...formData, simpleName: e.target.value })}
                                         />
                                     </div>
                                 </div>
