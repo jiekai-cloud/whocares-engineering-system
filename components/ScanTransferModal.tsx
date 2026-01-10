@@ -80,22 +80,48 @@ const ScanTransferModal: React.FC<ScanTransferModalProps> = ({ inventoryItems, l
 
     useEffect(() => {
         let scanner: Html5QrcodeScanner | null = null;
-        if (isScanning) {
-            scanner = new Html5QrcodeScanner(
-                "reader",
-                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
-                /* verbose= */ false
-            );
-            scanner.render(handleCodeDetected, (error) => {
-                // Ignore scan errors as they happen frequently when no code is visible
-            });
-        }
+        let isMounted = true;
 
-        return () => {
-            if (scanner) {
-                scanner.clear().catch(err => console.error("Failed to clear scanner", err));
-            }
-        };
+        if (isScanning) {
+            // Small delay to ensure DOM is ready
+            const timer = setTimeout(() => {
+                if (!isMounted) return;
+
+                // Check if element exists
+                if (!document.getElementById('reader')) {
+                    console.error("Scanner element not found");
+                    return;
+                }
+
+                try {
+                    scanner = new Html5QrcodeScanner(
+                        "reader",
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 },
+                            aspectRatio: 1.0,
+                            // Explicitly request formats if needed, though default usually covers common ones
+                            // formatsToSupport: [ Html5QrcodeSupportedFormats.DATAMATRIX, Html5QrcodeSupportedFormats.QR_CODE ] 
+                        },
+                        /* verbose= */ false
+                    );
+                    scanner.render(handleCodeDetected, (error) => {
+                        // console.warn(error);
+                    });
+                } catch (e) {
+                    console.error("Scanner initialization failed", e);
+                    setErrorMsg("相機啟動失敗，請檢查權限或使用手動輸入");
+                }
+            }, 300);
+
+            return () => {
+                isMounted = false;
+                clearTimeout(timer);
+                if (scanner) {
+                    scanner.clear().catch(err => console.error("Failed to clear scanner", err));
+                }
+            };
+        }
     }, [isScanning]);
 
     const handleManualAdd = (e: React.FormEvent) => {
