@@ -82,46 +82,58 @@ const ScanTransferModal: React.FC<ScanTransferModalProps> = ({ inventoryItems, l
         let scanner: Html5QrcodeScanner | null = null;
         let isMounted = true;
 
-        if (isScanning) {
-            // Small delay to ensure DOM is ready
-            const timer = setTimeout(() => {
+        const checkPermissionAndInit = async () => {
+            try {
+                // Pre-check permissions
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // Stop the stream immediately as we just wanted to check permission
+                stream.getTracks().forEach(track => track.stop());
+
                 if (!isMounted) return;
 
-                // Check if element exists
-                if (!document.getElementById('reader')) {
-                    console.error("Scanner element not found");
-                    return;
-                }
+                // Initialize Scanner
+                // Small delay to ensure DOM is ready
+                setTimeout(() => {
+                    if (!isMounted || !document.getElementById('reader')) return;
 
-                try {
-                    scanner = new Html5QrcodeScanner(
-                        "reader",
-                        {
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                            aspectRatio: 1.0,
-                            // Explicitly request formats if needed, though default usually covers common ones
-                            // formatsToSupport: [ Html5QrcodeSupportedFormats.DATAMATRIX, Html5QrcodeSupportedFormats.QR_CODE ] 
-                        },
-                        /* verbose= */ false
-                    );
-                    scanner.render(handleCodeDetected, (error) => {
-                        // console.warn(error);
-                    });
-                } catch (e) {
-                    console.error("Scanner initialization failed", e);
-                    setErrorMsg("相機啟動失敗，請檢查權限或使用手動輸入");
-                }
-            }, 300);
+                    try {
+                        scanner = new Html5QrcodeScanner(
+                            "reader",
+                            {
+                                fps: 10,
+                                qrbox: { width: 250, height: 250 },
+                                aspectRatio: 1.0
+                            },
+                            /* verbose= */ false
+                        );
+                        scanner.render(handleCodeDetected, (error) => {
+                            // ignore scan errors
+                        });
+                    } catch (e) {
+                        console.error("Scanner init error", e);
+                    }
+                }, 100);
 
-            return () => {
-                isMounted = false;
-                clearTimeout(timer);
-                if (scanner) {
-                    scanner.clear().catch(err => console.error("Failed to clear scanner", err));
+            } catch (err: any) {
+                console.error("Permission error", err);
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    setErrorMsg("🔒 請允許相機權限。請至手機「設定 > 瀏覽器 > 允許相機」開啟。");
+                } else {
+                    setErrorMsg("相機啟動失敗，請確認裝置支援或使用手動輸入。");
                 }
-            };
+            }
+        };
+
+        if (isScanning) {
+            checkPermissionAndInit();
         }
+
+        return () => {
+            isMounted = false;
+            if (scanner) {
+                scanner.clear().catch(err => console.error("Failed to clear scanner", err));
+            }
+        };
     }, [isScanning]);
 
     const handleManualAdd = (e: React.FormEvent) => {
