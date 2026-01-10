@@ -291,9 +291,21 @@ const App: React.FC = () => {
 
   const handleLogout = useCallback((forced = false) => {
     if (forced || confirm('確定要安全登出生產系統嗎？')) {
+      // 1. Clear User Session
       setUser(null);
       localStorage.removeItem('bt_user');
+
+      // 2. Clear Critical Data State to prevent leakage between departments
+      setProjects([]);
+      setCustomers([]);
+      setTeamMembers([]);
+      setVendors([]);
+      setLeads([]);
+      setInventoryItems([]);
+      setActivityLogs([]);
+
       setActiveTab('dashboard');
+      console.log('[System] Logout complete, memory cleared.');
     }
   }, []);
 
@@ -899,11 +911,13 @@ const App: React.FC = () => {
   }
 
   if (!user) return <Login onLoginSuccess={(u, d) => {
+    setIsInitializing(true); // Show loading screen immediately
     const fullUser: User = { ...u, department: d };
     setUser(fullUser);
     setCurrentDept(d);
     setViewingDeptId(u.role === 'SuperAdmin' ? 'all' : (d === 'ThirdDept' ? 'DEPT-3' : 'DEPT-1'));
     localStorage.setItem('bt_user', JSON.stringify(fullUser));
+    // Data loading happens in background but UI is blocked by isInitializing
     loadSystemData(d);
   }} />;
 
