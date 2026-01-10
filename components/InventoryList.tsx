@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
     Search, Plus, Package, Ruler, Archive, AlertTriangle,
     MoreHorizontal, Pencil, Trash2, Tag, Box, Hash, Filter,
-    ShieldAlert, ShoppingBag, Truck, LayoutList, MapPin, Building2, ArrowRightLeft
+    ShieldAlert, ShoppingBag, Truck, LayoutList, MapPin, Building2, ArrowRightLeft, ScanBarcode
 } from 'lucide-react';
 import { InventoryItem, User as UserType, InventoryCategory } from '../types';
 
@@ -14,9 +14,10 @@ interface InventoryListProps {
     onDeleteClick: (id: string) => void;
     onManageLocations: () => void;
     onTransferClick: (item: InventoryItem) => void;
+    onScanClick: () => void;
 }
 
-const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, onEditClick, onDeleteClick, onManageLocations, onTransferClick }) => {
+const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, onEditClick, onDeleteClick, onManageLocations, onTransferClick, onScanClick }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -89,6 +90,13 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                             >
                                 <Building2 size={18} />
                                 <span className="hidden sm:inline">倉庫管理</span>
+                            </button>
+                            <button
+                                onClick={onScanClick}
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3.5 rounded-2xl flex items-center gap-2 transition-all font-bold shadow-lg shadow-emerald-200 active:scale-95"
+                            >
+                                <ScanBarcode size={20} />
+                                <span className="hidden sm:inline">掃描調撥</span>
                             </button>
                             <button
                                 onClick={onAddClick}

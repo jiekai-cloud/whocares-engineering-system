@@ -18,6 +18,7 @@ import InventoryModal from './components/InventoryModal';
 import InventoryList from './components/InventoryList';
 import LocationManagerModal from './components/LocationManagerModal';
 import TransferModal from './components/TransferModal';
+import ScanTransferModal from './components/ScanTransferModal';
 import LeadToProjectModal from './components/LeadToProjectModal';
 import Login from './components/Login';
 import ModuleManager from './components/ModuleManager';
@@ -96,6 +97,7 @@ const App: React.FC = () => {
   const [inventoryLocations, setInventoryLocations] = useState<InventoryLocation[]>([]);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [transferItem, setTransferItem] = useState<InventoryItem | null>(null);
   const [editingInventoryItem, setEditingInventoryItem] = useState<InventoryItem | null>(null);
 
@@ -1256,6 +1258,7 @@ const App: React.FC = () => {
                 }}
                 onManageLocations={() => setIsLocationManagerOpen(true)}
                 onTransferClick={(item) => setTransferItem(item)}
+                onScanClick={() => setIsScanModalOpen(true)}
               />}
 
               {activeTab === 'vendors' && moduleService.isModuleEnabled(ModuleId.VENDORS) && (
@@ -1571,6 +1574,65 @@ const App: React.FC = () => {
             };
           }));
           setTransferItem(null);
+        }}
+      />}
+
+      {isScanModalOpen && <ScanTransferModal
+        inventoryItems={inventoryItems}
+        locations={inventoryLocations}
+        onClose={() => setIsScanModalOpen(false)}
+        onConfirm={(items, toLocation) => {
+          // Batch Transfer Logic
+          setInventoryItems(prev => {
+            let newItems = [...prev];
+            const logDetails: string[] = [];
+
+            items.forEach(transfer => {
+              const itemIndex = newItems.findIndex(i => i.id === transfer.inventoryItem.id);
+              if (itemIndex >= 0) {
+                const item = newItems[itemIndex];
+                const newLocations = [...(item.locations || [])];
+
+                // Decrease Source
+                const sourceIdx = newLocations.findIndex(l => l.name === transfer.fromLocation);
+                if (sourceIdx >= 0) {
+                  newLocations[sourceIdx] = {
+                    ...newLocations[sourceIdx],
+                    quantity: Math.max(0, newLocations[sourceIdx].quantity - transfer.quantity)
+                  };
+                }
+
+                // Increase Dest
+                const destIdx = newLocations.findIndex(l => l.name === toLocation);
+                if (destIdx >= 0) {
+                  newLocations[destIdx] = {
+                    ...newLocations[destIdx],
+                    quantity: newLocations[destIdx].quantity + transfer.quantity
+                  };
+                } else {
+                  newLocations.push({ name: toLocation, quantity: transfer.quantity });
+                }
+
+                // Recalculate total
+                const total = newLocations.reduce((sum, l) => sum + (l.quantity || 0), 0);
+                newItems[itemIndex] = {
+                  ...item,
+                  quantity: total,
+                  locations: newLocations,
+                  updatedAt: new Date().toISOString()
+                };
+
+                logDetails.push(`${item.name} (${transfer.quantity})`);
+              }
+            });
+
+            if (logDetails.length > 0) {
+              addActivityLog('批量調撥', `轉移至 ${toLocation}: ${logDetails.join(', ')}`, 'BATCH_TRANSFER', 'inventory');
+            }
+
+            return newItems;
+          });
+          setIsScanModalOpen(false);
         }}
       />}
 
