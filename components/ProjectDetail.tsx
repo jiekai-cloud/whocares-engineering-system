@@ -598,59 +598,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                 </div>
               )}
 
-              {/* 留言中心 */}
-              <div className="flex-1 bg-white rounded-3xl border border-stone-200 shadow-sm flex flex-col lg:overflow-hidden">
-                <div className="px-6 py-4 border-b border-stone-100 bg-stone-50/50 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare size={16} className="text-blue-600" />
-                    <h3 className="font-black text-xs uppercase tracking-widest">團隊討論區</h3>
-                  </div>
-                </div>
-                <div className="flex-1 lg:overflow-y-auto p-4 space-y-4 no-scrollbar">
-                  {(project.comments || []).map((comment) => (
-                    <div key={comment.id} className="flex gap-2 group/comment items-start">
-                      <div className="w-6 h-6 rounded-lg bg-stone-100 flex items-center justify-center font-black text-stone-400 text-[8px] shrink-0 uppercase border border-stone-200">
-                        {comment.authorName.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-medium text-stone-700 bg-stone-50 p-2.5 rounded-xl rounded-tl-none border border-stone-100 leading-relaxed italic">
-                          "{comment.text}"
-                        </p>
-                      </div>
-                      {(!isReadOnly && (comment.authorName === user.name || user.role === 'SuperAdmin')) && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm('確定要刪除這條留言嗎？')) {
-                              onDeleteComment(comment.id);
-                            }
-                          }}
-                          className="p-1.5 text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover/comment:opacity-100 shrink-0"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {!isReadOnly && (
-                  <div className="p-4 border-t border-stone-100">
-                    <form
-                      onSubmit={(e) => { e.preventDefault(); if (!newComment.trim()) return; onAddComment(newComment); setNewComment(''); }}
-                      className="flex gap-2"
-                    >
-                      <input
-                        type="text"
-                        placeholder="留言..."
-                        className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-[10px] font-bold outline-none"
-                        value={newComment}
-                        onChange={e => setNewComment(e.target.value)}
-                      />
-                      <button type="submit" disabled={!newComment.trim()} className="p-2 bg-blue-600 text-white rounded-xl disabled:opacity-20 transition-all active:scale-90"><Send size={14} /></button>
-                    </form>
-                  </div>
-                )}
-              </div>
+
             </div>
           </div>
         )}
