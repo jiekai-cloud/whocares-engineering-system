@@ -4,18 +4,17 @@ import { Project } from "../types";
 // 優先採用的穩定模型列表 (依序備援)
 // 優先採用的穩定模型列表 (依序備援，涵蓋穩定版與最新版)
 const FALLBACK_MODELS = [
+  'gemini-2.0-flash-exp',      // Primary: Only model working for this user (despite rate limits)
+  'gemini-2.0-flash-thinking-exp', // Backup experimental
   'gemini-1.5-flash-002',      // Newer stable version
   'gemini-1.5-flash-001',      // Older stable version
-  'gemini-1.5-flash',          // Generic alias (sometimes 404s)
-  'gemini-1.5-flash-8b',       // Another flash variant
-  'gemini-1.5-pro',            // Pro version
-  'gemini-1.5-pro-001',
-  'gemini-1.5-pro-002',
-  'gemini-pro',                // Legacy 1.0 Pro
-  'gemini-2.0-flash-exp'       // Experimental (Moved to last due to lower quotas)
+  'gemini-1.5-flash',          // Generic alias
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-pro',
+  'gemini-1.5-pro-001'
 ];
-const STABLE_MODEL = 'gemini-1.5-flash-002';
-const EXPERIMENTAL_MODEL = 'gemini-2.0-flash-exp';
+const STABLE_MODEL = 'gemini-2.0-flash-exp';
+const EXPERIMENTAL_MODEL = 'gemini-2.0-flash-thinking-exp';
 
 // Always use an named parameter for apiKey and fetch from process.env.API_KEY
 const getAI = () => {
@@ -58,7 +57,7 @@ const handleAIError = (error: any, context: string, modelUsed: string) => {
   // 如果是配額問題，直接拋出，不進行備援
   // 429: Too Many Requests / Resource Exhausted
   if (errorMsg.includes("limit: 0") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("429")) {
-    throw new Error(`AI 服務配額已耗盡 (429)。這是因為免費版 API Key 有使用限制，請稍候再試，或更換 API Key。`);
+    throw new Error(`AI 服務忙碌中 (429)：免費版配額已滿，請等待約 1 分鐘後再試。`);
   }
 
   // 404 代表模型不存在或未被授權
