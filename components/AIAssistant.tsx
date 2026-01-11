@@ -68,7 +68,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ projects, onAddProject, onPro
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
 
-      // Add threshold to distinguish click vs drag
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
         dragRef.current.hasMoved = true;
       }
@@ -83,20 +82,57 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ projects, onAddProject, onPro
       dragRef.current.isDragging = false;
     };
 
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dragRef.current.isDragging) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragRef.current.startX;
+      const dy = touch.clientY - dragRef.current.startY;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        dragRef.current.hasMoved = true;
+      }
+
+      setPosition({
+        x: dragRef.current.initialX + dx,
+        y: dragRef.current.initialY + dy
+      });
+    };
+
+    const handleTouchEnd = () => {
+      dragRef.current.isDragging = false;
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     };
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent text selection
+    e.preventDefault();
     dragRef.current = {
       isDragging: true,
       startX: e.clientX,
       startY: e.clientY,
+      initialX: position.x,
+      initialY: position.y,
+      hasMoved: false
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    dragRef.current = {
+      isDragging: true,
+      startX: touch.clientX,
+      startY: touch.clientY,
       initialX: position.x,
       initialY: position.y,
       hasMoved: false
@@ -165,14 +201,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ projects, onAddProject, onPro
 
   return (
     <div
-      className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 z-50 transition-transform duration-75 ease-out will-change-transform sm:translate-x-0 sm:translate-y-0"
-      style={{
-        transform: window.innerWidth >= 640 ? `translate(${position.x}px, ${position.y}px)` : 'none'
-      }}
+      className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 z-50 transition-transform duration-75 ease-out will-change-transform"
+      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
     >
       {!isOpen && (
         <button
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           onClick={() => {
             if (!dragRef.current.hasMoved) setIsOpen(true);
           }}
