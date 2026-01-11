@@ -67,7 +67,11 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const lastPinchDistRef = useRef<number | null>(null);
 
   const currentFilteredFiles = useMemo(() => {
     return (project.files || []).filter(f =>
@@ -132,6 +136,51 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && zoomLevel > 1) {
+      const touch = e.touches[0];
+      setIsDragging(true);
+      dragStartRef.current = { x: touch.clientX - position.x, y: touch.clientY - position.y };
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      lastPinchDistRef.current = dist;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging && zoomLevel > 1) {
+      const touch = e.touches[0];
+      setPosition({
+        x: touch.clientX - dragStartRef.current.x,
+        y: touch.clientY - dragStartRef.current.y
+      });
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+
+      if (lastPinchDistRef.current !== null) {
+        const delta = dist - lastPinchDistRef.current;
+        const ZOOM_SPEED = 0.01;
+        setZoomLevel(prev => {
+          const newZoom = Math.min(Math.max(prev + delta * ZOOM_SPEED, 1), 5);
+          if (newZoom === 1) setPosition({ x: 0, y: 0 });
+          return newZoom;
+        });
+      }
+      lastPinchDistRef.current = dist;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    lastPinchDistRef.current = null;
   };
 
   // Keyboard navigation
@@ -2089,740 +2138,753 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                       cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
                     }}
                     onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
+                    }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                   >
-                    <img
-                      src={selectedImage.url}
-                      alt={selectedImage.name}
-                      className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl pointer-events-none select-none"
-                      draggable={false}
-                    />
-                  </div>
-                )}
+                <img
+                  src={selectedImage.url}
+                  alt={selectedImage.name}
+                  className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl pointer-events-none select-none"
+                  draggable={false}
+                />
               </div>
-
-              {/* Controls Toolbar */}
-              <div className="mt-6 flex flex-col items-center gap-4 z-[110]">
-                {/* Zoom Controls (Images Only) */}
-                {selectedImage.type !== 'video' && (
-                  <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
-                    <button onClick={handleZoomOut} className="text-white/70 hover:text-white transition-colors disabled:opacity-30" disabled={zoomLevel <= 1}>
-                      <ZoomOut size={18} />
-                    </button>
-                    <span className="text-xs font-black text-white w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-                    <button onClick={handleZoomIn} className="text-white/70 hover:text-white transition-colors disabled:opacity-30" disabled={zoomLevel >= 3}>
-                      <ZoomIn size={18} />
-                    </button>
-                  </div>
                 )}
+            </div>
 
-                {/* Image Info */}
-                <div className="text-center space-y-3">
-                  <h3 className="text-white text-lg font-black tracking-tight drop-shadow-md">{selectedImage.name}</h3>
-                  <div className="flex flex-wrap items-center justify-center gap-3">
-                    <p className="text-white/60 text-[10px] font-black uppercase tracking-widest">
-                      {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) + 1} / {currentFilteredFiles.length}
-                    </p>
-                    <span className="w-1 h-1 bg-white/20 rounded-full" />
-                    <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">
-                      {selectedImage.uploadedAt ? new Date(selectedImage.uploadedAt).toLocaleString() : '無日期'}
-                    </p>
-                    <span className="w-1 h-1 bg-white/20 rounded-full" />
-                    {!isReadOnly && onUpdateFiles ? (
-                      <div className="flex items-center gap-3">
-                        <div className="relative group/cat">
-                          <select
-                            value={selectedImage.category}
-                            onChange={(e) => {
-                              const newCategory = e.target.value;
-                              const updatedFiles = project.files?.map(f => f.id === selectedImage.id ? { ...f, category: newCategory } : f) || [];
-                              onUpdateFiles(updatedFiles);
-                              setSelectedImage({ ...selectedImage, category: newCategory });
-                            }}
-                            className="appearance-none bg-stone-800 text-orange-500 text-[10px] font-black uppercase tracking-widest border border-stone-700 rounded-xl px-4 py-1.5 pr-8 outline-none cursor-pointer hover:bg-stone-700 transition-all"
-                          >
-                            {PHOTO_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-                              <option key={cat.id} value={cat.id}>{cat.label}</option>
-                            ))}
-                          </select>
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-orange-500/50">
-                            <Layers size={10} />
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (confirm('確定要從雲端刪除這張照片嗎？')) {
-                              onUpdateFiles(project.files!.filter(f => f.id !== selectedImage.id));
-                              setSelectedImage(null);
-                            }
+            {/* Controls Toolbar */}
+            <div className="mt-6 flex flex-col items-center gap-4 z-[110]">
+              {/* Zoom Controls (Images Only) */}
+              {selectedImage.type !== 'video' && (
+                <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                  <button onClick={handleZoomOut} className="text-white/70 hover:text-white transition-colors disabled:opacity-30" disabled={zoomLevel <= 1}>
+                    <ZoomOut size={18} />
+                  </button>
+                  <span className="text-xs font-black text-white w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+                  <button onClick={handleZoomIn} className="text-white/70 hover:text-white transition-colors disabled:opacity-30" disabled={zoomLevel >= 3}>
+                    <ZoomIn size={18} />
+                  </button>
+                </div>
+              )}
+
+              {/* Image Info */}
+              <div className="text-center space-y-3">
+                <h3 className="text-white text-lg font-black tracking-tight drop-shadow-md">{selectedImage.name}</h3>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <p className="text-white/60 text-[10px] font-black uppercase tracking-widest">
+                    {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) + 1} / {currentFilteredFiles.length}
+                  </p>
+                  <span className="w-1 h-1 bg-white/20 rounded-full" />
+                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">
+                    {selectedImage.uploadedAt ? new Date(selectedImage.uploadedAt).toLocaleString() : '無日期'}
+                  </p>
+                  <span className="w-1 h-1 bg-white/20 rounded-full" />
+                  {!isReadOnly && onUpdateFiles ? (
+                    <div className="flex items-center gap-3">
+                      <div className="relative group/cat">
+                        <select
+                          value={selectedImage.category}
+                          onChange={(e) => {
+                            const newCategory = e.target.value;
+                            const updatedFiles = project.files?.map(f => f.id === selectedImage.id ? { ...f, category: newCategory } : f) || [];
+                            onUpdateFiles(updatedFiles);
+                            setSelectedImage({ ...selectedImage, category: newCategory });
                           }}
-                          className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all border border-rose-500/20"
-                          title="刪除"
+                          className="appearance-none bg-stone-800 text-orange-500 text-[10px] font-black uppercase tracking-widest border border-stone-700 rounded-xl px-4 py-1.5 pr-8 outline-none cursor-pointer hover:bg-stone-700 transition-all"
                         >
-                          <Trash2 size={14} />
-                        </button>
+                          {PHOTO_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.label}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-orange-500/50">
+                          <Layers size={10} />
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
-                    )}
-                  </div>
+                      <button
+                        onClick={() => {
+                          if (confirm('確定要從雲端刪除這張照片嗎？')) {
+                            onUpdateFiles(project.files!.filter(f => f.id !== selectedImage.id));
+                            setSelectedImage(null);
+                          }
+                        }}
+                        className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all border border-rose-500/20"
+                        title="刪除"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-        )
-      }
-      {/* Mandatory Contract Upload Modal */}
-      {isMandatoryUploadOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 space-y-6">
-              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
-                <Upload size={32} />
-              </div>
+          </div>
+  )
+}
+{/* Mandatory Contract Upload Modal */ }
+{
+  isMandatoryUploadOpen && (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="p-8 space-y-6">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+            <Upload size={32} />
+          </div>
 
-              <div className="text-center space-y-2">
-                <h3 className="text-xl font-black text-slate-900">上傳報價單或合約</h3>
-                <p className="text-sm text-slate-500 font-bold leading-relaxed">
-                  將案件狀態更改為「{pendingStatus}」前，<br />
-                  需先上傳正式報價單或合約文件作為後續參考。
+          <div className="text-center space-y-2">
+            <h3 className="text-xl font-black text-slate-900">上傳報價單或合約</h3>
+            <p className="text-sm text-slate-500 font-bold leading-relaxed">
+              將案件狀態更改為「{pendingStatus}」前，<br />
+              需先上傳正式報價單或合約文件作為後續參考。
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <input
+              type="file"
+              className="hidden"
+              ref={contractFileInputRef}
+              accept="image/*,.pdf"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  try {
+                    setIsUploading(true);
+                    const url = await cloudFileService.uploadFile(file);
+                    onUpdateContractUrl(url);
+                    if (pendingStatus) onUpdateStatus(pendingStatus);
+                    setIsMandatoryUploadOpen(false);
+                  } catch (err) {
+                    alert('上傳失敗，請再試一次');
+                  } finally {
+                    setIsUploading(false);
+                  }
+                }
+              }}
+            />
+            <button
+              onClick={() => contractFileInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 flex items-center justify-center gap-3 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+              {isUploading ? '正在上傳文件...' : '選擇檔案並上傳'}
+            </button>
+            <button
+              onClick={() => {
+                setIsMandatoryUploadOpen(false);
+                setPendingStatus(null);
+              }}
+              disabled={isUploading}
+              className="w-full py-4 text-slate-400 font-bold text-sm hover:text-slate-600 transition-all"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+        <div className="bg-stone-50 px-8 py-4 text-center">
+          <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest">
+            此文件將作為 AI 排程與施工前準備的關鍵依據
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+{/* Project Report Modal */ }
+{
+  isReportMode && (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+        {/* Header */}
+        <div className="px-10 py-8 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+              <FileText size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">專案執行績效報告</h2>
+              <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">{project.name} | {project.id}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsReportMode(false)}
+            className="w-10 h-10 rounded-full bg-stone-100 text-stone-400 flex items-center justify-center hover:bg-stone-200 hover:text-stone-900 transition-all"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-10 space-y-10 no-scrollbar">
+          {/* Basic Info & Status */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100">
+              <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">目前進度</p>
+              <p className="text-3xl font-black text-blue-600">{project.progress}%</p>
+              <div className="mt-4 h-2 bg-stone-200 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${project.progress}%` }}></div>
+              </div>
+            </div>
+            <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100">
+              <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">案件狀態</p>
+              <p className="text-2xl font-black text-slate-900">{project.status}</p>
+              <p className="text-[10px] text-stone-400 font-bold mt-2">最後更新: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : '尚未更新'}</p>
+            </div>
+            <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100">
+              <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">合約日期</p>
+              <p className="text-lg font-black text-slate-900">{project.startDate} 至</p>
+              <p className="text-lg font-black text-slate-900">{project.endDate}</p>
+            </div>
+          </div>
+
+          {/* Financial Performance */}
+          <div className="space-y-6">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] border-l-4 border-orange-500 pl-4">財務損益分析 (Financial Performance)</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Budget Chart Simulation */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-[10px] font-black text-stone-400 uppercase">預算執行狀況</p>
+                    <p className="text-2xl font-black text-slate-900">${(currentSpent || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-stone-400 uppercase">總預算</p>
+                    <p className="text-lg font-black text-stone-400">${(project.budget || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="relative h-4 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
+                  <div
+                    className={`h-full transition-all duration-1000 ${currentSpent > project.budget ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(100, (currentSpent / project.budget) * 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-[9px] font-black text-stone-400 text-center uppercase tracking-widest">
+                  {currentSpent > project.budget ? '⚠️ 已超出預算' : `預算執行率: ${Math.round((currentSpent / project.budget) * 100)}%`}
                 </p>
               </div>
 
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100 relative overflow-hidden">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase">預估毛利</p>
+                    {/* Profit Health Indicator */}
+                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${(margin / (project.budget || 1)) > 0.3 ? 'bg-emerald-500 text-white' :
+                      (margin / (project.budget || 1)) > 0.15 ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'
+                      }`}>
+                      <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                      {(margin / (project.budget || 1)) > 0.3 ? 'Safe' : (margin / (project.budget || 1)) > 0.15 ? 'Caution' : 'Critical'}
+                    </div>
+                  </div>
+                  <p className="text-xl font-black text-emerald-700">${(margin || 0).toLocaleString()}</p>
+                </div>
+                <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100">
+                  <p className="text-[10px] font-black text-blue-600 uppercase mb-1">利潤率</p>
+                  <p className="text-xl font-black text-blue-700">{project.budget > 0 ? Math.round((margin / project.budget) * 100) : 0}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b pb-2">支出構成明細 (Expense Breakdown)</h4>
               <div className="space-y-3">
-                <input
-                  type="file"
-                  className="hidden"
-                  ref={contractFileInputRef}
-                  accept="image/*,.pdf"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
+                <div className="flex justify-between items-center text-xs font-bold text-stone-600">
+                  <span>人工成本 (派工)</span>
+                  <span className="font-black text-stone-900">${(totalLaborCost || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs font-bold text-stone-600">
+                  <span>材料及其他支出</span>
+                  <span className="font-black text-stone-900">${(totalExpenseCost || 0).toLocaleString()}</span>
+                </div>
+                <div className="pt-2 border-t flex justify-between items-center text-sm font-black text-stone-900">
+                  <span>總支出</span>
+                  <span>${(currentSpent || 0).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b pb-2">施工項次統計 (Phase Status)</h4>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-xs font-bold text-stone-600">
+                  <span>總施工項目</span>
+                  <span className="font-black text-stone-900">{project.phases?.length || 0} 項</span>
+                </div>
+                <div className="flex justify-between items-center text-xs font-bold text-stone-600">
+                  <span>已完工項目</span>
+                  <span className="font-black text-emerald-600">{project.phases?.filter(p => p.status === 'Completed').length || 0} 項</span>
+                </div>
+                <div className="flex justify-between items-center text-xs font-bold text-stone-600">
+                  <span>進行中項目</span>
+                  <span className="font-black text-blue-600">{project.phases?.filter(p => p.status === 'In Progress').length || 0} 項</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advice Section (AI Integrated Style) */}
+          <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+            <div className="relative z-10 flex items-start gap-6">
+              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
+                <Sparkles size={24} />
+              </div>
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black tracking-tight">AI 專案診斷建議</h4>
+                  <button
+                    onClick={async () => {
+                      const btn = document.getElementById('ai-analyze-btn');
+                      if (btn) btn.innerHTML = '分析中...';
                       try {
-                        setIsUploading(true);
-                        const url = await cloudFileService.uploadFile(file);
-                        onUpdateContractUrl(url);
-                        if (pendingStatus) onUpdateStatus(pendingStatus);
-                        setIsMandatoryUploadOpen(false);
-                      } catch (err) {
-                        alert('上傳失敗，請再試一次');
+                        const res = await analyzeProjectFinancials(project);
+                        const adviceP = document.getElementById('ai-advice-text');
+                        if (adviceP) adviceP.innerHTML = res.text;
+                      } catch (e) {
+                        alert('分析失敗');
                       } finally {
-                        setIsUploading(false);
+                        if (btn) btn.innerHTML = '重新診斷';
                       }
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => contractFileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 flex items-center justify-center gap-3 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-                  {isUploading ? '正在上傳文件...' : '選擇檔案並上傳'}
-                </button>
-                <button
-                  onClick={() => {
-                    setIsMandatoryUploadOpen(false);
-                    setPendingStatus(null);
-                  }}
-                  disabled={isUploading}
-                  className="w-full py-4 text-slate-400 font-bold text-sm hover:text-slate-600 transition-all"
-                >
-                  取消
-                </button>
+                    }}
+                    id="ai-analyze-btn"
+                    className="text-[9px] font-black uppercase tracking-widest bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-all"
+                  >
+                    執行深度診斷
+                  </button>
+                </div>
+                <div id="ai-advice-text" className="text-xs text-stone-300 leading-relaxed prose prose-invert prose-xs max-w-none">
+                  根據目前的進度為 {project.progress}%，與預算執行率 {project.budget > 0 ? Math.round((currentSpent / project.budget) * 100) : 0}% 相比，
+                  {currentSpent > project.budget ? '支出已超過預算，建議立即檢查「材料支出」與「委託工程」是否有異常。' :
+                    (margin / (project.budget || 1)) < 0.2 ? '目前毛利稍微偏低，請留意後續工資成本的控管。' :
+                      '目前案場營運狀況良好，資金執行率與進度匹配。'}
+                </div>
               </div>
-            </div>
-            <div className="bg-stone-50 px-8 py-4 text-center">
-              <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest">
-                此文件將作為 AI 排程與施工前準備的關鍵依據
-              </p>
             </div>
           </div>
         </div>
-      )}
-      {/* Project Report Modal */}
-      {isReportMode && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-            {/* Header */}
-            <div className="px-10 py-8 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                  <FileText size={24} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">專案執行績效報告</h2>
-                  <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">{project.name} | {project.id}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsReportMode(false)}
-                className="w-10 h-10 rounded-full bg-stone-100 text-stone-400 flex items-center justify-center hover:bg-stone-200 hover:text-stone-900 transition-all"
-              >
-                <X size={20} />
-              </button>
+
+        {/* Footer Buttons */}
+        <div className="px-10 py-8 border-t border-stone-100 flex items-center justify-end gap-4 bg-stone-50/30">
+          <button
+            onClick={() => window.print()}
+            className="px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-50 transition-all flex items-center gap-2"
+          >
+            <DownloadCloud size={14} /> 列印報告
+          </button>
+          <button
+            onClick={() => setIsReportMode(false)}
+            className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
+          >
+            關閉報告
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+{/* Completion Report Modal (完工報告書) */ }
+{
+  isCompletionReportMode && (
+    <div className="fixed inset-0 z-[120] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300 overflow-y-auto no-scrollbar">
+      <div className="bg-white w-full max-w-[210mm] min-h-screen sm:min-h-0 sm:rounded-[2.5rem] shadow-2xl relative flex flex-col print:shadow-none print:rounded-none">
+        {/* Action Bar (Hidden when printing) */}
+        <div className="sticky top-0 z-[130] bg-white/80 backdrop-blur-md px-8 py-4 border-b border-stone-100 flex items-center justify-between print:hidden">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+              <CheckCircle size={20} />
             </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-10 space-y-10 no-scrollbar">
-              {/* Basic Info & Status */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100">
-                  <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">目前進度</p>
-                  <p className="text-3xl font-black text-blue-600">{project.progress}%</p>
-                  <div className="mt-4 h-2 bg-stone-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${project.progress}%` }}></div>
-                  </div>
-                </div>
-                <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100">
-                  <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">案件狀態</p>
-                  <p className="text-2xl font-black text-slate-900">{project.status}</p>
-                  <p className="text-[10px] text-stone-400 font-bold mt-2">最後更新: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : '尚未更新'}</p>
-                </div>
-                <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100">
-                  <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">合約日期</p>
-                  <p className="text-lg font-black text-slate-900">{project.startDate} 至</p>
-                  <p className="text-lg font-black text-slate-900">{project.endDate}</p>
-                </div>
-              </div>
-
-              {/* Financial Performance */}
-              <div className="space-y-6">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] border-l-4 border-orange-500 pl-4">財務損益分析 (Financial Performance)</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Budget Chart Simulation */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-[10px] font-black text-stone-400 uppercase">預算執行狀況</p>
-                        <p className="text-2xl font-black text-slate-900">${(currentSpent || 0).toLocaleString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black text-stone-400 uppercase">總預算</p>
-                        <p className="text-lg font-black text-stone-400">${(project.budget || 0).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <div className="relative h-4 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
-                      <div
-                        className={`h-full transition-all duration-1000 ${currentSpent > project.budget ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${Math.min(100, (currentSpent / project.budget) * 100)}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-[9px] font-black text-stone-400 text-center uppercase tracking-widest">
-                      {currentSpent > project.budget ? '⚠️ 已超出預算' : `預算執行率: ${Math.round((currentSpent / project.budget) * 100)}%`}
-                    </p>
-                  </div>
-
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100 relative overflow-hidden">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="text-[10px] font-black text-emerald-600 uppercase">預估毛利</p>
-                        {/* Profit Health Indicator */}
-                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${(margin / (project.budget || 1)) > 0.3 ? 'bg-emerald-500 text-white' :
-                          (margin / (project.budget || 1)) > 0.15 ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'
-                          }`}>
-                          <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
-                          {(margin / (project.budget || 1)) > 0.3 ? 'Safe' : (margin / (project.budget || 1)) > 0.15 ? 'Caution' : 'Critical'}
-                        </div>
-                      </div>
-                      <p className="text-xl font-black text-emerald-700">${(margin || 0).toLocaleString()}</p>
-                    </div>
-                    <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100">
-                      <p className="text-[10px] font-black text-blue-600 uppercase mb-1">利潤率</p>
-                      <p className="text-xl font-black text-blue-700">{project.budget > 0 ? Math.round((margin / project.budget) * 100) : 0}%</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Breakdown */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b pb-2">支出構成明細 (Expense Breakdown)</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-xs font-bold text-stone-600">
-                      <span>人工成本 (派工)</span>
-                      <span className="font-black text-stone-900">${(totalLaborCost || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs font-bold text-stone-600">
-                      <span>材料及其他支出</span>
-                      <span className="font-black text-stone-900">${(totalExpenseCost || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="pt-2 border-t flex justify-between items-center text-sm font-black text-stone-900">
-                      <span>總支出</span>
-                      <span>${(currentSpent || 0).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b pb-2">施工項次統計 (Phase Status)</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-xs font-bold text-stone-600">
-                      <span>總施工項目</span>
-                      <span className="font-black text-stone-900">{project.phases?.length || 0} 項</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs font-bold text-stone-600">
-                      <span>已完工項目</span>
-                      <span className="font-black text-emerald-600">{project.phases?.filter(p => p.status === 'Completed').length || 0} 項</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs font-bold text-stone-600">
-                      <span>進行中項目</span>
-                      <span className="font-black text-blue-600">{project.phases?.filter(p => p.status === 'In Progress').length || 0} 項</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Advice Section (AI Integrated Style) */}
-              <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-                <div className="relative z-10 flex items-start gap-6">
-                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
-                    <Sparkles size={24} />
-                  </div>
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-black tracking-tight">AI 專案診斷建議</h4>
-                      <button
-                        onClick={async () => {
-                          const btn = document.getElementById('ai-analyze-btn');
-                          if (btn) btn.innerHTML = '分析中...';
-                          try {
-                            const res = await analyzeProjectFinancials(project);
-                            const adviceP = document.getElementById('ai-advice-text');
-                            if (adviceP) adviceP.innerHTML = res.text;
-                          } catch (e) {
-                            alert('分析失敗');
-                          } finally {
-                            if (btn) btn.innerHTML = '重新診斷';
-                          }
-                        }}
-                        id="ai-analyze-btn"
-                        className="text-[9px] font-black uppercase tracking-widest bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-all"
-                      >
-                        執行深度診斷
-                      </button>
-                    </div>
-                    <div id="ai-advice-text" className="text-xs text-stone-300 leading-relaxed prose prose-invert prose-xs max-w-none">
-                      根據目前的進度為 {project.progress}%，與預算執行率 {project.budget > 0 ? Math.round((currentSpent / project.budget) * 100) : 0}% 相比，
-                      {currentSpent > project.budget ? '支出已超過預算，建議立即檢查「材料支出」與「委託工程」是否有異常。' :
-                        (margin / (project.budget || 1)) < 0.2 ? '目前毛利稍微偏低，請留意後續工資成本的控管。' :
-                          '目前案場營運狀況良好，資金執行率與進度匹配。'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Buttons */}
-            <div className="px-10 py-8 border-t border-stone-100 flex items-center justify-end gap-4 bg-stone-50/30">
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-50 transition-all flex items-center gap-2"
-              >
-                <DownloadCloud size={14} /> 列印報告
-              </button>
-              <button
-                onClick={() => setIsReportMode(false)}
-                className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
-              >
-                關閉報告
-              </button>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none">完工報告書系統</h3>
+              <p className="text-[10px] text-stone-400 font-bold mt-1">Completion Report Preview</p>
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.print()}
+              className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2"
+            >
+              <DownloadCloud size={14} /> 列印或匯出 PDF
+            </button>
+            <button
+              onClick={() => setIsCompletionReportMode(false)}
+              className="w-10 h-10 rounded-xl bg-stone-100 text-stone-400 flex items-center justify-center hover:bg-stone-200 hover:text-stone-900 transition-all"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
-      )}
-      {/* Completion Report Modal (完工報告書) */}
-      {isCompletionReportMode && (
-        <div className="fixed inset-0 z-[120] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300 overflow-y-auto no-scrollbar">
-          <div className="bg-white w-full max-w-[210mm] min-h-screen sm:min-h-0 sm:rounded-[2.5rem] shadow-2xl relative flex flex-col print:shadow-none print:rounded-none">
-            {/* Action Bar (Hidden when printing) */}
-            <div className="sticky top-0 z-[130] bg-white/80 backdrop-blur-md px-8 py-4 border-b border-stone-100 flex items-center justify-between print:hidden">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                  <CheckCircle size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none">完工報告書系統</h3>
-                  <p className="text-[10px] text-stone-400 font-bold mt-1">Completion Report Preview</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => window.print()}
-                  className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2"
-                >
-                  <DownloadCloud size={14} /> 列印或匯出 PDF
-                </button>
-                <button
-                  onClick={() => setIsCompletionReportMode(false)}
-                  className="w-10 h-10 rounded-xl bg-stone-100 text-stone-400 flex items-center justify-center hover:bg-stone-200 hover:text-stone-900 transition-all"
-                >
-                  <X size={20} />
-                </button>
+
+        {/* Report Content */}
+        <div className="flex-1 p-0 print:p-0">
+          {/* PAGE 1: COVER */}
+          <div className="w-full aspect-[1/1.4142] p-16 flex flex-col items-center justify-between relative print:break-after-page">
+            <div className="w-full text-center space-y-6 mt-12">
+              <h1 className="text-3xl font-black text-slate-900 tracking-[0.2em]">{project.location?.address}</h1>
+              <h2 className="text-4xl font-black text-slate-900 tracking-[0.1em]">{project.name}</h2>
+            </div>
+
+            <div className="relative w-96 h-96 flex items-center justify-center">
+              <div className="absolute inset-0 border-[1px] border-stone-100 rounded-full"></div>
+              <div className="absolute inset-8 border-[1px] border-stone-200 rounded-full"></div>
+              <div className="relative text-center space-y-4">
+                <span className="text-6xl font-black text-stone-800 tracking-[0.5em] block ml-4">完工</span>
+                <span className="text-6xl font-black text-stone-800 tracking-[0.5em] block ml-4">報告</span>
+                <span className="text-6xl font-black text-stone-800 tracking-[0.5em] block ml-4">書</span>
               </div>
             </div>
 
-            {/* Report Content */}
-            <div className="flex-1 p-0 print:p-0">
-              {/* PAGE 1: COVER */}
-              <div className="w-full aspect-[1/1.4142] p-16 flex flex-col items-center justify-between relative print:break-after-page">
-                <div className="w-full text-center space-y-6 mt-12">
-                  <h1 className="text-3xl font-black text-slate-900 tracking-[0.2em]">{project.location?.address}</h1>
-                  <h2 className="text-4xl font-black text-slate-900 tracking-[0.1em]">{project.name}</h2>
+            <div className="w-full max-w-md space-y-4 pb-12">
+              <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
+                <span className="text-stone-400 text-sm font-black uppercase tracking-widest">案件編號</span>
+                <span className="col-span-2 text-stone-900 text-lg font-black tracking-widest">{project.id}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
+                <span className="text-stone-400 text-sm font-black uppercase tracking-widest">承攬廠商</span>
+                <span className="col-span-2 text-stone-900 text-sm font-black">台灣生活品質發展股份有限公司</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
+                <span className="text-stone-400 text-sm font-black uppercase tracking-widest">負責人</span>
+                <span className="col-span-2 text-stone-900 text-sm font-black text-lg">陳信寬</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
+                <span className="text-stone-400 text-sm font-black uppercase tracking-widest">專案負責人</span>
+                <span className="col-span-2 text-stone-900 text-sm font-black text-lg">{project.engineeringManager}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <span className="text-stone-400 text-sm font-black uppercase tracking-widest">聯絡電話</span>
+                <span className="col-span-2 text-stone-900 text-sm font-black">0986-909157 / 0910-929-597</span>
+              </div>
+            </div>
+
+            <div className="absolute bottom-12 right-12 flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-[10px] font-black text-stone-900 uppercase">傑凱相關企業</p>
+                <p className="text-[8px] text-stone-400 font-bold uppercase tracking-tighter">Jiekai Affiliated Companies</p>
+              </div>
+              <img src="./pwa-icon.png" className="w-8 h-8 opacity-50 contrast-125" alt="Logo" />
+            </div>
+          </div>
+
+          {/* PAGE 2: TABLE OF CONTENTS */}
+          <div className="w-full aspect-[1/1.4142] p-24 flex flex-col relative print:break-after-page">
+            <h3 className="text-3xl font-black text-slate-900 text-center mb-24 tracking-[0.5em] ml-4">目錄</h3>
+            <div className="space-y-8 flex-1 max-w-2xl mx-auto w-full">
+              {[
+                { label: '工程報單', page: '2' },
+                { label: '施工過程照片紀錄', page: '3' },
+                { label: '工程保固書', page: '10' },
+                { label: '附件一：合約影本', page: '12' },
+                { label: '附件二：工安管理資料影本', page: '24' },
+                { label: '附件三：使用材料簡介', page: '34' }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-end gap-2 group">
+                  <span className="text-lg font-black text-slate-900 shrink-0">{item.label}</span>
+                  <div className="flex-1 border-b-[1.5px] border-dotted border-stone-300 mb-1.5 transition-colors group-hover:border-stone-900"></div>
+                  <span className="text-lg font-black text-slate-900 shrink-0 font-mono">{item.page}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-auto flex justify-center pb-12">
+              <img src="./pwa-icon.png" className="w-10 h-10 opacity-20" alt="Logo" />
+            </div>
+          </div>
+
+          {/* PAGE 3+: PHOTO RECORDS (CHUNKED BY 2 PER PAGE) */}
+          {Array.from({ length: Math.ceil(files.filter(f => f.category === 'construction').length / 2) }).map((_, pageIdx) => {
+            const pagePhotos = files.filter(f => f.category === 'construction').slice(pageIdx * 2, pageIdx * 2 + 2);
+            return (
+              <div key={pageIdx} className="w-full aspect-[1/1.4142] p-20 flex flex-col relative print:break-after-page border-t sm:border-t-0 border-stone-100">
+                <h3 className="text-2xl font-black text-slate-900 text-center mb-12 tracking-widest">施工過程照片紀錄</h3>
+                <div className="flex-1 flex flex-col gap-12">
+                  {pagePhotos.map((photo, pIdx) => (
+                    <div key={pIdx} className="flex-1 flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-stone-50/30">
+                      <div className="flex-1 relative overflow-hidden flex items-center justify-center p-2">
+                        <img
+                          src={photo.url}
+                          className="max-w-full max-h-full object-contain shadow-sm"
+                          alt={photo.name}
+                        />
+                      </div>
+                      <div className="bg-white px-8 py-5 border-t border-slate-100 text-center">
+                        <p className="text-sm font-black text-slate-800">{photo.name.replace(/\.[^/.]+$/, "")}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-8 flex justify-between items-center opacity-40">
+                  <span className="text-[10px] font-black">{pageIdx + 3}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Jiekai Affiliated Companies</span>
+                    <img src="./pwa-icon.png" className="w-6 h-6" alt="Logo" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* PAGE 10: ENGINEERING WARRANTY (工程保固書) */}
+          <div className="w-full aspect-[1/1.4142] p-20 flex flex-col relative print:break-after-page border-t sm:border-t-0 border-stone-100">
+            <div className="flex-1 border-[1.5px] border-stone-800 p-12 flex flex-col space-y-10">
+              <h3 className="text-4xl font-black text-slate-900 text-center tracking-[0.5em] mb-12 underline underline-offset-8">工程保固書</h3>
+
+              <div className="space-y-6 text-base font-bold text-slate-800">
+                <p>一、工程名稱：{project.name}</p>
+                <p>二、工程地點：{project.location?.address}</p>
+                <p>三、承包廠商：台灣生活品質發展股份有限公司</p>
+                <p>四、工程範圍：工程項目詳細報價單</p>
+
+                <div className="pt-4 leading-relaxed space-y-4">
+                  <p>五、保固責任：本工程已於民國一一四年十一月三日全部竣工完成，</p>
+                  <p className="pl-12">並由承商負責保固，保固期限為壹年，自民國一一四年</p>
+                  <p className="pl-12">十一月二日起至民國一一五年十一月一日止，保固期間</p>
+                  <p className="pl-12">施工範圍內，倘發生結構損壞或漏水情形，由承商負責</p>
+                  <p className="pl-12">無償修復(因不可抗力及材料自然老化之因素，或甲方</p>
+                  <p className="pl-12">使用不當、未善盡保管之責所造成之損害除外)，並於</p>
+                  <p className="pl-12">甲方通知後，七日內安排保固修繕，絕無異議。</p>
+                </div>
+              </div>
+
+              <div className="mt-auto grid grid-cols-2 gap-8 pt-12">
+                <div className="space-y-3 text-sm font-black text-slate-900">
+                  <p>承攬廠商：台灣生活品質發展股份有限公司</p>
+                  <p>負責人：陳信寬</p>
+                  <p>工地負責人：陳信寬 &nbsp;&nbsp; 專案負責人：{project.engineeringManager}</p>
+                  <p>公司地址：新北市中和區景平路 71-7 號 5 樓之 9</p>
+                  <p>統一編號：60618756</p>
+                  <p>公司電話：02-2242-1955 公司傳真：02-2242-1905</p>
                 </div>
 
-                <div className="relative w-96 h-96 flex items-center justify-center">
-                  <div className="absolute inset-0 border-[1px] border-stone-100 rounded-full"></div>
-                  <div className="absolute inset-8 border-[1px] border-stone-200 rounded-full"></div>
-                  <div className="relative text-center space-y-4">
-                    <span className="text-6xl font-black text-stone-800 tracking-[0.5em] block ml-4">完工</span>
-                    <span className="text-6xl font-black text-stone-800 tracking-[0.5em] block ml-4">報告</span>
-                    <span className="text-6xl font-black text-stone-800 tracking-[0.5em] block ml-4">書</span>
+                <div className="relative flex flex-col items-center justify-center">
+                  <div className="w-48 h-48 border-2 border-dashed border-rose-200 rounded-2xl flex items-center justify-center relative overflow-hidden group">
+                    <div className="text-[10px] text-rose-300 font-black text-center group-hover:text-rose-400 transition-colors">
+                      <p>保固書專用章用印處</p>
+                      <p className="mt-1">無戳印則本保固書無效</p>
+                    </div>
+                    {/* Seal Simulation Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                      <div className="w-24 h-24 border-4 border-rose-600 rounded flex items-center justify-center text-rose-600 font-black text-xs rotate-12">公司大章</div>
+                      <div className="w-12 h-12 border-2 border-rose-600 rounded flex items-center justify-center text-rose-600 font-black text-[8px] -rotate-12 absolute bottom-4 right-4">私章</div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="w-full max-w-md space-y-4 pb-12">
-                  <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
-                    <span className="text-stone-400 text-sm font-black uppercase tracking-widest">案件編號</span>
-                    <span className="col-span-2 text-stone-900 text-lg font-black tracking-widest">{project.id}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
-                    <span className="text-stone-400 text-sm font-black uppercase tracking-widest">承攬廠商</span>
-                    <span className="col-span-2 text-stone-900 text-sm font-black">台灣生活品質發展股份有限公司</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
-                    <span className="text-stone-400 text-sm font-black uppercase tracking-widest">負責人</span>
-                    <span className="col-span-2 text-stone-900 text-sm font-black text-lg">陳信寬</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 border-b border-stone-100 pb-2">
-                    <span className="text-stone-400 text-sm font-black uppercase tracking-widest">專案負責人</span>
-                    <span className="col-span-2 text-stone-900 text-sm font-black text-lg">{project.engineeringManager}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <span className="text-stone-400 text-sm font-black uppercase tracking-widest">聯絡電話</span>
-                    <span className="col-span-2 text-stone-900 text-sm font-black">0986-909157 / 0910-929-597</span>
-                  </div>
+              <div className="flex justify-between items-end pt-12">
+                <div className="flex gap-4 text-xl font-black text-slate-900 tracking-widest">
+                  <span>中</span>
+                  <span>華</span>
+                  <span>民</span>
+                  <span>國</span>
+                  <span className="w-12 border-b-2 border-stone-800 text-center">一一四</span>
+                  <span>年</span>
+                  <span className="w-8 border-b-2 border-stone-800 text-center">十</span>
+                  <span>月</span>
+                  <span className="w-8 border-b-2 border-stone-800 text-center">四</span>
+                  <span>日</span>
                 </div>
-
-                <div className="absolute bottom-12 right-12 flex items-center gap-3">
+                <div className="flex items-center gap-3 opacity-60 scale-75 origin-right">
                   <div className="text-right">
                     <p className="text-[10px] font-black text-stone-900 uppercase">傑凱相關企業</p>
                     <p className="text-[8px] text-stone-400 font-bold uppercase tracking-tighter">Jiekai Affiliated Companies</p>
                   </div>
-                  <img src="./pwa-icon.png" className="w-8 h-8 opacity-50 contrast-125" alt="Logo" />
+                  <img src="./pwa-icon.png" className="w-8 h-8" alt="Logo" />
+                </div>
+              </div>
+            </div>
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-black text-stone-300">10</div>
+          </div>
+          <div className="w-full aspect-[1/1.4142] p-16 flex flex-col relative print:break-after-page border-t sm:border-t-0 border-stone-100">
+            <div className="border-[1.5px] border-stone-900 h-full p-8 flex flex-col">
+              <div className="flex justify-between items-start mb-8">
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-black text-slate-900">報價單</h3>
+                  <p className="text-stone-500 font-bold text-[10px] tracking-widest">QUOTATION SUMMARY</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-black">台灣生活品質發展股份有限公司</p>
+                  <p className="text-[8px] text-stone-500">台北市士林區中心北路五段500號7樓</p>
+                  <p className="text-[8px] text-stone-500">TEL: 02-2242-1955</p>
                 </div>
               </div>
 
-              {/* PAGE 2: TABLE OF CONTENTS */}
-              <div className="w-full aspect-[1/1.4142] p-24 flex flex-col relative print:break-after-page">
-                <h3 className="text-3xl font-black text-slate-900 text-center mb-24 tracking-[0.5em] ml-4">目錄</h3>
-                <div className="space-y-8 flex-1 max-w-2xl mx-auto w-full">
-                  {[
-                    { label: '工程報單', page: '2' },
-                    { label: '施工過程照片紀錄', page: '3' },
-                    { label: '工程保固書', page: '10' },
-                    { label: '附件一：合約影本', page: '12' },
-                    { label: '附件二：工安管理資料影本', page: '24' },
-                    { label: '附件三：使用材料簡介', page: '34' }
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-end gap-2 group">
-                      <span className="text-lg font-black text-slate-900 shrink-0">{item.label}</span>
-                      <div className="flex-1 border-b-[1.5px] border-dotted border-stone-300 mb-1.5 transition-colors group-hover:border-stone-900"></div>
-                      <span className="text-lg font-black text-slate-900 shrink-0 font-mono">{item.page}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-auto flex justify-center pb-12">
-                  <img src="./pwa-icon.png" className="w-10 h-10 opacity-20" alt="Logo" />
-                </div>
+              <div className="grid grid-cols-2 gap-y-4 mb-8 text-[11px] font-bold text-slate-700">
+                <p>工程編號：{project.id}</p>
+                <p className="text-right font-black">Date: {new Date().toLocaleDateString()}</p>
+                <p className="col-span-2">工程名稱：{project.name}</p>
+                <p className="col-span-2">工程地址：{project.location?.address || '見詳述'}</p>
               </div>
 
-              {/* PAGE 3+: PHOTO RECORDS (CHUNKED BY 2 PER PAGE) */}
-              {Array.from({ length: Math.ceil(files.filter(f => f.category === 'construction').length / 2) }).map((_, pageIdx) => {
-                const pagePhotos = files.filter(f => f.category === 'construction').slice(pageIdx * 2, pageIdx * 2 + 2);
-                return (
-                  <div key={pageIdx} className="w-full aspect-[1/1.4142] p-20 flex flex-col relative print:break-after-page border-t sm:border-t-0 border-stone-100">
-                    <h3 className="text-2xl font-black text-slate-900 text-center mb-12 tracking-widest">施工過程照片紀錄</h3>
-                    <div className="flex-1 flex flex-col gap-12">
-                      {pagePhotos.map((photo, pIdx) => (
-                        <div key={pIdx} className="flex-1 flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-stone-50/30">
-                          <div className="flex-1 relative overflow-hidden flex items-center justify-center p-2">
-                            <img
-                              src={photo.url}
-                              className="max-w-full max-h-full object-contain shadow-sm"
-                              alt={photo.name}
-                            />
-                          </div>
-                          <div className="bg-white px-8 py-5 border-t border-slate-100 text-center">
-                            <p className="text-sm font-black text-slate-800">{photo.name.replace(/\.[^/.]+$/, "")}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-8 flex justify-between items-center opacity-40">
-                      <span className="text-[10px] font-black">{pageIdx + 3}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-tighter">Jiekai Affiliated Companies</span>
-                        <img src="./pwa-icon.png" className="w-6 h-6" alt="Logo" />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* PAGE 10: ENGINEERING WARRANTY (工程保固書) */}
-              <div className="w-full aspect-[1/1.4142] p-20 flex flex-col relative print:break-after-page border-t sm:border-t-0 border-stone-100">
-                <div className="flex-1 border-[1.5px] border-stone-800 p-12 flex flex-col space-y-10">
-                  <h3 className="text-4xl font-black text-slate-900 text-center tracking-[0.5em] mb-12 underline underline-offset-8">工程保固書</h3>
-
-                  <div className="space-y-6 text-base font-bold text-slate-800">
-                    <p>一、工程名稱：{project.name}</p>
-                    <p>二、工程地點：{project.location?.address}</p>
-                    <p>三、承包廠商：台灣生活品質發展股份有限公司</p>
-                    <p>四、工程範圍：工程項目詳細報價單</p>
-
-                    <div className="pt-4 leading-relaxed space-y-4">
-                      <p>五、保固責任：本工程已於民國一一四年十一月三日全部竣工完成，</p>
-                      <p className="pl-12">並由承商負責保固，保固期限為壹年，自民國一一四年</p>
-                      <p className="pl-12">十一月二日起至民國一一五年十一月一日止，保固期間</p>
-                      <p className="pl-12">施工範圍內，倘發生結構損壞或漏水情形，由承商負責</p>
-                      <p className="pl-12">無償修復(因不可抗力及材料自然老化之因素，或甲方</p>
-                      <p className="pl-12">使用不當、未善盡保管之責所造成之損害除外)，並於</p>
-                      <p className="pl-12">甲方通知後，七日內安排保固修繕，絕無異議。</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto grid grid-cols-2 gap-8 pt-12">
-                    <div className="space-y-3 text-sm font-black text-slate-900">
-                      <p>承攬廠商：台灣生活品質發展股份有限公司</p>
-                      <p>負責人：陳信寬</p>
-                      <p>工地負責人：陳信寬 &nbsp;&nbsp; 專案負責人：{project.engineeringManager}</p>
-                      <p>公司地址：新北市中和區景平路 71-7 號 5 樓之 9</p>
-                      <p>統一編號：60618756</p>
-                      <p>公司電話：02-2242-1955 公司傳真：02-2242-1905</p>
-                    </div>
-
-                    <div className="relative flex flex-col items-center justify-center">
-                      <div className="w-48 h-48 border-2 border-dashed border-rose-200 rounded-2xl flex items-center justify-center relative overflow-hidden group">
-                        <div className="text-[10px] text-rose-300 font-black text-center group-hover:text-rose-400 transition-colors">
-                          <p>保固書專用章用印處</p>
-                          <p className="mt-1">無戳印則本保固書無效</p>
-                        </div>
-                        {/* Seal Simulation Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-                          <div className="w-24 h-24 border-4 border-rose-600 rounded flex items-center justify-center text-rose-600 font-black text-xs rotate-12">公司大章</div>
-                          <div className="w-12 h-12 border-2 border-rose-600 rounded flex items-center justify-center text-rose-600 font-black text-[8px] -rotate-12 absolute bottom-4 right-4">私章</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-end pt-12">
-                    <div className="flex gap-4 text-xl font-black text-slate-900 tracking-widest">
-                      <span>中</span>
-                      <span>華</span>
-                      <span>民</span>
-                      <span>國</span>
-                      <span className="w-12 border-b-2 border-stone-800 text-center">一一四</span>
-                      <span>年</span>
-                      <span className="w-8 border-b-2 border-stone-800 text-center">十</span>
-                      <span>月</span>
-                      <span className="w-8 border-b-2 border-stone-800 text-center">四</span>
-                      <span>日</span>
-                    </div>
-                    <div className="flex items-center gap-3 opacity-60 scale-75 origin-right">
-                      <div className="text-right">
-                        <p className="text-[10px] font-black text-stone-900 uppercase">傑凱相關企業</p>
-                        <p className="text-[8px] text-stone-400 font-bold uppercase tracking-tighter">Jiekai Affiliated Companies</p>
-                      </div>
-                      <img src="./pwa-icon.png" className="w-8 h-8" alt="Logo" />
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-black text-stone-300">10</div>
+              <div className="flex-1 border-t border-stone-900">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-stone-900 text-[10px] font-black uppercase tracking-widest">
+                      <th className="py-2 px-1">項次</th>
+                      <th className="py-2 px-1">品名項目</th>
+                      <th className="py-2 px-1">單位</th>
+                      <th className="py-2 px-1 text-right">金額</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[10px] font-bold">
+                    {(project.phases || []).map((phase, idx) => (
+                      <tr key={idx} className="border-b border-stone-100">
+                        <td className="py-2 px-1 text-stone-400">{idx + 1}</td>
+                        <td className="py-2 px-1 text-slate-800">{phase.name}</td>
+                        <td className="py-2 px-1 text-stone-500">一式</td>
+                        <td className="py-2 px-1 text-right font-black">${((project.budget || 0) / (project.phases?.length || 1)).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="w-full aspect-[1/1.4142] p-16 flex flex-col relative print:break-after-page border-t sm:border-t-0 border-stone-100">
-                <div className="border-[1.5px] border-stone-900 h-full p-8 flex flex-col">
-                  <div className="flex justify-between items-start mb-8">
-                    <div className="space-y-1">
-                      <h3 className="text-2xl font-black text-slate-900">報價單</h3>
-                      <p className="text-stone-500 font-bold text-[10px] tracking-widest">QUOTATION SUMMARY</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black">台灣生活品質發展股份有限公司</p>
-                      <p className="text-[8px] text-stone-500">台北市士林區中心北路五段500號7樓</p>
-                      <p className="text-[8px] text-stone-500">TEL: 02-2242-1955</p>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-y-4 mb-8 text-[11px] font-bold text-slate-700">
-                    <p>工程編號：{project.id}</p>
-                    <p className="text-right font-black">Date: {new Date().toLocaleDateString()}</p>
-                    <p className="col-span-2">工程名稱：{project.name}</p>
-                    <p className="col-span-2">工程地址：{project.location?.address || '見詳述'}</p>
-                  </div>
-
-                  <div className="flex-1 border-t border-stone-900">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-stone-900 text-[10px] font-black uppercase tracking-widest">
-                          <th className="py-2 px-1">項次</th>
-                          <th className="py-2 px-1">品名項目</th>
-                          <th className="py-2 px-1">單位</th>
-                          <th className="py-2 px-1 text-right">金額</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-[10px] font-bold">
-                        {(project.phases || []).map((phase, idx) => (
-                          <tr key={idx} className="border-b border-stone-100">
-                            <td className="py-2 px-1 text-stone-400">{idx + 1}</td>
-                            <td className="py-2 px-1 text-slate-800">{phase.name}</td>
-                            <td className="py-2 px-1 text-stone-500">一式</td>
-                            <td className="py-2 px-1 text-right font-black">${((project.budget || 0) / (project.phases?.length || 1)).toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="space-y-1 mt-8 border-t-[1.5px] border-stone-900 pt-6">
-                    <div className="flex justify-between items-center text-sm font-black">
-                      <span className="text-stone-400">未稅金額</span>
-                      <span>${Math.round((project.budget || 0) / 1.05).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm font-black">
-                      <span className="text-stone-400">營業稅 5%</span>
-                      <span>${Math.round((project.budget || 0) - ((project.budget || 0) / 1.05)).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xl font-black pt-4">
-                      <span>總計金額</span>
-                      <span className="text-emerald-600">${(project.budget || 0).toLocaleString()}</span>
-                    </div>
-                  </div>
+              <div className="space-y-1 mt-8 border-t-[1.5px] border-stone-900 pt-6">
+                <div className="flex justify-between items-center text-sm font-black">
+                  <span className="text-stone-400">未稅金額</span>
+                  <span>${Math.round((project.budget || 0) / 1.05).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-black">
+                  <span className="text-stone-400">營業稅 5%</span>
+                  <span>${Math.round((project.budget || 0) - ((project.budget || 0) / 1.05)).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-xl font-black pt-4">
+                  <span>總計金額</span>
+                  <span className="text-emerald-600">${(project.budget || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
 
-      {/* 編輯派工 Modal */}
-      {editingAssignment && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-[#2c3e50] p-6 text-white flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Pencil size={18} /> 編輯派工
-                </h3>
-                <p className="text-[10px] font-medium opacity-80 mt-1">修改工時、日期或薪資資料</p>
-              </div>
-              <button onClick={() => setEditingAssignment(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                <X size={20} />
-              </button>
+{/* 編輯派工 Modal */ }
+{
+  editingAssignment && (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-[#2c3e50] p-6 text-white flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+              <Pencil size={18} /> 編輯派工
+            </h3>
+            <p className="text-[10px] font-medium opacity-80 mt-1">修改工時、日期或薪資資料</p>
+          </div>
+          <button onClick={() => setEditingAssignment(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">施工人員</label>
+              <input
+                readOnly
+                value={editingAssignment.memberName}
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold text-stone-500"
+              />
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">施工人員</label>
-                  <input
-                    readOnly
-                    value={editingAssignment.memberName}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold text-stone-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">日期</label>
-                    <input
-                      type="date"
-                      value={editingAssignment.date}
-                      onChange={e => setEditingAssignment({ ...editingAssignment, date: e.target.value })}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">工時 (天)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={editingAssignment.days}
-                      onChange={e => setEditingAssignment({ ...editingAssignment, days: Number(e.target.value) })}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">日薪 (TWD)</label>
-                  <input
-                    type="number"
-                    value={editingAssignment.wagePerDay}
-                    onChange={e => setEditingAssignment({ ...editingAssignment, wagePerDay: Number(e.target.value) })}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
-                  />
-                </div>
-
-                <label className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={editingAssignment.isSpiderMan || false}
-                    onChange={e => {
-                      const isChecked = e.target.checked;
-                      const member = props.teamMembers.find(m => m.name === editingAssignment.memberName);
-                      const allowance = member?.spiderManAllowance || 0;
-                      let newWage = Number(editingAssignment.wagePerDay) || 0;
-
-                      if (isChecked) {
-                        newWage += allowance;
-                      } else {
-                        newWage -= allowance;
-                      }
-
-                      setEditingAssignment({ ...editingAssignment, isSpiderMan: isChecked, wagePerDay: newWage });
-                    }}
-                    className="w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-600 transition-colors"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm font-black text-blue-900 group-hover:text-blue-700 transition-colors">🕷️ 蜘蛛人作業 (繩索吊掛)</span>
-                    <div className="flex justify-between items-center mt-0.5">
-                      <p className="text-[10px] text-blue-600">勾選後將自動加計津貼</p>
-                      {(() => {
-                        const member = props.teamMembers.find(m => m.name === editingAssignment.memberName);
-                        const allowance = member?.spiderManAllowance || 0;
-                        return allowance > 0 ? (
-                          <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
-                            津貼: +${allowance}
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
-                  </div>
-                </label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">日期</label>
+                <input
+                  type="date"
+                  value={editingAssignment.date}
+                  onChange={e => setEditingAssignment({ ...editingAssignment, date: e.target.value })}
+                  className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
+                />
               </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setEditingAssignment(null)}
-                  className="flex-1 px-4 py-3 rounded-xl font-bold text-stone-500 hover:bg-stone-50 transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={() => handleSaveAssignment(editingAssignment)}
-                  className="flex-1 px-4 py-3 bg-[#2c3e50] text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                >
-                  儲存變更
-                </button>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">工時 (天)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={editingAssignment.days}
+                  onChange={e => setEditingAssignment({ ...editingAssignment, days: Number(e.target.value) })}
+                  className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
+                />
               </div>
             </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">日薪 (TWD)</label>
+              <input
+                type="number"
+                value={editingAssignment.wagePerDay}
+                onChange={e => setEditingAssignment({ ...editingAssignment, wagePerDay: Number(e.target.value) })}
+                className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#2c3e50] outline-none"
+              />
+            </div>
+
+            <label className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={editingAssignment.isSpiderMan || false}
+                onChange={e => {
+                  const isChecked = e.target.checked;
+                  const member = props.teamMembers.find(m => m.name === editingAssignment.memberName);
+                  const allowance = member?.spiderManAllowance || 0;
+                  let newWage = Number(editingAssignment.wagePerDay) || 0;
+
+                  if (isChecked) {
+                    newWage += allowance;
+                  } else {
+                    newWage -= allowance;
+                  }
+
+                  setEditingAssignment({ ...editingAssignment, isSpiderMan: isChecked, wagePerDay: newWage });
+                }}
+                className="w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-600 transition-colors"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-black text-blue-900 group-hover:text-blue-700 transition-colors">🕷️ 蜘蛛人作業 (繩索吊掛)</span>
+                <div className="flex justify-between items-center mt-0.5">
+                  <p className="text-[10px] text-blue-600">勾選後將自動加計津貼</p>
+                  {(() => {
+                    const member = props.teamMembers.find(m => m.name === editingAssignment.memberName);
+                    const allowance = member?.spiderManAllowance || 0;
+                    return allowance > 0 ? (
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                        津貼: +${allowance}
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setEditingAssignment(null)}
+              className="flex-1 px-4 py-3 rounded-xl font-bold text-stone-500 hover:bg-stone-50 transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={() => handleSaveAssignment(editingAssignment)}
+              className="flex-1 px-4 py-3 bg-[#2c3e50] text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              儲存變更
+            </button>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
     </div >
   );
 };
