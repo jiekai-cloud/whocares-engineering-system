@@ -354,7 +354,7 @@ export interface InventoryTransaction {
   id: string;
   itemId: string;
   itemName: string;
-  type: 'In' | 'Out' | 'Adjust' | 'Transfer';
+  type: 'In' | 'Out' | 'Adjust' | 'Transfer' | 'Purchase';
   quantity: number;
   fromLocation?: string;
   toLocation?: string;
@@ -363,4 +363,36 @@ export interface InventoryTransaction {
   notes?: string;
   relatedProjectId?: string; // 關聯專案 ID (若是出庫到專案)
   relatedProjectName?: string;
+}
+
+export interface PurchaseOrderItem {
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  cost: number;
+  received: boolean;
+}
+
+export interface OrderPayment {
+  id: string;
+  date: string;
+  amount: number;
+  method: 'Cash' | 'Transfer' | 'Check' | 'CreditCard' | 'Other';
+  note?: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  date: string; // 訂購日期
+  expectedDeliveryDate?: string;
+  supplier: string;
+  targetWarehouseId: string; // 預設入庫倉庫
+  items: PurchaseOrderItem[];
+  status: 'Pending' | 'Partial' | 'Completed' | 'Cancelled'; // 待出貨 | 部分到貨 | 已完成 | 取消
+  payments: OrderPayment[];
+  totalAmount: number;
+  notes?: string;
+  updatedAt?: string;
+  createdAb?: string;
 }

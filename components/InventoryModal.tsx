@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Box, Ruler, Hash, Archive, Truck, AlertTriangle,
     QrCode, Plus, Trash2, Printer, Wrench, Calendar, User, FileText,
-    Package, X, Tag, DollarSign, MapPin, Save
+    Package, X, Tag, DollarSign, MapPin, Save, Pencil
 } from 'lucide-react';
 import { InventoryItem, InventoryCategory, MaintenanceRecord } from '../types';
 
@@ -43,22 +43,45 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
         performer: ''
     });
 
+    const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+
     const handleAddMaintenance = () => {
         if (!newMaintenance.description || !newMaintenance.date) return;
-        const record: MaintenanceRecord = {
-            id: Date.now().toString(),
-            date: newMaintenance.date!,
-            type: newMaintenance.type as any || '維修',
-            description: newMaintenance.description!,
-            cost: Number(newMaintenance.cost) || 0,
-            performer: newMaintenance.performer || '',
-        };
 
-        setFormData(prev => ({
-            ...prev,
-            maintenanceRecords: [record, ...(prev.maintenanceRecords || [])]
-        }));
+        if (editingRecordId) {
+            // Update existing record
+            setFormData(prev => ({
+                ...prev,
+                maintenanceRecords: prev.maintenanceRecords?.map(r =>
+                    r.id === editingRecordId ? {
+                        ...r,
+                        date: newMaintenance.date!,
+                        type: newMaintenance.type as any || '維修',
+                        description: newMaintenance.description!,
+                        cost: Number(newMaintenance.cost) || 0,
+                        performer: newMaintenance.performer || '',
+                    } : r
+                )
+            }));
+            setEditingRecordId(null);
+        } else {
+            // Add new record
+            const record: MaintenanceRecord = {
+                id: Date.now().toString(),
+                date: newMaintenance.date!,
+                type: newMaintenance.type as any || '維修',
+                description: newMaintenance.description!,
+                cost: Number(newMaintenance.cost) || 0,
+                performer: newMaintenance.performer || '',
+            };
 
+            setFormData(prev => ({
+                ...prev,
+                maintenanceRecords: [record, ...(prev.maintenanceRecords || [])]
+            }));
+        }
+
+        // Reset form
         setNewMaintenance({
             type: '維修',
             date: new Date().toISOString().split('T')[0],
@@ -66,6 +89,28 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
             cost: 0,
             performer: ''
         });
+    };
+
+    const handleEditMaintenance = (record: MaintenanceRecord) => {
+        setNewMaintenance({
+            type: record.type,
+            date: record.date,
+            description: record.description,
+            cost: record.cost,
+            performer: record.performer
+        });
+        setEditingRecordId(record.id);
+    };
+
+    const handleCancelEdit = () => {
+        setNewMaintenance({
+            type: '維修',
+            date: new Date().toISOString().split('T')[0],
+            description: '',
+            cost: 0,
+            performer: ''
+        });
+        setEditingRecordId(null);
     };
 
     const handleRemoveMaintenance = (id: string) => {
@@ -356,7 +401,8 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                             {/* Add New Record Form */}
                             <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
                                 <h3 className="text-sm font-black text-slate-700 mb-4 flex items-center gap-2">
-                                    <Plus size={16} className="text-blue-500" /> 新增紀錄
+                                    {editingRecordId ? <Pencil size={16} className="text-blue-500" /> : <Plus size={16} className="text-blue-500" />}
+                                    {editingRecordId ? '編輯紀錄' : '新增紀錄'}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -426,8 +472,17 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                                     onClick={handleAddMaintenance}
                                     className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-200 active:scale-95"
                                 >
-                                    新增紀錄
+                                    {editingRecordId ? '更新紀錄' : '新增紀錄'}
                                 </button>
+                                {editingRecordId && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        className="mt-2 w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all"
+                                    >
+                                        取消編輯
+                                    </button>
+                                )}
                             </div>
 
                             {/* List Records */}
@@ -467,12 +522,20 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                                                     </span>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => handleRemoveMaintenance(record.id)}
-                                                className="text-slate-300 hover:text-rose-500 transition-colors p-1"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                            <div className="flex flex-col gap-1">
+                                                <button
+                                                    onClick={() => handleEditMaintenance(record)}
+                                                    className="text-slate-300 hover:text-blue-500 transition-colors p-1"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveMaintenance(record.id)}
+                                                    className="text-slate-300 hover:text-rose-500 transition-colors p-1"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))
                                 )}

@@ -2,12 +2,13 @@ import React, { useState, useMemo } from 'react';
 import {
     Search, Plus, Package, Ruler, Archive, AlertTriangle,
     MoreHorizontal, Pencil, Trash2, Tag, Box, Hash, Filter,
-    ShieldAlert, ShoppingBag, Truck, LayoutList, MapPin, Building2, ArrowRightLeft, ScanBarcode, Wrench
+    ShieldAlert, ShoppingBag, Truck, LayoutList, MapPin, Building2, ArrowRightLeft, ScanBarcode, Wrench, Warehouse, ShoppingCart
 } from 'lucide-react';
-import { InventoryItem, User as UserType, InventoryCategory } from '../types';
+import { InventoryItem, User as UserType, InventoryCategory, InventoryLocation } from '../types';
 
 interface InventoryListProps {
     items: InventoryItem[];
+    locations?: InventoryLocation[];
     user?: UserType;
     onAddClick: () => void;
     onEditClick: (item: InventoryItem) => void;
@@ -15,11 +16,13 @@ interface InventoryListProps {
     onManageLocations: () => void;
     onTransferClick: (item: InventoryItem) => void;
     onScanClick: () => void;
+    onOrdersClick: () => void;
 }
 
-const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, onEditClick, onDeleteClick, onManageLocations, onTransferClick, onScanClick }) => {
+const InventoryList: React.FC<InventoryListProps> = ({ items, locations, user, onAddClick, onEditClick, onDeleteClick, onManageLocations, onTransferClick, onScanClick, onOrdersClick }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [selectedLocation, setSelectedLocation] = useState<string>('all');
     const [showLowStockOnly, setShowLowStockOnly] = useState(false);
     const isReadOnly = user?.role === 'Guest';
 
@@ -34,11 +37,12 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                 (item.supplier && item.supplier.toLowerCase().includes(searchTerm.toLowerCase()));
 
             const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+            const matchesLocation = selectedLocation === 'all' || item.locations?.some(l => l.name === selectedLocation);
             const matchesLowStock = !showLowStockOnly || (item.minLevel !== undefined && item.quantity <= item.minLevel);
 
-            return matchesSearch && matchesCategory && matchesLowStock;
+            return matchesSearch && matchesCategory && matchesLocation && matchesLowStock;
         });
-    }, [items, searchTerm, selectedCategory, showLowStockOnly]);
+    }, [items, searchTerm, selectedCategory, selectedLocation, showLowStockOnly]);
 
     const getCategoryStyle = (category: InventoryCategory) => {
         switch (category) {
@@ -86,6 +90,13 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                     {!isReadOnly ? (
                         <>
                             <button
+                                onClick={onOrdersClick}
+                                className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-4 py-3.5 rounded-2xl flex items-center gap-2 transition-all font-bold text-sm"
+                            >
+                                <ShoppingCart size={18} />
+                                <span className="hidden sm:inline">採購管理</span>
+                            </button>
+                            <button
                                 onClick={onManageLocations}
                                 className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-4 py-3.5 rounded-2xl flex items-center gap-2 transition-all font-bold text-sm"
                             >
@@ -114,6 +125,33 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                     )}
                 </div>
             </div>
+
+            {/* Warehouse Filter */}
+            {locations && locations.length > 0 && (
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button
+                        onClick={() => setSelectedLocation('all')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all whitespace-nowrap flex items-center gap-2 border ${selectedLocation === 'all'
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg'
+                            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                            }`}
+                    >
+                        <LayoutList size={14} /> 全部倉庫
+                    </button>
+                    {locations.map(loc => (
+                        <button
+                            key={loc.id}
+                            onClick={() => setSelectedLocation(loc.name)}
+                            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all whitespace-nowrap flex items-center gap-2 border ${selectedLocation === loc.name
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200'
+                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                }`}
+                        >
+                            <Warehouse size={14} /> {loc.name}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Filter Bar */}
             <div className="flex flex-col xl:flex-row gap-4">
@@ -243,10 +281,20 @@ const InventoryList: React.FC<InventoryListProps> = ({ items, user, onAddClick, 
                                 {/* Quantity */}
                                 <div className="col-span-2 mb-4 lg:mb-0">
                                     <div className="flex items-end gap-1.5">
-                                        <span className="text-2xl font-black text-slate-700">{item.quantity}</span>
+                                        <span className="text-2xl font-black text-slate-700">
+                                            {selectedLocation === 'all'
+                                                ? item.quantity
+                                                : (item.locations?.find(l => l.name === selectedLocation)?.quantity || 0)
+                                            }
+                                        </span>
                                         <span className="text-xs font-bold text-slate-400 mb-1.5">{item.unit}</span>
                                     </div>
-                                    {item.minLevel !== undefined && (
+                                    {selectedLocation !== 'all' && (
+                                        <div className="text-[10px] font-bold text-slate-400">
+                                            (總庫存: {item.quantity})
+                                        </div>
+                                    )}
+                                    {selectedLocation === 'all' && item.minLevel !== undefined && (
                                         <div className="text-[10px] font-bold text-slate-400">
                                             安全存量: {item.minLevel} {item.unit}
                                         </div>

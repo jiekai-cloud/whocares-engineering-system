@@ -21,11 +21,12 @@ import TransferModal from './components/TransferModal';
 import ScanTransferModal from './components/ScanTransferModal';
 import LeadToProjectModal from './components/LeadToProjectModal';
 import Login from './components/Login';
+import OrderManagerModal from './components/OrderManagerModal';
 import ModuleManager from './components/ModuleManager';
 import { Menu, LogOut, Layers, Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, Database, Zap, Sparkles, Globe, Activity, ShieldAlert, Bell, User as LucideUser, Trash2, ShoppingBag, Receipt, Pencil, X, ExternalLink, Download } from 'lucide-react';
 import NotificationPanel from './components/NotificationPanel';
 import { MOCK_PROJECTS, MOCK_DEPARTMENTS, MOCK_TEAM_MEMBERS } from './constants';
-import { Project, ProjectStatus, Customer, TeamMember, User, SystemContext, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead, InventoryItem, InventoryCategory, InventoryLocation, InventoryTransaction } from './types';
+import { Project, ProjectStatus, Customer, TeamMember, User, SystemContext, ProjectComment, ActivityLog, Vendor, ChecklistTask, PaymentStage, DailyLogEntry, Lead, InventoryItem, InventoryCategory, InventoryLocation, InventoryTransaction, PurchaseOrder } from './types';
 import { googleDriveService, DEFAULT_CLIENT_ID } from './services/googleDriveService';
 import { moduleService } from './services/moduleService';
 import { ModuleId } from './moduleConfig';
@@ -46,6 +47,7 @@ const App: React.FC = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
 
   useEffect(() => {
     // Seed some mock leads if empty for demo
@@ -99,6 +101,7 @@ const App: React.FC = () => {
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [isOrderManagerOpen, setIsOrderManagerOpen] = useState(false);
   const [transferItem, setTransferItem] = useState<InventoryItem | null>(null);
   const [editingInventoryItem, setEditingInventoryItem] = useState<InventoryItem | null>(null);
 
@@ -277,6 +280,9 @@ const App: React.FC = () => {
     if (cloudData.locations) {
       setInventoryLocations(prev => mergeData(prev, cloudData.locations || []));
     }
+    if (cloudData.purchaseOrders) {
+      setPurchaseOrders(prev => mergeData(prev, cloudData.purchaseOrders || []));
+    }
     // Activity logs 採取單純合併去重
     setActivityLogs(prev => {
       const combined = [...(cloudData.activityLogs || []), ...prev];
@@ -302,6 +308,7 @@ const App: React.FC = () => {
       setVendors([]);
       setLeads([]);
       setInventoryItems([]);
+      setPurchaseOrders([]);
       setActivityLogs([]);
 
       setActiveTab('dashboard');
@@ -387,14 +394,15 @@ const App: React.FC = () => {
       })));
 
       // Load other entities
-      const [customersData, initialTeamData, vendorsData, leadsData, logsData, inventoryData, locationsData] = await Promise.all([
+      const [customersData, initialTeamData, vendorsData, leadsData, logsData, inventoryData, locationsData, purchaseOrdersData] = await Promise.all([
         storageService.getItem<Customer[]>(`${prefix}bt_customers`, []),
         storageService.getItem<TeamMember[]>(`${prefix}bt_team`, defaultTeam),
         storageService.getItem<Vendor[]>(`${prefix}bt_vendors`, []),
         storageService.getItem<Lead[]>(`${prefix}bt_leads`, []),
         storageService.getItem<any[]>(`${prefix}bt_logs`, []),
         storageService.getItem<InventoryItem[]>(`${prefix}bt_inventory`, []),
-        storageService.getItem<InventoryLocation[]>(`${prefix}bt_locations`, [{ id: 'MAIN', name: '總倉庫', type: 'Main', isDefault: true }])
+        storageService.getItem<InventoryLocation[]>(`${prefix}bt_locations`, [{ id: 'MAIN', name: '總倉庫', type: 'Main', isDefault: true }]),
+        storageService.getItem<PurchaseOrder[]>(`${prefix}bt_orders`, [])
       ]);
 
       setCustomers(customersData);
@@ -408,6 +416,7 @@ const App: React.FC = () => {
       setLeads(leadsData);
       setInventoryItems(inventoryData);
       setInventoryLocations(locationsData);
+      setPurchaseOrders(purchaseOrdersData);
       setActivityLogs(logsData);
 
       setInitialSyncDone(true);
@@ -518,6 +527,7 @@ const App: React.FC = () => {
         leads,
         inventory: inventoryItems,
         locations: inventoryLocations,
+        purchaseOrders: purchaseOrders,
         activityLogs,
         lastUpdated: new Date().toISOString(),
         userEmail: user?.email
@@ -619,6 +629,7 @@ const App: React.FC = () => {
           storageService.setItem(`${prefix}bt_leads`, leads),
           storageService.setItem(`${prefix}bt_inventory`, inventoryItems),
           storageService.setItem(`${prefix}bt_locations`, inventoryLocations),
+          storageService.setItem(`${prefix}bt_orders`, purchaseOrders),
           storageService.setItem(`${prefix}bt_logs`, activityLogs.slice(0, 50))
         ]);
         setLastLocalSave(new Date().toLocaleTimeString());
@@ -633,7 +644,7 @@ const App: React.FC = () => {
         handleCloudSync();
       }, 3000);
     }
-  }, [projects, customers, teamMembers, activityLogs, vendors, isCloudConnected, cloudError, initialSyncDone, handleCloudSync, user?.role, leads, inventoryItems, inventoryLocations, currentDept]);
+  }, [projects, customers, teamMembers, activityLogs, vendors, isCloudConnected, cloudError, initialSyncDone, handleCloudSync, user?.role, leads, inventoryItems, inventoryLocations, purchaseOrders, currentDept]);
 
   // 背景心跳監測 (Heartbeat Polling) - 每 45 秒檢查一次雲端是否有新更動
   useEffect(() => {
@@ -1256,6 +1267,7 @@ const App: React.FC = () => {
 
               {activeTab === 'inventory' && moduleService.isModuleEnabled(ModuleId.INVENTORY) && <InventoryList
                 items={inventoryItems}
+                locations={inventoryLocations}
                 user={user}
                 onAddClick={() => { setEditingInventoryItem(null); setIsInventoryModalOpen(true); }}
                 onEditClick={(item) => { setEditingInventoryItem(item); setIsInventoryModalOpen(true); }}
@@ -1269,6 +1281,7 @@ const App: React.FC = () => {
                 onManageLocations={() => setIsLocationManagerOpen(true)}
                 onTransferClick={(item) => setTransferItem(item)}
                 onScanClick={() => setIsScanModalOpen(true)}
+                onOrdersClick={() => setIsOrderManagerOpen(true)}
               />}
 
               {activeTab === 'vendors' && moduleService.isModuleEnabled(ModuleId.VENDORS) && (
@@ -1521,6 +1534,79 @@ const App: React.FC = () => {
         initialData={editingInventoryItem}
         // Pass available locations names for suggestion
         availableLocationNames={inventoryLocations.map(l => l.name)}
+      />}
+
+      {isOrderManagerOpen && user?.role !== 'Guest' && <OrderManagerModal
+        onClose={() => setIsOrderManagerOpen(false)}
+        orders={purchaseOrders}
+        inventoryItems={inventoryItems}
+        locations={inventoryLocations}
+        onSaveOrder={(order) => {
+          setPurchaseOrders(prev => [order, ...prev]);
+          addActivityLog('建立採購單', order.supplier, order.id, 'system');
+        }}
+        onUpdateOrder={(order) => {
+          setPurchaseOrders(prev => prev.map(o => o.id === order.id ? order : o));
+          addActivityLog('更新採購單', order.supplier, order.id, 'system');
+        }}
+        onReceiveItems={(orderId, itemIdxs) => {
+          const order = purchaseOrders.find(o => o.id === orderId);
+          if (!order) return;
+
+          const updatedItems = [...order.items];
+          let somethingChanged = false;
+
+          itemIdxs.forEach(idx => {
+            if (!updatedItems[idx].received) {
+              updatedItems[idx].received = true;
+              somethingChanged = true;
+
+              // Update Inventory
+              const invItemId = updatedItems[idx].itemId;
+              const quantityToAdd = updatedItems[idx].quantity;
+              const targetWarehouseId = order.targetWarehouseId;
+              const targetWarehouseName = inventoryLocations.find(l => l.id === targetWarehouseId)?.name || '總倉庫';
+
+              setInventoryItems(prev => prev.map(item => {
+                if (item.id === invItemId) {
+                  // Find if location exists
+                  const existingLocIdx = item.locations?.findIndex(l => l.name === targetWarehouseName);
+                  let newLocations = [...(item.locations || [])];
+
+                  if (existingLocIdx !== undefined && existingLocIdx >= 0) {
+                    newLocations[existingLocIdx] = {
+                      ...newLocations[existingLocIdx],
+                      quantity: Number(newLocations[existingLocIdx].quantity) + quantityToAdd
+                    };
+                  } else {
+                    newLocations.push({ name: targetWarehouseName, quantity: quantityToAdd });
+                  }
+
+                  const totalQuantity = newLocations.reduce((sum, loc) => sum + loc.quantity, 0);
+
+                  return {
+                    ...item,
+                    quantity: totalQuantity,
+                    locations: newLocations,
+                    updatedAt: new Date().toISOString()
+                  };
+                }
+                return item;
+              }));
+            }
+          });
+
+          if (somethingChanged) {
+            const allReceived = updatedItems.every(i => i.received);
+            const updatedOrder = {
+              ...order,
+              items: updatedItems,
+              status: allReceived ? 'Completed' : 'Partial' as any
+            };
+            setPurchaseOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
+            addActivityLog('採購單收貨', order.supplier, order.id, 'system');
+          }
+        }}
       />}
 
       {isLocationManagerOpen && <LocationManagerModal
