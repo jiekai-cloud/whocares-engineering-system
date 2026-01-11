@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell, PieChart, Pie
+  Cell, PieChart, Pie, Legend
 } from 'recharts';
 import {
   LayoutDashboard, FolderKanban, Users, BarChart3, TrendingUp,
@@ -180,8 +180,49 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
       });
   }, [filteredProjects]);
 
+  // Chart Data Preparation
+  const statusData = useMemo(() => {
+    return Object.entries(stats.counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [stats]);
+
+  const financialChartData = useMemo(() => {
+    return filteredProjects
+      .filter(p => p.budget > 0 && p.status !== '撤案' && p.status !== '未成交')
+      .sort((a, b) => b.budget - a.budget)
+      .slice(0, 5)
+      .map(p => ({
+        name: p.name.length > 6 ? p.name.substring(0, 6) + '...' : p.name,
+        budget: p.budget,
+        spent: p.spent,
+        full_name: p.name
+      }));
+  }, [filteredProjects]);
+
+  const STATUS_COLORS: Record<string, string> = {
+    [ProjectStatus.NEGOTIATING]: '#64748b', // Slate-500
+    [ProjectStatus.QUOTING]: '#3b82f6', // Blue-500
+    [ProjectStatus.QUOTED]: '#6366f1', // Indigo-500
+    [ProjectStatus.WAITING_SIGN]: '#8b5cf6', // Violet-500
+    [ProjectStatus.SIGNED_WAITING_WORK]: '#a855f7', // Purple-500
+    [ProjectStatus.CONSTRUCTING]: '#f97316', // Orange-500
+    [ProjectStatus.COMPLETED]: '#10b981', // Emerald-500
+    [ProjectStatus.INSPECTION]: '#06b6d4', // Cyan-500
+    [ProjectStatus.CLOSED]: '#059669', // Emerald-600
+    [ProjectStatus.CANCELLED]: '#94a3b8', // Slate-400
+    [ProjectStatus.LOST]: '#cbd5e1', // Slate-300
+  };
+
+  const formatMoney = (val: number) => {
+    if (val >= 100000000) return (val / 100000000).toFixed(1) + '億';
+    if (val >= 10000) return (val / 10000).toFixed(0) + '萬';
+    return val.toLocaleString();
+  };
+
   const statsCards = [
     { label: '案件總量', value: filteredProjects.length, icon: Layers, color: 'text-slate-600', bg: 'bg-slate-50' },
+    { label: '總合約金額', value: `$${formatMoney(stats.totalBudget)}`, icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50' },
     {
       label: '報價逾期',
       value: riskProjects.filter(r => r.riskType === 'delay').length,
@@ -190,7 +231,6 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
       bg: 'bg-rose-50'
     },
     { label: '施工進行中', value: stats.counts[ProjectStatus.CONSTRUCTING] || 0, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: '執行週轉率', value: `${filteredProjects.length > 0 ? Math.round(((stats.counts[ProjectStatus.COMPLETED] || 0) / filteredProjects.length) * 100) : 0}%`, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   return (
@@ -279,6 +319,70 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Status Distribution Chart */}
+        <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm flex flex-col">
+          <h3 className="text-sm font-black text-stone-900 uppercase tracking-widest mb-6 border-l-4 border-indigo-500 pl-3">案件狀態分佈</h3>
+          <div className="flex-1 w-full min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {statusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#94a3b8'} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Legend
+                  layout="horizontal"
+                  verticalAlign="bottom"
+                  align="center"
+                  wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '20px' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Financial Overview Chart */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm flex flex-col">
+          <h3 className="text-sm font-black text-stone-900 uppercase tracking-widest mb-6 border-l-4 border-emerald-500 pl-3">重點案件預算執行概況 (Top 5)</h3>
+          <div className="flex-1 w-full min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={financialChartData} barSize={20}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                <XAxis dataKey="name" fontSize={10} tick={{ fontWeight: 'bold', fill: '#78716c' }} axisLine={false} tickLine={false} />
+                <YAxis
+                  fontSize={10}
+                  tick={{ fontWeight: 'bold', fill: '#78716c' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(val) => formatMoney(val)}
+                />
+                <Tooltip
+                  cursor={{ fill: '#fafaf9' }}
+                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  labelStyle={{ fontSize: '12px', fontWeight: '900', color: '#1c1917', marginBottom: '8px' }}
+                  formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+                />
+                <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '20px' }} />
+                <Bar dataKey="budget" name="預算金額" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="spent" name="已支出" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
