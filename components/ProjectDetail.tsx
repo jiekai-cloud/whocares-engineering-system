@@ -65,6 +65,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const [selectedUploadCategory, setSelectedUploadCategory] = useState('survey');
   const [currentPhotoFilter, setCurrentPhotoFilter] = useState('all');
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
   const currentFilteredFiles = useMemo(() => {
     return (project.files || []).filter(f =>
@@ -80,6 +83,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
     if (currentIndex !== -1 && currentIndex < currentFilteredFiles.length - 1) {
       setSelectedImage(currentFilteredFiles[currentIndex + 1]);
       setZoomLevel(1);
+      setPosition({ x: 0, y: 0 });
     }
   };
 
@@ -90,6 +94,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
     if (currentIndex > 0) {
       setSelectedImage(currentFilteredFiles[currentIndex - 1]);
       setZoomLevel(1);
+      setPosition({ x: 0, y: 0 });
     }
   };
 
@@ -100,7 +105,33 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
 
   const handleZoomOut = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setZoomLevel(prev => Math.max(prev - 0.5, 1));
+    setZoomLevel(prev => {
+      const newZoom = Math.max(prev - 0.5, 1);
+      if (newZoom === 1) setPosition({ x: 0, y: 0 });
+      return newZoom;
+    });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel > 1) {
+      e.preventDefault();
+      setIsDragging(true);
+      dragStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoomLevel > 1) {
+      e.preventDefault();
+      setPosition({
+        x: e.clientX - dragStartRef.current.x,
+        y: e.clientY - dragStartRef.current.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   // Keyboard navigation
@@ -2042,19 +2073,28 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
             )}
 
             {/* Main Content */}
-            <div className="relative w-full h-full flex flex-col items-center justify-center p-4 lg:p-12 animate-in zoom-in-95 duration-300">
+            <div
+              className="relative w-full h-full flex flex-col items-center justify-center p-4 lg:p-12 animate-in zoom-in-95 duration-300"
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
               <div className="flex-1 w-full flex items-center justify-center min-h-0 overflow-hidden relative">
                 {selectedImage.type === 'video' ? (
                   <video src={selectedImage.url} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay />
                 ) : (
                   <div
-                    className="relative transition-transform duration-200 ease-out"
-                    style={{ transform: `scale(${zoomLevel})` }}
+                    className="relative transition-transform duration-75 ease-out will-change-transform"
+                    style={{
+                      transform: `scale(${zoomLevel}) translate3d(${position.x / zoomLevel}px, ${position.y / zoomLevel}px, 0)`,
+                      cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
+                    }}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
                   >
                     <img
                       src={selectedImage.url}
                       alt={selectedImage.name}
-                      className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
+                      className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl pointer-events-none select-none"
                       draggable={false}
                     />
                   </div>
