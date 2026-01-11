@@ -5,10 +5,12 @@ import { Project } from "../types";
 // 優先採用的穩定模型列表 (依序備援，涵蓋穩定版與最新版)
 // 優先採用的穩定模型列表 (依序備援)
 const FALLBACK_MODELS = [
-  'gemini-2.0-flash-exp',      // Primary: Smartest model
-  'gemini-1.5-flash',          // Secondary: Most stable and fast
-  'gemini-1.5-flash-002',
-  'gemini-1.5-pro',            // Backup: Higher capacity
+  'gemini-2.0-flash-exp',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-pro',
+  'gemini-1.5-pro-latest',
+  'gemini-1.5-pro',
   'gemini-2.0-flash-thinking-exp'
 ];
 

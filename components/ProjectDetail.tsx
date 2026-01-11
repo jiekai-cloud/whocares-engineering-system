@@ -4,7 +4,8 @@ import {
   ArrowLeft, CheckCircle2, Clock, DollarSign, Pencil, Sparkles, Trash2, Activity,
   MessageSquare, Send, Receipt, X, ZoomIn, FileText, ImageIcon, Upload, MapPin,
   Navigation, ShoppingBag, Utensils, Building2, ExternalLink, CalendarDays, Loader2, Check, DownloadCloud, ShieldAlert,
-  Layers, Camera, HardHat, CheckCircle, ShieldCheck, Edit2, Wrench, ClipboardList, Construction, FileImage, Zap, Lock, ChevronDown
+  Layers, Camera, HardHat, CheckCircle, ShieldCheck, Edit2, Wrench, ClipboardList, Construction, FileImage, Zap, Lock, ChevronDown,
+  ChevronLeft, ChevronRight, Plus, Minus, ZoomOut
 } from 'lucide-react';
 import { Project, ProjectStatus, Task, ProjectComment, Expense, WorkAssignment, TeamMember, ProjectFile, ProjectPhase, User, ChecklistTask, PaymentStage } from '../types';
 import { suggestProjectSchedule, searchNearbyResources, analyzeProjectFinancials, parseScheduleFromImage, generatePreConstructionPrep, scanReceipt, analyzeQuotationItems } from '../services/geminiService';
@@ -63,6 +64,56 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedUploadCategory, setSelectedUploadCategory] = useState('survey');
   const [currentPhotoFilter, setCurrentPhotoFilter] = useState('all');
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  const currentFilteredFiles = useMemo(() => {
+    return (project.files || []).filter(f =>
+      (f.type === 'image' || f.type === 'video') &&
+      (currentPhotoFilter === 'all' || f.category === currentPhotoFilter)
+    );
+  }, [project.files, currentPhotoFilter]);
+
+  const handleNextImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!selectedImage) return;
+    const currentIndex = currentFilteredFiles.findIndex(f => f.id === selectedImage.id);
+    if (currentIndex !== -1 && currentIndex < currentFilteredFiles.length - 1) {
+      setSelectedImage(currentFilteredFiles[currentIndex + 1]);
+      setZoomLevel(1);
+    }
+  };
+
+  const handlePrevImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!selectedImage) return;
+    const currentIndex = currentFilteredFiles.findIndex(f => f.id === selectedImage.id);
+    if (currentIndex > 0) {
+      setSelectedImage(currentFilteredFiles[currentIndex - 1]);
+      setZoomLevel(1);
+    }
+  };
+
+  const handleZoomIn = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setZoomLevel(prev => Math.min(prev + 0.5, 3));
+  };
+
+  const handleZoomOut = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setZoomLevel(prev => Math.max(prev - 0.5, 1));
+  };
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedImage) return;
+      if (e.key === 'ArrowRight') handleNextImage();
+      if (e.key === 'ArrowLeft') handlePrevImage();
+      if (e.key === 'Escape') setSelectedImage(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImage, currentFilteredFiles]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleFileInputRef = useRef<HTMLInputElement>(null);
   const scopeDrawingInputRef = useRef<HTMLInputElement>(null);
@@ -1965,65 +2016,116 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
       {/* Lightbox / Media Preview Modal */}
       {
         selectedImage && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-12 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-            <button onClick={() => setSelectedImage(null)} className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors z-[110] bg-white/10 p-3 rounded-full hover:bg-white/20">
-              <X size={32} />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+            {/* Close Button */}
+            <button onClick={() => setSelectedImage(null)} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors z-[110] bg-white/10 p-3 rounded-full hover:bg-white/20">
+              <X size={24} />
             </button>
 
-            <div className="relative w-full h-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-300">
-              <div className="flex-1 w-full flex items-center justify-center min-h-0">
+            {/* Navigation Buttons */}
+            {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) > 0 && (
+              <button
+                onClick={handlePrevImage}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white hover:bg-white/10 p-4 rounded-full transition-all z-[110]"
+              >
+                <ChevronLeft size={40} />
+              </button>
+            )}
+
+            {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) < currentFilteredFiles.length - 1 && (
+              <button
+                onClick={handleNextImage}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white hover:bg-white/10 p-4 rounded-full transition-all z-[110]"
+              >
+                <ChevronRight size={40} />
+              </button>
+            )}
+
+            {/* Main Content */}
+            <div className="relative w-full h-full flex flex-col items-center justify-center p-4 lg:p-12 animate-in zoom-in-95 duration-300">
+              <div className="flex-1 w-full flex items-center justify-center min-h-0 overflow-hidden relative">
                 {selectedImage.type === 'video' ? (
                   <video src={selectedImage.url} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay />
                 ) : (
-                  <img src={selectedImage.url} alt={selectedImage.name} className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
+                  <div
+                    className="relative transition-transform duration-200 ease-out"
+                    style={{ transform: `scale(${zoomLevel})` }}
+                  >
+                    <img
+                      src={selectedImage.url}
+                      alt={selectedImage.name}
+                      className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
+                      draggable={false}
+                    />
+                  </div>
                 )}
               </div>
 
-              <div className="mt-8 text-center space-y-4">
-                <h3 className="text-white text-lg font-black tracking-tight">{selectedImage.name}</h3>
-                <div className="flex flex-wrap items-center justify-center gap-4">
-                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">
-                    {selectedImage.uploadedAt ? new Date(selectedImage.uploadedAt).toLocaleString() : '無日期'}
-                  </p>
-                  <span className="w-1 h-1 bg-white/20 rounded-full" />
-                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">上傳者: {selectedImage.uploadedBy}</p>
-                  <span className="w-1 h-1 bg-white/20 rounded-full" />
-                  {!isReadOnly && onUpdateFiles ? (
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <select
-                          value={selectedImage.category}
-                          onChange={(e) => {
-                            const newCategory = e.target.value;
-                            const updatedFiles = project.files?.map(f => f.id === selectedImage.id ? { ...f, category: newCategory } : f) || [];
-                            onUpdateFiles(updatedFiles);
-                            setSelectedImage({ ...selectedImage, category: newCategory });
-                          }}
-                          className="appearance-none bg-stone-800 text-orange-500 text-[10px] font-black uppercase tracking-widest border border-stone-700 rounded-xl px-4 py-1.5 pr-8 outline-none cursor-pointer hover:bg-stone-700 transition-all"
-                        >
-                          {PHOTO_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.label}</option>
-                          ))}
-                        </select>
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-orange-500/50">
-                          <Layers size={10} />
+              {/* Controls Toolbar */}
+              <div className="mt-6 flex flex-col items-center gap-4 z-[110]">
+                {/* Zoom Controls (Images Only) */}
+                {selectedImage.type !== 'video' && (
+                  <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                    <button onClick={handleZoomOut} className="text-white/70 hover:text-white transition-colors disabled:opacity-30" disabled={zoomLevel <= 1}>
+                      <ZoomOut size={18} />
+                    </button>
+                    <span className="text-xs font-black text-white w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+                    <button onClick={handleZoomIn} className="text-white/70 hover:text-white transition-colors disabled:opacity-30" disabled={zoomLevel >= 3}>
+                      <ZoomIn size={18} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Image Info */}
+                <div className="text-center space-y-3">
+                  <h3 className="text-white text-lg font-black tracking-tight drop-shadow-md">{selectedImage.name}</h3>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <p className="text-white/60 text-[10px] font-black uppercase tracking-widest">
+                      {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) + 1} / {currentFilteredFiles.length}
+                    </p>
+                    <span className="w-1 h-1 bg-white/20 rounded-full" />
+                    <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">
+                      {selectedImage.uploadedAt ? new Date(selectedImage.uploadedAt).toLocaleString() : '無日期'}
+                    </p>
+                    <span className="w-1 h-1 bg-white/20 rounded-full" />
+                    {!isReadOnly && onUpdateFiles ? (
+                      <div className="flex items-center gap-3">
+                        <div className="relative group/cat">
+                          <select
+                            value={selectedImage.category}
+                            onChange={(e) => {
+                              const newCategory = e.target.value;
+                              const updatedFiles = project.files?.map(f => f.id === selectedImage.id ? { ...f, category: newCategory } : f) || [];
+                              onUpdateFiles(updatedFiles);
+                              setSelectedImage({ ...selectedImage, category: newCategory });
+                            }}
+                            className="appearance-none bg-stone-800 text-orange-500 text-[10px] font-black uppercase tracking-widest border border-stone-700 rounded-xl px-4 py-1.5 pr-8 outline-none cursor-pointer hover:bg-stone-700 transition-all"
+                          >
+                            {PHOTO_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.label}</option>
+                            ))}
+                          </select>
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-orange-500/50">
+                            <Layers size={10} />
+                          </div>
                         </div>
+                        <button
+                          onClick={() => {
+                            if (confirm('確定要從雲端刪除這張照片嗎？')) {
+                              onUpdateFiles(project.files!.filter(f => f.id !== selectedImage.id));
+                              setSelectedImage(null);
+                            }
+                          }}
+                          className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all border border-rose-500/20"
+                          title="刪除"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => {
-                          if (confirm('確定要從雲端刪除這張照片嗎？')) {
-                            onUpdateFiles(project.files!.filter(f => f.id !== selectedImage.id));
-                            setSelectedImage(null);
-                          }
-                        }}
-                        className="flex items-center gap-2 px-4 py-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-rose-500/20"
-                      >
-                        <Trash2 size={12} /> 刪除檔案
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
-                  )}
+                    ) : (
+                      <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
