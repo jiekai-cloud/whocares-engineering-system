@@ -9,7 +9,7 @@ import {
   AlertCircle, Clock, CheckCircle2, DollarSign, ArrowUpRight,
   ArrowDownRight, Activity, ShieldAlert, Zap, ExternalLink,
   Sparkles, Phone, MapPin, FileWarning, CalendarDays, AlertTriangle,
-  Layers, Target, ArrowRight, Briefcase
+  Layers, Target, ArrowRight, Briefcase, Loader2
 } from 'lucide-react';
 import { Project, ProjectStatus, Lead } from '../types';
 
