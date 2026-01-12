@@ -218,7 +218,10 @@ export interface DefectItem {
   content: string; // 缺失項目
   status: 'Pending' | 'Completed'; // 待改進 | 已改進
   improvement?: string; // 改善情形
+  photos?: string[]; // 缺失或改善照片 (Base64 or URL)
+  videoUrl?: string; // 影片記錄 (Base64 or URL)
 }
+
 
 export interface DefectRecord {
   id: string;

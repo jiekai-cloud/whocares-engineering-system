@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Plus, Trash2, Edit2, Save, X, CheckCircle2, Circle, AlertTriangle, MessageSquare, Calendar, ChevronDown, ChevronRight, Check, Download, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, CheckCircle2, Circle, AlertTriangle, MessageSquare, Calendar, ChevronDown, ChevronRight, Check, Download, Loader2, Image as ImageIcon, Video as VideoIcon, Play } from 'lucide-react';
 import { Project, DefectRecord, DefectItem } from '../types';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -16,7 +16,9 @@ const DefectImprovement: React.FC<DefectImprovementProps> = ({ project, onUpdate
     const [expandedRecords, setExpandedRecords] = useState<string[]>([]);
     const [isExporting, setIsExporting] = useState(false);
     const pdfRef = useRef<HTMLDivElement>(null);
-
+    const photoInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
 
     const [tempRecord, setTempRecord] = useState<DefectRecord | null>(null);
 
@@ -97,6 +99,73 @@ const DefectImprovement: React.FC<DefectImprovementProps> = ({ project, onUpdate
             ...tempRecord,
             items: tempRecord.items.filter(item => item.id !== itemId)
         });
+    };
+
+    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, itemId: string) => {
+        const files = e.target.files;
+        if (!files || !tempRecord) return;
+
+        setUploadingItemId(itemId);
+        const newPhotos: string[] = [];
+        let processedCount = 0;
+
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (reader.result) {
+                    newPhotos.push(reader.result as string);
+                }
+                processedCount++;
+                if (processedCount === files.length) {
+                    const currentItem = tempRecord.items.find(i => i.id === itemId);
+                    if (currentItem) {
+                        const existingPhotos = currentItem.photos || [];
+                        updateItem(itemId, { photos: [...existingPhotos, ...newPhotos] });
+                    }
+                    setUploadingItemId(null);
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Reset input
+        e.target.value = '';
+    };
+
+    const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>, itemId: string) => {
+        const file = e.target.files?.[0];
+        if (!file || !tempRecord) return;
+
+        setUploadingItemId(itemId);
+        // Check size (limit to 50MB for base64 safety, though ideally should be cloud URL)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('影片檔案過大 (限制 50MB)');
+            setUploadingItemId(null);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            updateItem(itemId, { videoUrl: reader.result as string });
+            setUploadingItemId(null);
+        };
+        reader.readAsDataURL(file);
+
+        // Reset input
+        e.target.value = '';
+    };
+
+    const removePhoto = (itemId: string, photoIndex: number) => {
+        if (!tempRecord) return;
+        const currentItem = tempRecord.items.find(i => i.id === itemId);
+        if (currentItem && currentItem.photos) {
+            const newPhotos = currentItem.photos.filter((_, idx) => idx !== photoIndex);
+            updateItem(itemId, { photos: newPhotos });
+        }
+    };
+
+    const removeVideo = (itemId: string) => {
+        updateItem(itemId, { videoUrl: undefined });
     };
 
     return (
@@ -320,16 +389,83 @@ const DefectImprovement: React.FC<DefectImprovementProps> = ({ project, onUpdate
                                                                                     onChange={(e) => updateItem(item.id, { improvement: e.target.value })}
                                                                                 />
                                                                             </div>
+
+                                                                            {/* Upload Controls */}
+                                                                            <div className="flex gap-2 pt-1">
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        // Hacky way to pass ID, better to have individual inputs or state
+                                                                                        // But since we can only open one file dialgo at a time:
+                                                                                        if (photoInputRef.current) {
+                                                                                            photoInputRef.current.setAttribute('data-item-id', item.id);
+                                                                                            photoInputRef.current.click();
+                                                                                        }
+                                                                                    }}
+                                                                                    className="flex items-center gap-1 text-[9px] font-black text-stone-400 hover:text-blue-600 bg-stone-50 px-2 py-1 rounded-lg border border-stone-200 hover:border-blue-200 transition"
+                                                                                >
+                                                                                    <ImageIcon size={10} />
+                                                                                    {uploadingItemId === item.id ? '上傳中...' : '添加照片'}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (videoInputRef.current) {
+                                                                                            videoInputRef.current.setAttribute('data-item-id', item.id);
+                                                                                            videoInputRef.current.click();
+                                                                                        }
+                                                                                    }}
+                                                                                    disabled={!!item.videoUrl}
+                                                                                    className="flex items-center gap-1 text-[9px] font-black text-stone-400 hover:text-blue-600 bg-stone-50 px-2 py-1 rounded-lg border border-stone-200 hover:border-blue-200 transition disabled:opacity-50"
+                                                                                >
+                                                                                    <VideoIcon size={10} />
+                                                                                    {item.videoUrl ? '影片已上傳' : '添加影片'}
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                     ) : (
-                                                                        <div>
-                                                                            <p className={`text-xs font-bold leading-relaxed ${item.status === 'Completed' ? 'text-emerald-800 line-through decoration-emerald-200' : 'text-stone-800'}`}>
-                                                                                {item.content}
-                                                                            </p>
-                                                                            {item.improvement && (
-                                                                                <p className="text-[10px] text-stone-500 mt-1 pl-2 border-l-2 border-stone-200">
-                                                                                    <span className="font-bold">改善：</span>{item.improvement}
+                                                                        <div className="space-y-2">
+                                                                            <div>
+                                                                                <p className={`text-xs font-bold leading-relaxed ${item.status === 'Completed' ? 'text-emerald-800 line-through decoration-emerald-200' : 'text-stone-800'}`}>
+                                                                                    {item.content}
                                                                                 </p>
+                                                                                {item.improvement && (
+                                                                                    <p className="text-[10px] text-stone-500 mt-1 pl-2 border-l-2 border-stone-200">
+                                                                                        <span className="font-bold">改善：</span>{item.improvement}
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Media Preview Grid */}
+                                                                    {(item.photos && item.photos.length > 0 || item.videoUrl) && (
+                                                                        <div className="flex flex-wrap gap-2 mt-2">
+                                                                            {item.photos?.map((photo, pIdx) => (
+                                                                                <div key={pIdx} className="relative group w-16 h-16 rounded-lg overflow-hidden bg-stone-100 border border-stone-200">
+                                                                                    <img src={photo} alt="Defect" className="w-full h-full object-cover" />
+                                                                                    {isEditing && (
+                                                                                        <button
+                                                                                            onClick={() => removePhoto(item.id, pIdx)}
+                                                                                            className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-rose-500 p-0.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all"
+                                                                                        >
+                                                                                            <X size={10} />
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            ))}
+                                                                            {item.videoUrl && (
+                                                                                <div className="relative group w-16 h-16 rounded-lg overflow-hidden bg-stone-900 border border-stone-200 flex items-center justify-center">
+                                                                                    <video src={item.videoUrl} className="w-full h-full object-cover opacity-50" />
+                                                                                    <Play size={20} className="absolute text-white" />
+                                                                                    {isEditing && (
+                                                                                        <button
+                                                                                            onClick={() => removeVideo(item.id)}
+                                                                                            className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-rose-500 p-0.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all z-10"
+                                                                                        >
+                                                                                            <X size={10} />
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <a href={item.videoUrl} target="_blank" rel="noreferrer" className="absolute inset-0 z-0" />
+                                                                                </div>
                                                                             )}
                                                                         </div>
                                                                     )}
@@ -348,6 +484,29 @@ const DefectImprovement: React.FC<DefectImprovementProps> = ({ project, onUpdate
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Hidden Inputs for File Upload */}
+                                            <input
+                                                type="file"
+                                                ref={photoInputRef}
+                                                className="hidden"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={(e) => {
+                                                    const itemId = e.target.getAttribute('data-item-id');
+                                                    if (itemId) handlePhotoUpload(e, itemId);
+                                                }}
+                                            />
+                                            <input
+                                                type="file"
+                                                ref={videoInputRef}
+                                                className="hidden"
+                                                accept="video/*"
+                                                onChange={(e) => {
+                                                    const itemId = e.target.getAttribute('data-item-id');
+                                                    if (itemId) handleVideoUpload(e, itemId);
+                                                }}
+                                            />
 
                                             {/* Suggestions */}
                                             <div>
