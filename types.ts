@@ -205,11 +205,27 @@ export interface Project {
   workAssignments?: WorkAssignment[];
   files?: ProjectFile[];
   contractUrl?: string; // 合約或報價單
+  defectRecords?: DefectRecord[]; // 缺失改善紀錄
   year?: string; // 新增：手動指定的年度類別 (2024, 2025, 2026)
   statusChangedAt?: string; // 狀態變更時間 (用於逾期計算)
   updatedAt?: string;
   deletedAt?: string;
   isPurged?: boolean;
+}
+
+export interface DefectItem {
+  id: string;
+  content: string; // 缺失項目
+  status: 'Pending' | 'Completed'; // 待改進 | 已改進
+  improvement?: string; // 改善情形
+}
+
+export interface DefectRecord {
+  id: string;
+  date: string;
+  items: DefectItem[];
+  suggestions?: string; // 後續會議建議
+  updatedAt: string;
 }
 
 export interface Lead {

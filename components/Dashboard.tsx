@@ -59,6 +59,13 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
     { value: '10', label: '10月' }, { value: '11', label: '11月' }, { value: '12', label: '12月' },
   ];
 
+  const projectsWithDefects = useMemo(() => {
+    return projects.filter(p =>
+      !p.name.includes('測試') &&
+      p.defectRecords?.some(record => record.items.some(item => item.status === 'Pending'))
+    );
+  }, [projects]);
+
   // 1. 高效過濾：在大數據量下僅在必要時重新計算
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
@@ -319,6 +326,50 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Defect Summary Section */}
+      <div className="bg-white rounded-[2rem] border border-stone-100 shadow-sm p-6 lg:p-8 animate-in slide-in-from-bottom-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h3 className="text-sm font-black text-stone-900 uppercase tracking-widest flex items-center gap-2 border-l-4 border-rose-500 pl-3">
+            <AlertTriangle size={18} className="text-rose-500" /> 缺失改善紀錄彙整 (未完成)
+          </h3>
+          <span className="text-[10px] bg-rose-50 text-rose-600 px-3 py-1 rounded-full font-black uppercase tracking-wider self-start sm:self-auto border border-rose-100">
+            共有 {projectsWithDefects.length} 案有待改進項目
+          </span>
+        </div>
+
+        {projectsWithDefects.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {projectsWithDefects.slice(0, 8).map(p => {
+              const totalPending = p.defectRecords?.reduce((acc, r) => acc + r.items.filter(i => i.status === 'Pending').length, 0) || 0;
+              return (
+                <div key={p.id} onClick={() => onProjectClick(p.id)} className="cursor-pointer bg-stone-50 hover:bg-white hover:shadow-lg hover:-translate-y-1 hover:border-rose-200 border border-stone-100 rounded-2xl p-5 transition-all group duration-300">
+                  <div className="flex justify-between items-start mb-3 gap-2">
+                    <h4 className="font-black text-stone-800 text-xs line-clamp-1 flex-1" title={p.name}>{p.name}</h4>
+                    <span className="bg-rose-500 text-white shadow-sm text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shrink-0">
+                      <AlertTriangle size={10} /> {totalPending}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] text-stone-400 font-bold uppercase tracking-wider">
+                    <span className="flex items-center gap-1"><Users size={10} /> {p.quotationManager || p.engineeringManager || '未指定'}</span>
+                    <span className="group-hover:translate-x-1 group-hover:text-rose-500 transition-all flex items-center gap-1">前往改善 <ArrowRight size={10} /></span>
+                  </div>
+                </div>
+              )
+            })}
+            {projectsWithDefects.length > 8 && (
+              <div onClick={() => { /* Consider filtering projects list */ }} className="flex items-center justify-center p-4 border border-dashed border-stone-200 rounded-2xl text-stone-400 hover:text-stone-600 hover:bg-stone-50 cursor-pointer transition-all">
+                <span className="text-xs font-black uppercase tracking-widest">查看更多 ({projectsWithDefects.length - 8})...</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center p-12 text-stone-300 gap-3 bg-stone-50/50 rounded-3xl border border-dashed border-stone-200">
+            <CheckCircle2 size={32} className="text-emerald-400" />
+            <span className="font-bold text-xs uppercase tracking-widest text-emerald-600/50">所有案件皆無待改善缺失，品質良好！</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

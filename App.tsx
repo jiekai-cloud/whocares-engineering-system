@@ -1123,6 +1123,7 @@ const App: React.FC = () => {
               onUpdateWorkAssignments={(assignments) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, workAssignments: assignments, updatedAt: new Date().toISOString() } : p))}
               onUpdatePreConstruction={(prep) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, preConstruction: prep, updatedAt: new Date().toISOString() } : p))}
               onUpdateContractUrl={(url) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, contractUrl: url, updatedAt: new Date().toISOString() } : p))}
+              onUpdateDefectRecords={(records) => setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, defectRecords: records, updatedAt: new Date().toISOString() } : p))}
               onLossClick={() => handleUpdateStatus(selectedProjectId!, ProjectStatus.LOST)}
             />
           ) : (
