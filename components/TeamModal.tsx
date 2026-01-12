@@ -35,6 +35,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
     name: '',
     role: '現場工程師',
     phone: '',
+    personalPhone: '',
     email: '',
     specialty: [],
     certifications: [],
@@ -260,15 +261,28 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
                   <input type="date" disabled={!isEditable} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.joinDate || ''} onChange={e => setFormData({ ...formData, joinDate: e.target.value })} />
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">聯絡電話</label>
-                <div className="flex gap-2">
-                  <input disabled={!isEditable} className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                  {formData.phone && (
-                    <button type="button" onClick={() => handleCall(formData.phone)} className="bg-emerald-50 text-emerald-600 px-4 rounded-2xl hover:bg-emerald-100 transition-colors border border-emerald-200">
-                      <Phone size={20} />
-                    </button>
-                  )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">工作電話</label>
+                  <div className="flex gap-2">
+                    <input disabled={!isEditable} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                    {formData.phone && (
+                      <button type="button" onClick={() => handleCall(formData.phone!)} className="bg-emerald-50 text-emerald-600 px-3 rounded-2xl hover:bg-emerald-100 transition-colors border border-emerald-200">
+                        <Phone size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">個人電話</label>
+                  <div className="flex gap-2">
+                    <input disabled={!isEditable} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.personalPhone || ''} onChange={e => setFormData({ ...formData, personalPhone: e.target.value })} />
+                    {formData.personalPhone && (
+                      <button type="button" onClick={() => handleCall(formData.personalPhone!)} className="bg-emerald-50 text-emerald-600 px-3 rounded-2xl hover:bg-emerald-100 transition-colors border border-emerald-200">
+                        <Phone size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               <div>
