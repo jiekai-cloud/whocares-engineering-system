@@ -9,9 +9,10 @@ import {
   AlertCircle, Clock, CheckCircle2, DollarSign, ArrowUpRight,
   ArrowDownRight, Activity, ShieldAlert, Zap, ExternalLink,
   Sparkles, Phone, MapPin, FileWarning, CalendarDays, AlertTriangle,
-  Layers, Target, ArrowRight, Briefcase, Loader2
+  Layers, Target, ArrowRight, Briefcase, Loader2, Download, X
 } from 'lucide-react';
 import { Project, ProjectStatus, Lead } from '../types';
+import DefectExportModal from './DefectExportModal';
 
 interface DashboardProps {
   projects: Project[];
@@ -27,6 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState<string | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const generatePortfolioAnalysis = async () => {
     setIsAnalyzing(true);
@@ -334,9 +336,17 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
           <h3 className="text-sm font-black text-stone-900 uppercase tracking-widest flex items-center gap-2 border-l-4 border-rose-500 pl-3">
             <AlertTriangle size={18} className="text-rose-500" /> 缺失改善紀錄彙整 (未完成)
           </h3>
-          <span className="text-[10px] bg-rose-50 text-rose-600 px-3 py-1 rounded-full font-black uppercase tracking-wider self-start sm:self-auto border border-rose-100">
-            共有 {projectsWithDefects.length} 案有待改進項目
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="flex items-center gap-2 bg-white border border-stone-200 text-stone-600 px-3 py-1.5 rounded-full text-[10px] font-black hover:bg-stone-50 transition-all shadow-sm active:scale-95"
+            >
+              <Download size={12} /> 批量匯出報告
+            </button>
+            <span className="text-[10px] bg-rose-50 text-rose-600 px-3 py-1 rounded-full font-black uppercase tracking-wider self-start sm:self-auto border border-rose-100">
+              共有 {projectsWithDefects.length} 案有待改進項目
+            </span>
+          </div>
         </div>
 
         {projectsWithDefects.length > 0 ? (
@@ -359,7 +369,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
               )
             })}
             {projectsWithDefects.length > 8 && (
-              <div onClick={() => { /* Consider filtering projects list */ }} className="flex items-center justify-center p-4 border border-dashed border-stone-200 rounded-2xl text-stone-400 hover:text-stone-600 hover:bg-stone-50 cursor-pointer transition-all">
+              <div onClick={() => { /* Consider filtering projects list */ }} className="flex items-center justify-center p-12 border border-dashed border-stone-200 rounded-2xl text-stone-400 hover:text-stone-600 hover:bg-stone-50 cursor-pointer transition-all">
                 <span className="text-xs font-black uppercase tracking-widest">查看更多 ({projectsWithDefects.length - 8})...</span>
               </div>
             )}
@@ -668,8 +678,16 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], onConvertLe
           </div>
         </div>
       </div>
+
+      {isExportModalOpen && (
+        <DefectExportModal
+          projects={projects}
+          onClose={() => setIsExportModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
 
 export default Dashboard;
+
