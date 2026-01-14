@@ -82,9 +82,10 @@ async function callAIWithFallback(payload: any, context: string) {
   const ai = getAI();
   let lastError: any = null;
 
+  console.log('[AI Config] Fallback list:', FALLBACK_MODELS);
   for (const modelId of FALLBACK_MODELS) {
     try {
-      console.log(`[AI] 嘗試調用模型: ${modelId} (${context})`);
+      console.log(`[AI v2.1] 嘗試調用模型: ${modelId} (${context})`);
       const response = await ai.models.generateContent({
         ...payload,
         model: modelId
