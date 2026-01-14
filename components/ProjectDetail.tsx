@@ -2086,7 +2086,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                                       const legacyUrl = project.preConstruction?.scopeDrawingUrl;
                                       let newScopeDrawings = [...(project.preConstruction?.scopeDrawings || [])];
 
-                                      if (url === legacyUrl) {
+                                      if (url === legacyUrl || String(legacyUrl) === url) {
                                         // Remove legacy
                                         props.onUpdatePreConstruction({
                                           ...project.preConstruction,
