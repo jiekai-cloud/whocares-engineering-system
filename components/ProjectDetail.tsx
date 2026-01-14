@@ -80,12 +80,33 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
     );
   }, [project.files, currentPhotoFilter]);
 
+  const scopeDrawingFiles = useMemo(() => {
+    const urls = [
+      ...(project.preConstruction?.scopeDrawingUrl ? [project.preConstruction.scopeDrawingUrl] : []),
+      ...(project.preConstruction?.scopeDrawings || [])
+    ];
+    return urls.map((url, idx) => ({
+      id: `scope-${idx}`,
+      url: String(url),
+      name: `施工範圍圖 (${idx + 1})`,
+      category: '施工範圍圖',
+      type: 'image',
+      uploadedAt: project.preConstruction?.updatedAt,
+      uploadedBy: 'System'
+    } as ProjectFile));
+  }, [project.preConstruction]);
+
+  const navigationList = useMemo(() => {
+    if (selectedImage?.category === '施工範圍圖') return scopeDrawingFiles;
+    return currentFilteredFiles;
+  }, [selectedImage, scopeDrawingFiles, currentFilteredFiles]);
+
   const handleNextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!selectedImage) return;
-    const currentIndex = currentFilteredFiles.findIndex(f => f.id === selectedImage.id);
-    if (currentIndex !== -1 && currentIndex < currentFilteredFiles.length - 1) {
-      setSelectedImage(currentFilteredFiles[currentIndex + 1]);
+    const currentIndex = navigationList.findIndex(f => f.id === selectedImage.id || f.url === selectedImage.url);
+    if (currentIndex !== -1 && currentIndex < navigationList.length - 1) {
+      setSelectedImage(navigationList[currentIndex + 1]);
       setZoomLevel(1);
       setPosition({ x: 0, y: 0 });
     }
@@ -94,9 +115,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const handlePrevImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!selectedImage) return;
-    const currentIndex = currentFilteredFiles.findIndex(f => f.id === selectedImage.id);
+    const currentIndex = navigationList.findIndex(f => f.id === selectedImage.id || f.url === selectedImage.url);
     if (currentIndex > 0) {
-      setSelectedImage(currentFilteredFiles[currentIndex - 1]);
+      setSelectedImage(navigationList[currentIndex - 1]);
       setZoomLevel(1);
       setPosition({ x: 0, y: 0 });
     }
@@ -2229,7 +2250,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
             </button>
 
             {/* Navigation Buttons */}
-            {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) > 0 && (
+            {navigationList.findIndex(f => f.id === selectedImage.id || f.url === selectedImage.url) > 0 && (
               <button
                 onClick={handlePrevImage}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white hover:bg-white/10 p-4 rounded-full transition-all z-[110]"
@@ -2238,7 +2259,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
               </button>
             )}
 
-            {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) < currentFilteredFiles.length - 1 && (
+            {navigationList.findIndex(f => f.id === selectedImage.id || f.url === selectedImage.url) < navigationList.length - 1 && (
               <button
                 onClick={handleNextImage}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white hover:bg-white/10 p-4 rounded-full transition-all z-[110]"
@@ -2299,14 +2320,14 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                   <h3 className="text-white text-lg font-black tracking-tight drop-shadow-md">{selectedImage.name}</h3>
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <p className="text-white/60 text-[10px] font-black uppercase tracking-widest">
-                      {currentFilteredFiles.findIndex(f => f.id === selectedImage.id) + 1} / {currentFilteredFiles.length}
+                      {navigationList.findIndex(f => f.id === selectedImage.id || f.url === selectedImage.url) + 1} / {navigationList.length}
                     </p>
                     <span className="w-1 h-1 bg-white/20 rounded-full" />
                     <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">
                       {selectedImage.uploadedAt ? new Date(selectedImage.uploadedAt).toLocaleString() : '無日期'}
                     </p>
                     <span className="w-1 h-1 bg-white/20 rounded-full" />
-                    {!isReadOnly && onUpdateFiles ? (
+                    {!isReadOnly && onUpdateFiles && selectedImage.category !== '施工範圍圖' ? (
                       <div className="flex items-center gap-3">
                         <div className="relative group/cat">
                           <select
@@ -2341,7 +2362,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                         </button>
                       </div>
                     ) : (
-                      <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類'}</p>
+                      <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest">{selectedImage.category === '施工範圍圖' ? '施工範圍圖' : (PHOTO_CATEGORIES.find(c => c.id === selectedImage.category)?.label || '未分類')}</p>
                     )}
                   </div>
                 </div>
