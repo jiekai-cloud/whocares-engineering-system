@@ -349,6 +349,8 @@ export interface InventoryItem {
   notes?: string;
   maintenanceRecords?: MaintenanceRecord[];
   photoUrl?: string;
+  isRental?: boolean;
+  rentalExpiry?: string;
 }
 
 export interface MaintenanceRecord {

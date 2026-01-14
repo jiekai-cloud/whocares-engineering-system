@@ -31,8 +31,11 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
         sellingPrice: 0,
         supplier: '',
         status: 'Normal',
+
         notes: '',
-        maintenanceRecords: []
+        maintenanceRecords: [],
+        isRental: false,
+        rentalExpiry: ''
     });
 
     const [newMaintenance, setNewMaintenance] = useState<Partial<MaintenanceRecord>>({
@@ -305,6 +308,36 @@ const InventoryModal: React.FC<InventoryModalProps> = ({ onClose, onConfirm, ini
                                         <option value="其他">其他</option>
                                     </select>
                                 </div>
+
+                                {formData.category === '工具' && (
+                                    <div className="md:col-span-2 space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="checkbox"
+                                                id="isRental"
+                                                className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                checked={formData.isRental || false}
+                                                onChange={e => setFormData({ ...formData, isRental: e.target.checked })}
+                                            />
+                                            <label htmlFor="isRental" className="font-bold text-slate-700 text-sm">此為租賃設備</label>
+                                        </div>
+
+                                        {formData.isRental && (
+                                            <div className="animate-in fade-in slide-in-from-top-2">
+                                                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">租賃到期日</label>
+                                                <div className="relative">
+                                                    <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                                    <input
+                                                        type="date"
+                                                        className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-black font-bold"
+                                                        value={formData.rentalExpiry || ''}
+                                                        onChange={e => setFormData({ ...formData, rentalExpiry: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">成本單價</label>
