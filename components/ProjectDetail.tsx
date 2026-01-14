@@ -2001,17 +2001,24 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length > 0) {
                           try {
-                            const urls = await Promise.all(files.map(f => cloudFileService.uploadFile(f)));
-                            props.onUpdatePreConstruction({
-                              ...project.preConstruction,
-                              scopeDrawings: [
-                                ...(project.preConstruction?.scopeDrawings || []),
-                                ...urls
-                              ],
-                              updatedAt: new Date().toISOString()
-                            });
+                            const results = await Promise.all(files.map(f => cloudFileService.uploadFile(f)));
+                            const validUrls = results
+                              .filter((res): res is { id: string; url: string } => !!res)
+                              .map(res => res.url);
+
+                            if (validUrls.length > 0) {
+                              props.onUpdatePreConstruction({
+                                ...project.preConstruction,
+                                scopeDrawings: [
+                                  ...(project.preConstruction?.scopeDrawings || []),
+                                  ...validUrls
+                                ],
+                                updatedAt: new Date().toISOString()
+                              });
+                            }
                           } catch (err) {
                             alert('圖面附件上傳失敗');
+                            console.error(err);
                           }
                         }
                       }}
