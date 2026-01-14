@@ -5,7 +5,7 @@ import {
   MessageSquare, Send, Receipt, X, ZoomIn, FileText, ImageIcon, Upload, MapPin,
   Navigation, ShoppingBag, Utensils, Building2, ExternalLink, CalendarDays, Loader2, Check, DownloadCloud, ShieldAlert,
   Layers, Camera, HardHat, CheckCircle, ShieldCheck, Edit2, Wrench, ClipboardList, Construction, FileImage, Zap, Lock, ChevronDown,
-  ChevronLeft, ChevronRight, Plus, Minus, ZoomOut, AlertTriangle
+  ChevronLeft, ChevronRight, Plus, Minus, ZoomOut, AlertTriangle, Wallet
 } from 'lucide-react';
 import { Project, ProjectStatus, Task, ProjectComment, Expense, WorkAssignment, TeamMember, ProjectFile, ProjectPhase, User, ChecklistTask, PaymentStage } from '../types';
 import { suggestProjectSchedule, searchNearbyResources, analyzeProjectFinancials, parseScheduleFromImage, generatePreConstructionPrep, scanReceipt, analyzeQuotationItems } from '../services/geminiService';
@@ -216,6 +216,8 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const [financialAnalysis, setFinancialAnalysis] = useState<string | null>(null);
   const [isLaborDetailsExpanded, setIsLaborDetailsExpanded] = useState(false); // 派工明細展開狀態
   const [editingAssignment, setEditingAssignment] = useState<WorkAssignment | null>(null); // 編輯中的派工
+  const [expandedExpenseCategory, setExpandedExpenseCategory] = useState<string | null>(null);
+
 
   // Daily Log Upload State
   const [logContent, setLogContent] = useState('');
@@ -954,19 +956,75 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                       </div>
 
                       {[
-                        { label: '委託工程 (分包)', key: '委託工程', icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50' },
-                        { label: '機具材料', key: '機具材料', icon: ShoppingBag, color: 'text-amber-600', bg: 'bg-amber-50' },
+                        { label: '委託工程 (分包)', key: '委託工程', icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
+                        { label: '機具材料', key: '機具材料', icon: ShoppingBag, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+                        { label: '零用金雜支', key: '零用金', icon: Wallet, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-100' },
                       ].map(cat => {
-                        const amount = (project.expenses || []).filter(e => e.category === cat.key).reduce((acc, curr) => acc + (curr?.amount || 0), 0);
+                        const catExpenses = (project.expenses || []).filter(e => e.category === cat.key);
+                        const amount = catExpenses.reduce((acc, curr) => acc + (curr?.amount || 0), 0);
                         const Icon = cat.icon;
+                        const isExpanded = expandedExpenseCategory === cat.key;
+
                         return (
-                          <div key={cat.label} className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
-                            <div className="flex justify-between items-start mb-4">
+                          <div key={cat.label} className={`bg-white p-6 rounded-3xl border shadow-sm transition-all duration-300 ${isExpanded ? `${cat.border} ring-2 ring-blue-500/10` : 'border-stone-100'}`}>
+                            <div className="flex justify-between items-start mb-4 cursor-pointer" onClick={() => setExpandedExpenseCategory(isExpanded ? null : cat.key)}>
                               <div className={`p-3 ${cat.bg} ${cat.color} rounded-2xl`}><Icon size={20} /></div>
-                              <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest">EXPENSE</span>
+                              <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest flex items-center gap-1">
+                                EXPENSE {isExpanded ? <ChevronDown size={12} className="rotate-180" /> : <ChevronDown size={12} />}
+                              </span>
                             </div>
-                            <p className="text-2xl font-black text-stone-900 tracking-tight">NT$ {(amount || 0).toLocaleString()}</p>
-                            <p className="text-[11px] font-bold text-stone-400 mt-1">{cat.label}</p>
+                            <div className="cursor-pointer" onClick={() => setExpandedExpenseCategory(isExpanded ? null : cat.key)}>
+                              <p className="text-2xl font-black text-stone-900 tracking-tight">NT$ {(amount || 0).toLocaleString()}</p>
+                              <p className="text-[11px] font-bold text-stone-400 mt-1">{cat.label} <span className="text-[9px] ml-1 opacity-50">({catExpenses.length} 筆)</span></p>
+                            </div>
+
+                            {/* 明細展開 */}
+                            {isExpanded && (
+                              <div className="mt-4 pt-4 border-t border-dashed border-stone-200 animate-in slide-in-from-top-2">
+                                <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+                                  {catExpenses.length > 0 ? (
+                                    catExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((exp, idx) => (
+                                      <div key={exp.id || idx} className="flex flex-col gap-1 p-2 rounded-lg hover:bg-stone-50 transition-colors">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-[10px] font-black text-stone-700 truncate max-w-[60%]">{exp.name}</span>
+                                          <span className="text-[10px] font-black text-stone-900">NT$ {exp.amount.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[9px] text-stone-400">
+                                          <span>{exp.date} {exp.supplier ? `· ${exp.supplier}` : ''}</span>
+                                          {!isReadOnly && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm('確定刪除此筆支出？')) {
+                                                  const newExpenses = (project.expenses || []).filter(e => e.id !== exp.id);
+                                                  const newExpTotal = newExpenses.reduce((sum, e) => sum + e.amount, 0);
+                                                  const currentLabor = (project.workAssignments || []).reduce((acc, curr) => acc + curr.totalCost, 0);
+                                                  onUpdateExpenses(newExpenses, newExpTotal + currentLabor);
+                                                }
+                                              }}
+                                              className="hover:text-rose-500"
+                                            >
+                                              <Trash2 size={10} />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="text-center py-2 text-[10px] text-stone-300">尚無明細資料</div>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setExpenseFormData({ ...expenseFormData, category: cat.key as any });
+                                    setIsAddingExpense(true);
+                                  }}
+                                  className="w-full mt-2 py-2 text-[10px] font-bold text-stone-400 border border-dashed border-stone-200 rounded-xl hover:bg-stone-50 hover:text-stone-600 transition-colors"
+                                >
+                                  + 新增{cat.label.split(' ')[0]}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
