@@ -2073,7 +2073,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                                           updatedAt: new Date().toISOString()
                                         });
                                       } else {
-                                        newScopeDrawings = newScopeDrawings.filter(u => u !== url);
+                                        newScopeDrawings = newScopeDrawings.filter(u => String(u) !== url);
                                         props.onUpdatePreConstruction({
                                           ...project.preConstruction,
                                           scopeDrawings: newScopeDrawings,
