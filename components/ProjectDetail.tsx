@@ -1126,7 +1126,18 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                             {(project.payments || []).length > 0 ? (project.payments || []).map((p) => (
                               <tr key={p.id} className="hover:bg-stone-50/30 transition-colors">
                                 <td className="px-6 py-4 text-xs font-black text-stone-900">{p.label}</td>
-                                <td className="px-6 py-4 text-xs font-bold text-stone-500">{p.date}</td>
+                                <td className="px-6 py-4 text-xs font-bold text-stone-500">
+                                  <input
+                                    type="date"
+                                    value={p.date}
+                                    disabled={isReadOnly}
+                                    onChange={(e) => {
+                                      const newDate = e.target.value;
+                                      onUpdatePayments((project.payments || []).map(pay => pay.id === p.id ? { ...pay, date: newDate } : pay));
+                                    }}
+                                    className="bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-200 rounded px-1 -ml-1 text-stone-500 w-[110px]"
+                                  />
+                                </td>
                                 <td className="px-6 py-4 text-xs font-black text-stone-900 text-right">NT$ {(p.amount || 0).toLocaleString()}</td>
                                 <td className="px-6 py-4">
                                   <button
