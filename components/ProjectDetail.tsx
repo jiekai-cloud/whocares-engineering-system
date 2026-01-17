@@ -427,6 +427,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
   const totalExpenseCost = expenses.reduce((acc, curr) => acc + curr.amount, 0);
   const currentSpent = totalLaborCost + totalExpenseCost;
   const margin = project.budget - currentSpent;
+  const totalReceived = (project.payments || [])
+    .filter(p => p.status === 'paid')
+    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
   const handleNearbySearch = async (resourceType: string) => {
     if (!project.location) return;
@@ -1063,6 +1066,19 @@ const ProjectDetail: React.FC<ProjectDetailProps> = (props) => {
                         <p className={`text-[11px] font-bold mt-1 ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {profit >= 0 ? '目前預估毛利' : '目前預估虧損'}
                         </p>
+                      </div>
+
+                      <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="p-3 bg-stone-100 text-stone-600 rounded-2xl">
+                            <DollarSign size={20} />
+                          </div>
+                          <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest">RECEIVED</span>
+                        </div>
+                        <p className="text-2xl font-black text-stone-900 tracking-tight">
+                          NT$ {totalReceived.toLocaleString()}
+                        </p>
+                        <p className="text-[11px] font-bold text-stone-400 mt-1">目前已收款總額</p>
                       </div>
                     </div>
 

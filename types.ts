@@ -119,6 +119,7 @@ export interface PaymentStage {
   date: string;
   notes: string;
   vendorId?: string;
+  status: 'pending' | 'paid';
 }
 
 export interface Vendor {
