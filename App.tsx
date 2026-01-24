@@ -139,7 +139,20 @@ const App: React.FC = () => {
     window.location.reload();
   };
 
-  // 同步控制與合併邏輯
+  // Sync User Session with Team Data (Auto-update role/info if changed in TeamModal)
+  useEffect(() => {
+    if (user && teamMembers.length > 0) {
+      const me = teamMembers.find(m => m.employeeId === user.id);
+      if (me) {
+        const needsUpdate = me.systemRole !== user.role || me.name !== user.name || me.avatar !== user.picture;
+        if (needsUpdate) {
+          console.log('[Session] Auto-updating user session from team data...');
+          setUser(prev => prev ? ({ ...prev, role: me.systemRole, name: me.name, picture: me.avatar }) : null);
+        }
+      }
+    }
+  }, [teamMembers, user?.id, user?.role, user?.name, user?.picture]);
+
   const lastRemoteModifiedTime = React.useRef<string | null>(null);
   const isSyncingRef = React.useRef(false);
   const syncTimeoutRef = React.useRef<any>(null);
