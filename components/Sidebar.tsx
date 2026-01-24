@@ -183,7 +183,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, user, onMenu
           />
           <div className="flex-1 overflow-hidden">
             <p className="text-xs font-black truncate">{user.name}</p>
-            <p className="text-[9px] text-stone-500 font-black uppercase tracking-widest truncate">Administrator</p>
+            <div className="flex flex-col">
+              <span className="text-[9px] text-stone-500 font-black uppercase tracking-widest truncate">{user.role}</span>
+              <span className="text-[8px] text-stone-600 font-mono mt-0.5">
+                Mods: {(user.accessibleModules || []).length} / {allMenuItems.length}
+              </span>
+            </div>
           </div>
         </div>
       </div>
