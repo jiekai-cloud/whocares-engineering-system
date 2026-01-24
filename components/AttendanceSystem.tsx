@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, AttendanceRecord, TeamMember } from '../types';
-import { MapPin, Clock, LogIn, LogOut, AlertTriangle, CheckCircle, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, Clock, LogIn, LogOut, AlertTriangle, CheckCircle, Navigation, Loader2, Calendar } from 'lucide-react';
+import LocationModal from './LocationModal';
 
 interface AttendanceSystemProps {
     currentUser: User;
@@ -13,6 +14,7 @@ const AttendanceSystem: React.FC<AttendanceSystemProps> = ({ currentUser, record
     const [location, setLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
     const [loadingLocation, setLoadingLocation] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
+    const [viewingRecord, setViewingRecord] = useState<AttendanceRecord | null>(null);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -28,6 +30,49 @@ const AttendanceSystem: React.FC<AttendanceSystemProps> = ({ currentUser, record
     const lastRecord = todayRecords.length > 0 ? todayRecords[todayRecords.length - 1] : null;
 
     const isOnDuty = lastRecord?.type === 'work-start';
+
+    // Statistics Logic
+    const stats = React.useMemo(() => {
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const monthRecords = records.filter(r =>
+            r.employeeId === currentUser.id && r.timestamp.startsWith(currentMonth)
+        );
+
+        const recordsByDate: Record<string, AttendanceRecord[]> = {};
+        monthRecords.forEach(r => {
+            const date = r.timestamp.split('T')[0];
+            if (!recordsByDate[date]) recordsByDate[date] = [];
+            recordsByDate[date].push(r);
+        });
+
+        let totalDays = 0;
+        let totalHours = 0;
+
+        Object.entries(recordsByDate).forEach(([date, dayRecs]) => {
+            // Sort by time
+            dayRecs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+            // Check if valid work day (has start)
+            const hasStart = dayRecs.some(r => r.type === 'work-start');
+            if (hasStart) totalDays++;
+
+            // Calculate hours (First Start to Last End)
+            const start = dayRecs.find(r => r.type === 'work-start');
+            // Find last end that is AFTER start
+            const end = [...dayRecs].reverse().find(r => r.type === 'work-end');
+
+            if (start && end && new Date(end.timestamp) > new Date(start.timestamp)) {
+                const duration = new Date(end.timestamp).getTime() - new Date(start.timestamp).getTime();
+                totalHours += duration / (1000 * 60 * 60);
+            }
+        });
+
+        return {
+            days: totalDays,
+            hours: totalHours.toFixed(1),
+            groupedRecords: Object.entries(recordsByDate).sort((a, b) => b[0].localeCompare(a[0])) // Sort dates desc
+        };
+    }, [records, currentUser.id]);
 
     const getLocation = async () => {
         setLoadingLocation(true);
@@ -45,7 +90,7 @@ const AttendanceSystem: React.FC<AttendanceSystemProps> = ({ currentUser, record
 
                 // Try to get address using Google Maps API if available via reverse geocoding
                 // Or just use coords
-                let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)} `;
 
                 // Simple mock reverse geocode if no API
                 try {
@@ -86,6 +131,15 @@ const AttendanceSystem: React.FC<AttendanceSystemProps> = ({ currentUser, record
 
     return (
         <div className="p-6 max-w-4xl mx-auto space-y-8 animate-in fade-in">
+            {/* Location Modal */}
+            {viewingRecord && viewingRecord.location && (
+                <LocationModal
+                    location={viewingRecord.location}
+                    onClose={() => setViewingRecord(null)}
+                    title={`${new Date(viewingRecord.timestamp).toLocaleTimeString()} 打卡位置`}
+                />
+            )}
+
             {/* Header Panel */}
             <div className="bg-white rounded-[2rem] shadow-xl p-8 border border-stone-100 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full translate-x-1/3 -translate-y-1/3 blur-3xl -z-10" />
@@ -107,6 +161,28 @@ const AttendanceSystem: React.FC<AttendanceSystemProps> = ({ currentUser, record
                         }`}>
                         <span className={`w-2 h-2 rounded-full ${isOnDuty ? 'bg-emerald-500 animate-pulse' : 'bg-stone-400'}`} />
                         {isOnDuty ? '工作中' : '未打卡 / 已下班'}
+                    </div>
+                </div>
+            </div>
+
+            {/* Monthly Stats Cards */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
+                        <Calendar size={24} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-black text-stone-400 uppercase tracking-widest">本月工作天數</p>
+                        <p className="text-2xl font-black text-stone-800 tabular-nums">{stats.days} <span className="text-sm text-stone-400">天</span></p>
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
+                        <Clock size={24} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-black text-stone-400 uppercase tracking-widest">本月累計工時</p>
+                        <p className="text-2xl font-black text-stone-800 tabular-nums">{stats.hours} <span className="text-sm text-stone-400">小時</span></p>
                     </div>
                 </div>
             </div>
@@ -180,37 +256,53 @@ const AttendanceSystem: React.FC<AttendanceSystemProps> = ({ currentUser, record
                 </button>
             </div>
 
-            {/* Today's History */}
+            {/* History Records */}
             <div className="bg-white rounded-[2rem] shadow-sm border border-stone-200 p-6 overflow-hidden">
                 <h3 className="text-lg font-black text-stone-800 mb-6 flex items-center gap-2">
                     <Clock size={20} className="text-stone-400" />
-                    今日打卡紀錄
+                    近其打卡紀錄
                 </h3>
 
-                {todayRecords.length === 0 ? (
+                {stats.groupedRecords.length === 0 ? (
                     <div className="text-center py-10 text-stone-400 font-medium bg-stone-50 rounded-2xl border border-stone-100 border-dashed">
                         尚無打卡紀錄
                     </div>
                 ) : (
-                    <div className="relative border-l-2 border-stone-100 ml-3 space-y-8 py-2">
-                        {todayRecords.map((record, index) => (
-                            <div key={record.id} className="relative pl-8">
-                                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${record.type === 'work-start' ? 'bg-emerald-500' : 'bg-indigo-500'
-                                    }`} />
-                                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
-                                    <div>
-                                        <span className={`font-black text-sm px-2 py-0.5 rounded mr-2 ${record.type === 'work-start' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'
-                                            }`}>
-                                            {record.type === 'work-start' ? '上班' : '下班'}
-                                        </span>
-                                        <span className="font-bold text-stone-800 text-lg">
-                                            {new Date(record.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                    <div className="text-xs text-stone-400 font-mono flex items-center gap-1">
-                                        <MapPin size={10} />
-                                        {record.location ? `${record.location.lat.toFixed(4)}, ${record.location.lng.toFixed(4)}` : '未記錄位置'}
-                                    </div>
+                    <div className="space-y-8">
+                        {stats.groupedRecords.map(([date, dayRecords]) => (
+                            <div key={date}>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="h-px flex-1 bg-stone-100"></div>
+                                    <span className="text-xs font-black text-stone-400 bg-stone-50 px-3 py-1 rounded-full">
+                                        {date === today ? '今天' : date}
+                                    </span>
+                                    <div className="h-px flex-1 bg-stone-100"></div>
+                                </div>
+                                <div className="relative border-l-2 border-stone-100 ml-3 space-y-6 py-2">
+                                    {dayRecords.map((record) => (
+                                        <div key={record.id} className="relative pl-8">
+                                            <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${record.type === 'work-start' ? 'bg-emerald-500' : 'bg-indigo-500'
+                                                }`} />
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+                                                <div>
+                                                    <span className={`font-black text-sm px-2 py-0.5 rounded mr-2 ${record.type === 'work-start' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'
+                                                        }`}>
+                                                        {record.type === 'work-start' ? '上班' : '下班'}
+                                                    </span>
+                                                    <span className="font-bold text-stone-800 text-lg">
+                                                        {new Date(record.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    className={`text-xs text-stone-400 font-mono flex items-center gap-1 ${record.location ? 'cursor-pointer hover:text-orange-500 hover:underline' : ''}`}
+                                                    onClick={() => record.location && setViewingRecord(record)}
+                                                >
+                                                    <MapPin size={10} />
+                                                    {record.location ? `${record.location.lat.toFixed(4)}, ${record.location.lng.toFixed(4)}` : '未記錄位置'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AttendanceRecord, TeamMember, User } from '../types';
 import { Calendar, User as UserIcon, MapPin, Download } from 'lucide-react';
+import LocationModal from './LocationModal';
 
 interface PayrollSystemProps {
     records: AttendanceRecord[];
@@ -8,12 +9,31 @@ interface PayrollSystemProps {
     currentUser: User;
 }
 
-const PayrollSystem: React.FC<PayrollSystemProps> = ({ records, teamMembers, currentUser }) => {
-    // Simple view for now
-    const sortedRecords = [...records].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers, currentUser }) => {
+    const [viewingLocation, setViewingLocation] = useState<AttendanceRecord | null>(null);
+
+    // Robust data filtering
+    const validRecords = Array.isArray(records) ? records.filter(r => r && r.timestamp && r.id) : [];
+
+    const sortedRecords = [...validRecords].sort((a, b) => {
+        try {
+            return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        } catch (e) {
+            return 0;
+        }
+    });
 
     return (
         <div className="p-6 max-w-6xl mx-auto animate-in fade-in">
+            {/* Location Modal */}
+            {viewingLocation && viewingLocation.location && (
+                <LocationModal
+                    location={viewingLocation.location}
+                    onClose={() => setViewingLocation(null)}
+                    title={`${viewingLocation.name} - ${viewingLocation.type === 'work-start' ? '上班' : '下班'}打卡位置`}
+                />
+            )}
+
             <div className="mb-8 flex justify-between items-end">
                 <div>
                     <h1 className="text-2xl font-black text-stone-900 mb-2">人事薪資管理</h1>
@@ -38,9 +58,9 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records, teamMembers, cur
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center font-bold text-stone-600 text-xs">
-                                                {record.name.substring(0, 1)}
+                                                {record.name ? record.name.substring(0, 1) : '?'}
                                             </div>
-                                            <span className="font-bold text-stone-700">{record.name}</span>
+                                            <span className="font-bold text-stone-700">{record.name || '未知員工'}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -50,11 +70,16 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records, teamMembers, cur
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-stone-600">
-                                        {new Date(record.timestamp).toLocaleString('zh-TW')}
+                                        {record.timestamp ? new Date(record.timestamp).toLocaleString('zh-TW') : '時間無效'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500 flex items-center gap-1">
-                                        <MapPin size={12} />
-                                        {record.location ? `${record.location.lat.toFixed(4)}, ${record.location.lng.toFixed(4)}` : '未知位置'}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
+                                        <div
+                                            className={`flex items-center gap-1 ${record.location ? 'cursor-pointer hover:text-orange-500 hover:underline' : ''}`}
+                                            onClick={() => record.location && setViewingLocation(record)}
+                                        >
+                                            <MapPin size={12} />
+                                            {record.location ? `${record.location.lat.toFixed(4)}, ${record.location.lng.toFixed(4)}` : '未知位置'}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
