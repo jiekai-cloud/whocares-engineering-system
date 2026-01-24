@@ -34,9 +34,14 @@ const Settings: FC<SettingsProps> = ({
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [restoreData, setRestoreData] = useState<any>(null);
   const [restoreOptions, setRestoreOptions] = useState({
+    projects: true,
+    dispatch: true,
     customers: true,
     vendors: true,
     teamMembers: true,
+    inventory: true,
+    attendance: true,
+    payroll: true,
     leads: true
   });
 
@@ -389,21 +394,31 @@ const Settings: FC<SettingsProps> = ({
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={restoreOptions.customers}
-                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, customers: e.target.checked })}
+                                  checked={restoreOptions.projects}
+                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, projects: e.target.checked })}
                                   className="w-4 h-4"
                                 />
-                                <span className="text-xs font-bold">客戶資料 ({restoreData.customers?.length || 0} 個)</span>
+                                <span className="text-xs font-bold">專案資料 ({restoreData.projects?.length || 0} 個)</span>
                               </label>
 
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={restoreOptions.vendors}
-                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, vendors: e.target.checked })}
+                                  checked={restoreOptions.dispatch}
+                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, dispatch: e.target.checked })}
                                   className="w-4 h-4"
                                 />
-                                <span className="text-xs font-bold">廠商資料 ({restoreData.vendors?.length || 0} 個)</span>
+                                <span className="text-xs font-bold">派工紀錄 (包含在專案中)</span>
+                              </label>
+
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={restoreOptions.customers}
+                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, customers: e.target.checked })}
+                                  className="w-4 h-4"
+                                />
+                                <span className="text-xs font-bold">客戶資料 ({restoreData.customers?.length || 0} 個)</span>
                               </label>
 
                               <label className="flex items-center gap-2 cursor-pointer">
@@ -419,19 +434,60 @@ const Settings: FC<SettingsProps> = ({
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={restoreOptions.leads}
-                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, leads: e.target.checked })}
+                                  checked={restoreOptions.vendors}
+                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, vendors: e.target.checked })}
                                   className="w-4 h-4"
                                 />
-                                <span className="text-xs font-bold">潛在客戶 ({restoreData.leads?.length || 0} 個)</span>
+                                <span className="text-xs font-bold">廠商資料 ({restoreData.vendors?.length || 0} 個)</span>
                               </label>
+
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={restoreOptions.inventory}
+                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, inventory: e.target.checked })}
+                                  className="w-4 h-4"
+                                />
+                                <span className="text-xs font-bold">庫存資料 ({restoreData.inventory?.length || 0} 項)</span>
+                              </label>
+
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={restoreOptions.attendance}
+                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, attendance: e.target.checked })}
+                                  className="w-4 h-4"
+                                />
+                                <span className="text-xs font-bold">考勤紀錄 ({restoreData.attendance?.length || 0} 筆)</span>
+                              </label>
+
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={restoreOptions.payroll}
+                                  onChange={(e) => setRestoreOptions({ ...restoreOptions, payroll: e.target.checked })}
+                                  className="w-4 h-4"
+                                />
+                                <span className="text-xs font-bold">薪資資料 ({restoreData.payroll?.length || 0} 筆)</span>
+                              </label>
+
                             </div>
 
                             <div className="flex gap-2">
                               <button
                                 onClick={() => {
                                   setRestoreData(null);
-                                  setRestoreOptions({ customers: true, vendors: true, teamMembers: true, leads: true });
+                                  setRestoreOptions({
+                                    projects: true,
+                                    dispatch: true,
+                                    customers: true,
+                                    vendors: true,
+                                    teamMembers: true,
+                                    inventory: true,
+                                    attendance: true,
+                                    payroll: true,
+                                    leads: true
+                                  });
                                 }}
                                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-2 rounded-lg text-xs font-bold transition-colors"
                               >
@@ -443,6 +499,10 @@ const Settings: FC<SettingsProps> = ({
                                     const dataToRestore: any = {};
                                     let restoredItems: string[] = [];
 
+                                    if (restoreOptions.projects && restoreData.projects) {
+                                      dataToRestore.projects = restoreData.projects;
+                                      restoredItems.push(`專案：${restoreData.projects.length} 個 (含派工紀錄)`);
+                                    }
                                     if (restoreOptions.customers && restoreData.customers) {
                                       dataToRestore.customers = restoreData.customers;
                                       restoredItems.push(`客戶：${restoreData.customers.length} 個`);
@@ -454,6 +514,20 @@ const Settings: FC<SettingsProps> = ({
                                     if (restoreOptions.teamMembers && restoreData.teamMembers) {
                                       dataToRestore.teamMembers = restoreData.teamMembers;
                                       restoredItems.push(`團隊成員：${restoreData.teamMembers.length} 位`);
+                                    }
+                                    if (restoreOptions.inventory && restoreData.inventory) {
+                                      dataToRestore.inventory = restoreData.inventory;
+                                      if (restoreData.locations) dataToRestore.locations = restoreData.locations;
+                                      if (restoreData.purchaseOrders) dataToRestore.purchaseOrders = restoreData.purchaseOrders;
+                                      restoredItems.push(`庫存與訂單：${restoreData.inventory.length} 項`);
+                                    }
+                                    if (restoreOptions.attendance && restoreData.attendance) {
+                                      dataToRestore.attendance = restoreData.attendance;
+                                      restoredItems.push(`考勤紀錄：${restoreData.attendance.length} 筆`);
+                                    }
+                                    if (restoreOptions.payroll && restoreData.payroll) {
+                                      dataToRestore.payroll = restoreData.payroll;
+                                      restoredItems.push(`薪資紀錄：${restoreData.payroll.length} 筆`);
                                     }
                                     if (restoreOptions.leads && restoreData.leads) {
                                       dataToRestore.leads = restoreData.leads;
@@ -468,7 +542,18 @@ const Settings: FC<SettingsProps> = ({
                                     onImportData(dataToRestore, 'merge');
                                     alert(`✅ 恢復完成！\n\n${restoredItems.join('\n')}`);
                                     setRestoreData(null);
-                                    setRestoreOptions({ customers: true, vendors: true, teamMembers: true, leads: true });
+                                    setRestoreData(null);
+                                    setRestoreOptions({
+                                      projects: true,
+                                      dispatch: true,
+                                      customers: true,
+                                      vendors: true,
+                                      teamMembers: true,
+                                      inventory: true,
+                                      attendance: true,
+                                      payroll: true,
+                                      leads: true
+                                    });
                                   } catch (error) {
                                     alert('恢復失敗：' + (error as Error).message);
                                   }

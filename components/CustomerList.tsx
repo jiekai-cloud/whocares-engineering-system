@@ -18,7 +18,15 @@ interface CustomerListProps {
 const CustomerList: React.FC<CustomerListProps> = ({ customers, user, onAddClick, onEditClick, onDeleteClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const isReadOnly = user?.role === 'Guest';
+
+  // Define authorized roles for editing (Administrative privileges)
+  const canEdit = user?.role === 'SuperAdmin' ||
+    user?.role === 'Admin' ||
+    user?.role === 'DeptAdmin' ||
+    user?.role === 'AdminStaff' ||
+    user?.role === 'Manager';
+
+  const isReadOnly = !canEdit;
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => {

@@ -301,6 +301,12 @@ const App: React.FC = () => {
     if (cloudData.purchaseOrders) {
       setPurchaseOrders(prev => mergeData(prev, cloudData.purchaseOrders || []));
     }
+    if (cloudData.attendance) {
+      setAttendanceRecords(prev => mergeData(prev, cloudData.attendance || []));
+    }
+    if (cloudData.payroll) {
+      setPayrollRecords(prev => mergeData(prev, cloudData.payroll || []));
+    }
     // Activity logs 採取單純合併去重
     setActivityLogs(prev => {
       const combined = [...(cloudData.activityLogs || []), ...prev];
@@ -548,10 +554,10 @@ const App: React.FC = () => {
   }, [loadSystemData]);
 
   // 使用 Ref 追蹤最新數據與同步狀態，避免頻繁觸發 useEffect 重新整理
-  const dataRef = React.useRef({ projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations });
+  const dataRef = React.useRef({ projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations, purchaseOrders, attendanceRecords, payrollRecords });
   React.useEffect(() => {
-    dataRef.current = { projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations };
-  }, [projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations]);
+    dataRef.current = { projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations, purchaseOrders, attendanceRecords, payrollRecords };
+  }, [projects, customers, teamMembers, activityLogs, vendors, leads, inventoryItems, inventoryLocations, purchaseOrders, attendanceRecords, payrollRecords]);
 
   const addActivityLog = useCallback((action: string, targetName: string, targetId: string, type: ActivityLog['type']) => {
     if (!user) return;
@@ -602,6 +608,8 @@ const App: React.FC = () => {
         inventory: inventoryItems,
         locations: inventoryLocations,
         purchaseOrders: purchaseOrders,
+        attendance: attendanceRecords,
+        payroll: payrollRecords,
         activityLogs,
         lastUpdated: new Date().toISOString(),
         userEmail: user?.email
@@ -633,7 +641,7 @@ const App: React.FC = () => {
       isSyncingRef.current = false;
       setIsSyncing(false); // STOP UI SPINNER
     }
-  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, inventoryItems, inventoryLocations, activityLogs, updateStateWithMerge, cloudError, handleLogout]);
+  }, [isCloudConnected, user?.email, user?.role, projects, customers, teamMembers, vendors, leads, inventoryItems, inventoryLocations, purchaseOrders, attendanceRecords, payrollRecords, activityLogs, updateStateWithMerge, cloudError, handleLogout]);
 
   const handleConnectCloud = async () => {
     if (user?.role === 'Guest') return;
@@ -654,6 +662,9 @@ const App: React.FC = () => {
         setVendors(cloudData.vendors || []);
         setInventoryItems(cloudData.inventory || []);
         setInventoryLocations(cloudData.locations || []);
+        setPurchaseOrders(cloudData.purchaseOrders || []);
+        setAttendanceRecords(cloudData.attendance || []);
+        setPayrollRecords(cloudData.payroll || []);
         setLastCloudSync(new Date().toLocaleTimeString());
 
         // 重要：在自動登出前，強制將下載的資料存入 IndexedDB
@@ -663,8 +674,12 @@ const App: React.FC = () => {
           storageService.setItem('bt_team', teamData),
           storageService.setItem('bt_customers', cloudData.customers || []),
           storageService.setItem('bt_vendors', cloudData.vendors || []),
+          storageService.setItem('bt_vendors', cloudData.vendors || []),
           storageService.setItem('bt_inventory', cloudData.inventory || []),
           storageService.setItem('bt_locations', cloudData.locations || []),
+          storageService.setItem('bt_orders', cloudData.purchaseOrders || []),
+          storageService.setItem('bt_attendance', cloudData.attendance || []),
+          storageService.setItem('bt_payroll', cloudData.payroll || []),
           storageService.setItem('bt_logs', cloudData.activityLogs || [])
         ]);
 
@@ -1402,42 +1417,46 @@ const App: React.FC = () => {
                 <div className="p-4 lg:p-8 space-y-6">
                   <div className="flex justify-between items-center">
                     <h2 className="text-xl font-black text-stone-900 tracking-tight">廠商與工班管理</h2>
-                    <button
-                      onClick={() => {
-                        setEditingVendor(null);
-                        setIsVendorModalOpen(true);
-                      }}
-                      className="bg-stone-900 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-stone-200 active:scale-95 transition-all"
-                    >
-                      + 新增廠商
-                    </button>
+                    {['SuperAdmin', 'Admin', 'DeptAdmin', 'AdminStaff', 'Manager'].includes(user?.role || '') && (
+                      <button
+                        onClick={() => {
+                          setEditingVendor(null);
+                          setIsVendorModalOpen(true);
+                        }}
+                        className="bg-stone-900 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-stone-200 active:scale-95 transition-all"
+                      >
+                        + 新增廠商
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {vendors.map(v => (
                       <div key={v.id} className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm hover:shadow-md transition-all group">
                         <div className="flex justify-between items-start mb-4">
                           <div className="bg-stone-100 px-2 py-0.5 rounded text-[8px] font-black text-stone-500 uppercase">{v.id}</div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                            <button
-                              onClick={() => {
-                                setEditingVendor(v);
-                                setIsVendorModalOpen(true);
-                              }}
-                              className="text-stone-300 hover:text-blue-600 p-1"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (window.confirm(`確定要刪除廠商 ${v.name} 嗎？`)) {
-                                  setVendors(prev => prev.map(vend => vend.id === v.id ? { ...vend, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : vend));
-                                }
-                              }}
-                              className="text-stone-300 hover:text-rose-500 p-1"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+                          {['SuperAdmin', 'Admin', 'DeptAdmin', 'AdminStaff', 'Manager'].includes(user?.role || '') && (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                              <button
+                                onClick={() => {
+                                  setEditingVendor(v);
+                                  setIsVendorModalOpen(true);
+                                }}
+                                className="text-stone-300 hover:text-blue-600 p-1"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`確定要刪除廠商 ${v.name} 嗎？`)) {
+                                    setVendors(prev => prev.map(vend => vend.id === v.id ? { ...vend, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : vend));
+                                  }
+                                }}
+                                className="text-stone-300 hover:text-rose-500 p-1"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <h3 className="text-lg font-black text-stone-900 mb-1">{v.name}</h3>
                         <p className="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-widest">{v.type}</p>

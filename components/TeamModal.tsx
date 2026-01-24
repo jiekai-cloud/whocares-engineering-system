@@ -112,7 +112,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
         <div className="px-8 py-6 bg-stone-900 flex justify-between items-center text-white">
           <h2 className="font-bold flex items-center gap-3 text-lg">
             <Shield className="text-orange-500" />
-            {initialData ? '修改成員權限與資訊' : '加入新團隊成員'}
+            {initialData ? '修改成員權限與資訊' : '加入新團隊成員 (Admin)'}
           </h2>
           <button onClick={onClose} className="opacity-40 hover:opacity-100 transition-opacity">
             <X size={24} />
@@ -419,13 +419,15 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">系統權限級別</label>
                   <select disabled={!isSuperAdmin} className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 text-sm font-bold" value={formData.systemRole} onChange={e => setFormData({ ...formData, systemRole: e.target.value as any })}>
                     <option value="Staff">一般成員 (僅限查看所属專案)</option>
+                    <option value="AdminStaff">行政人員 (可管理客戶/廠商資料)</option>
                     <option value="DeptAdmin">部門主管 (可查看該部門所有資料)</option>
                     <option value="SuperAdmin">最高權限 (可存取系統所有功能)</option>
                   </select>
                   <div className="mt-4 p-4 bg-orange-50 rounded-2xl border border-orange-100 text-[10px] text-orange-800 leading-relaxed">
                     <p className="font-black mb-1">權限說明：</p>
                     <ul className="list-disc list-inside space-y-1 opacity-80">
-                      <li><b>一般成員：</b> 僅能查看及編輯指派給自己的任務與專案。</li>
+                      <li><b>一般成員：</b> 僅能查看列表及指派給自己的任務。</li>
+                      <li><b>行政人員：</b> 擁有編輯客戶與廠商清單的權限。</li>
                       <li><b>部門主管：</b> 可查看並管理該部門下的所有成員與專案。</li>
                       <li><b>最高權限：</b> 擁有系統完整控制權，包含刪除資料與指派權限。</li>
                     </ul>
