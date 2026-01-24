@@ -352,8 +352,24 @@ const App: React.FC = () => {
 
     setAttendanceRecords(prev => [...prev, newRecord]);
 
+    // Update Team Member Status
+    setTeamMembers(prev => prev.map(member => {
+      // Match user to member by ID or Name
+      if (member.id === user.id || member.employeeId === user.id || member.name === user.name) {
+        return {
+          ...member,
+          // If work-start -> Available (OnDuty)
+          // If work-end -> OffDuty
+          status: type === 'work-start' ? 'Available' : 'OffDuty',
+          currentWorkStatus: type === 'work-start' ? 'OnDuty' : 'OffDuty',
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return member;
+    }));
+
     const action = type === 'work-start' ? '上班' : '下班';
-    alert(`${action}打卡成功！\n時間：${new Date().toLocaleTimeString()}\n地點：${location.address || 'GPS ' + location.lat.toFixed(4)}`);
+    alert(`${action}打卡成功！\n成員狀態已更新為：${type === 'work-start' ? '上班中' : '未上班'}\n時間：${new Date().toLocaleTimeString()}\n地點：${location.address || 'GPS ' + location.lat.toFixed(4)}`);
   };
 
   // Auto-redirect to Attendance page on login

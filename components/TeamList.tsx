@@ -53,20 +53,26 @@ const TeamList: React.FC<TeamListProps> = ({ members, departments, projects, onA
     return a.employeeId.localeCompare(b.employeeId, undefined, { numeric: true, sensitivity: 'base' });
   });
 
-  const getStatusBadge = (status: TeamMember['status']) => {
+  const getStatusBadge = (status: TeamMember['status'], current?: string) => {
+    if (current === 'OnDuty') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+
     switch (status) {
       case 'Available': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
       case 'Busy': return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'OnLeave': return 'bg-rose-50 text-rose-600 border-rose-100';
+      case 'OffDuty': return 'bg-slate-50 text-slate-400 border-slate-100';
       default: return 'bg-slate-50 text-slate-500 border-slate-100';
     }
   };
 
-  const getStatusText = (status: TeamMember['status']) => {
+  const getStatusText = (status: TeamMember['status'], current?: string) => {
+    if (current === 'OnDuty') return '上班中';
+
     switch (status) {
-      case 'Available': return '待命中';
+      case 'Available': return '上班中';
       case 'Busy': return '執行任務中';
       case 'OnLeave': return '請假中';
+      case 'OffDuty': return '未上班';
       default: return '未知';
     }
   };
@@ -169,7 +175,11 @@ const TeamList: React.FC<TeamListProps> = ({ members, departments, projects, onA
                     <div className="col-span-4 flex items-center gap-4 mb-4 lg:mb-0">
                       <div className="relative shrink-0">
                         <img src={member.avatar} alt={member.name} className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-50 shadow-sm" />
-                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${member.status === 'Available' ? 'bg-emerald-500' : member.status === 'Busy' ? 'bg-amber-500' : 'bg-rose-500'
+                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white 
+                          ${(member.currentWorkStatus === 'OnDuty' || member.status === 'Available') ? 'bg-emerald-500' :
+                            member.status === 'Busy' ? 'bg-amber-500' :
+                              member.status === 'OnLeave' ? 'bg-rose-500' :
+                                member.status === 'OffDuty' ? 'bg-slate-300' : 'bg-slate-300'
                           }`}></div>
                       </div>
                       <div>
@@ -230,8 +240,8 @@ const TeamList: React.FC<TeamListProps> = ({ members, departments, projects, onA
 
                     {/* 狀態標籤 */}
                     <div className="col-span-2 mb-4 lg:mb-0">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black border ${getStatusBadge(member.status)}`}>
-                        {getStatusText(member.status)}
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black border ${getStatusBadge(member.status, member.currentWorkStatus)}`}>
+                        {getStatusText(member.status, member.currentWorkStatus)}
                       </span>
                     </div>
 

@@ -307,7 +307,8 @@ export interface TeamMember {
     phone: string;
   };
   specialty: string[];
-  status: 'Available' | 'Busy' | 'OnLeave';
+  status: 'Available' | 'Busy' | 'OnLeave' | 'OffDuty';
+  currentWorkStatus?: 'OnDuty' | 'OffDuty';
   activeProjectsCount: number;
   avatar: string;
   updatedAt?: string;
