@@ -56,7 +56,8 @@ const App: React.FC = () => {
   // Calculate permissions dynamically
   const currentUserPermissions = useMemo(() => {
     if (!user) return [];
-    const member = teamMembers.find(m => m.employeeId === user.id);
+    // Case-insensitive match for robustness
+    const member = teamMembers.find(m => m.employeeId.toLowerCase() === user.id.toLowerCase());
 
     // If SuperAdmin has specific modules defined, use them. Otherwise default to ALL.
     if (user.role === 'SuperAdmin') {
@@ -148,7 +149,8 @@ const App: React.FC = () => {
   // Sync User Session with Team Data (Auto-update role/info if changed in TeamModal)
   useEffect(() => {
     if (user && teamMembers.length > 0) {
-      const me = teamMembers.find(m => m.employeeId === user.id);
+      // Case-insensitive match
+      const me = teamMembers.find(m => m.employeeId.toLowerCase() === user.id.toLowerCase());
       if (me) {
         const needsUpdate = me.systemRole !== user.role || me.name !== user.name || me.avatar !== user.picture;
         if (needsUpdate) {
