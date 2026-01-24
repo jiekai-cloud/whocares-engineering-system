@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, FileSpreadsheet, Pencil, Trash2, CalendarDays, FilterX, Activity, XCircle, ChevronLeft, ChevronRight, Hash, ShieldAlert, LayoutGrid, List, Zap, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
+import { Search, Plus, FileSpreadsheet, Pencil, Trash2, CalendarDays, FilterX, Activity, XCircle, ChevronLeft, ChevronRight, Hash, ShieldAlert, LayoutGrid, List, Zap, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, Columns, MessageSquare, Camera } from 'lucide-react';
 import { Project, ProjectStatus, User } from '../types';
 import { exportProjectsToCSV } from '../utils/csvExport';
 
@@ -29,7 +29,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('2026');
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'card' | 'kanban'>('table');
   const [sortBy, setSortBy] = useState<'id' | 'manager' | 'status' | 'progress' | 'budget' | null>('id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const isReadOnly = user.role === 'Guest';
@@ -141,9 +141,29 @@ const ProjectList: React.FC<ProjectListProps> = ({
     }
   };
 
+  // Kanban Column Definition
+  const KANBAN_COLUMNS = [
+    ProjectStatus.INSPECTION,
+    ProjectStatus.PREPARING_PAYMENT,
+    ProjectStatus.SUBMITTED_PAYMENT,
+    ProjectStatus.INVOICED,
+    ProjectStatus.PARTIAL_PAYMENT
+  ];
+
+  const OTHER_STATUSES = Object.values(ProjectStatus).filter(s => !KANBAN_COLUMNS.includes(s) && s !== ProjectStatus.CLOSED && s !== ProjectStatus.CANCELLED && s !== ProjectStatus.LOST);
+
+  // Group projects by status
+  const projectsByStatus = useMemo(() => {
+    const groups: Record<string, Project[]> = {};
+    Object.values(ProjectStatus).forEach(status => {
+      groups[status] = filteredProjects.filter(p => p.status === status);
+    });
+    return groups;
+  }, [filteredProjects]);
+
   return (
-    <div className="p-4 lg:p-8 space-y-4 animate-in fade-in">
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+    <div className="p-4 lg:p-8 space-y-4 animate-in fade-in h-screen flex flex-col">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 flex-shrink-0">
         <div>
           <h1 className="text-xl font-black text-stone-900">案件中心</h1>
           <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">目前共管理 {projects.length} 件工程項目</p>
@@ -166,6 +186,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
             >
               <LayoutGrid size={14} />
               <span className="hidden sm:inline">卡片</span>
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'kanban' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'
+                }`}
+            >
+              <Columns size={14} />
+              <span className="hidden sm:inline">看板</span>
             </button>
           </div>
 
@@ -195,7 +223,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       </div>
 
       {/* 年度大類別切換 */}
-      <div className="flex flex-wrap gap-2 mb-2">
+      <div className="flex flex-wrap gap-2 mb-2 flex-shrink-0">
         {['2024', '2025', '2026'].map(year => {
           const yearCount = projects.filter(p => getProjectYear(p) === year).length;
 
@@ -219,7 +247,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         })}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 flex-shrink-0">
         <div className="sm:col-span-2 flex items-center bg-white rounded-xl border border-stone-200 px-4 py-2.5 shadow-sm">
           <Search size={14} className="text-stone-400 mr-2" />
           <input className="bg-transparent text-xs font-bold outline-none w-full text-stone-900" placeholder="搜尋案名、業主或案號..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
@@ -246,7 +274,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       </div>
 
       {viewMode === 'table' ? (
-        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden overflow-x-auto touch-scroll">
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden overflow-x-auto touch-scroll flex-1">
           <table className="w-full text-left min-w-[850px]">
             <thead className="bg-stone-50 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-widest">
               <tr>
@@ -357,8 +385,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
             </tbody>
           </table>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : viewMode === 'card' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1 overflow-y-auto pb-20">
           {paginatedProjects.length > 0 ? paginatedProjects.map(p => (
             <div
               key={p.id}
@@ -451,6 +479,84 @@ const ProjectList: React.FC<ProjectListProps> = ({
               <button onClick={() => { setSearchTerm(''); setSelectedStatus('all'); }} className="text-[10px] font-black text-orange-600 hover:underline underline-offset-4">清除篩選條件</button>
             </div>
           )}
+        </div>
+      ) : (
+        /* KANBAN VIEW */
+        <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
+          <div className="flex gap-4 h-full min-w-max px-2">
+            {[...OTHER_STATUSES, ...KANBAN_COLUMNS].filter(s => projectsByStatus[s]?.length > 0 || KANBAN_COLUMNS.includes(s)).map(status => (
+              <div key={status} className="w-80 flex flex-col h-full bg-stone-100/50 rounded-2xl border border-stone-200/50 flex-shrink-0">
+                <div className="p-3 flex justify-between items-center bg-white rounded-t-2xl border-b border-stone-100 shadow-sm z-10 sticky top-0">
+                  <div className="font-bold text-sm text-stone-700 truncate max-w-[200px]" title={status}>{status}</div>
+                  <span className="text-xs font-black bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{projectsByStatus[status]?.length || 0}</span>
+                </div>
+
+                <div className="p-2 space-y-2 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-stone-200 hover:scrollbar-thumb-stone-300">
+                  {projectsByStatus[status]?.map(p => (
+                    <div
+                      key={p.id}
+                      onClick={() => onDetailClick(p)}
+                      className="bg-white p-3 rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-orange-200 hover:-translate-y-0.5 transition-all cursor-pointer group flex flex-col gap-2 relative"
+                    >
+                      {/* Top Bar: ID and Options */}
+                      <div className="flex justify-between items-start">
+                        <span className="text-[9px] font-black text-stone-400 bg-stone-50 px-1.5 py-0.5 rounded uppercase tracking-wider">{p.id}</span>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {!isReadOnly && !p.deletedAt && (
+                            <button onClick={(e) => { e.stopPropagation(); onEditClick(p); }} className="p-1 hover:bg-stone-100 rounded text-stone-400 hover:text-blue-600">
+                              <Pencil size={10} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Main Content */}
+                      <div>
+                        <h4 className="font-bold text-stone-800 text-sm leading-snug line-clamp-2 group-hover:text-orange-600 transition-colors mb-1">
+                          {p.name}
+                        </h4>
+                        <div className="text-[10px] text-stone-500 truncate" title={p.client}>{p.client}</div>
+                        {/* Tags or Managers */}
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-stone-400">
+                          {p.quotationManager || p.engineeringManager || '未指定'}
+                        </div>
+                      </div>
+
+                      {/* Footer: Comments, etc. */}
+                      <div className="border-t border-stone-50 pt-2 flex justify-between items-center text-[10px] text-stone-400 font-bold">
+                        <div className="flex gap-3">
+                          {(p.comments?.length || 0) > 0 && (
+                            <div className="flex items-center gap-1 text-stone-500">
+                              <MessageSquare size={10} /> {p.comments?.length}
+                            </div>
+                          )}
+                          {(p.dailyLogs?.length || 0) > 0 && (
+                            <div className="flex items-center gap-1 text-stone-500">
+                              <Camera size={10} /> {p.dailyLogs?.length}
+                            </div>
+                          )}
+                          {p.updatedAt && (
+                            <span className="text-[9px] text-stone-300 font-normal">
+                              {new Date(p.updatedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-[9px] font-black text-stone-400 uppercase">
+                          {(p.quotationManager || 'U')[0]}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={onAddClick}
+                    className="w-full py-2 rounded-lg border border-dashed border-stone-300 text-stone-400 text-xs font-bold hover:bg-white hover:border-orange-300 hover:text-orange-500 transition-all flex items-center justify-center gap-1 opacity-50 hover:opacity-100"
+                  >
+                    <Plus size={12} /> 新增卡片
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

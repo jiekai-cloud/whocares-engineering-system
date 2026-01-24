@@ -202,6 +202,9 @@ const App: React.FC = () => {
       // CRITICAL FIX: If ID became "JW2601907" or legacy match, remap it to "JW2601003"
       if (updatedProject.id === 'JW2601907' || updatedProject.name.includes('樹林區三龍街')) updatedProject.id = 'JW2601003';
 
+      // MIGRATION: Fix legacy status '驗收中' to new '施工完成、待驗收'
+      if (updatedProject.status === '驗收中' as any) updatedProject.status = ProjectStatus.INSPECTION;
+
       return updatedProject;
     });
 

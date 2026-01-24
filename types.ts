@@ -6,8 +6,12 @@ export enum ProjectStatus {
   WAITING_SIGN = '待簽約',
   SIGNED_WAITING_WORK = '已簽約待施工',
   CONSTRUCTING = '施工中',
+  INSPECTION = '施工完成、待驗收', // Updated to match user phrasing
+  PREPARING_PAYMENT = '請款資料製作中',
+  SUBMITTED_PAYMENT = '已送件待通知開發票',
+  INVOICED = '已開發票',
+  PARTIAL_PAYMENT = '已部分付款(尚有保留款未付)',
   COMPLETED = '已完工',
-  INSPECTION = '驗收中',
   CLOSED = '結案',
   CANCELLED = '撤案',
   LOST = '未成交'
