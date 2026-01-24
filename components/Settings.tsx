@@ -398,16 +398,16 @@ const Settings: FC<SettingsProps> = ({
                                 try {
                                   const dataToRestore: any = {};
                                   const restoredItems: string[] = [];
-                                  
+
                                   if (restoreOptions.projects && restoreData.projects) { dataToRestore.projects = restoreData.projects; restoredItems.push(`專案`); }
                                   if (restoreOptions.customers && restoreData.customers) { dataToRestore.customers = restoreData.customers; restoredItems.push(`客戶`); }
                                   if (restoreOptions.vendors && restoreData.vendors) { dataToRestore.vendors = restoreData.vendors; restoredItems.push(`廠商`); }
                                   if (restoreOptions.teamMembers && restoreData.teamMembers) { dataToRestore.teamMembers = restoreData.teamMembers; restoredItems.push(`團隊`); }
-                                  if (restoreOptions.inventory && restoreData.inventory) { 
-                                    dataToRestore.inventory = restoreData.inventory; 
-                                    if(restoreData.locations) dataToRestore.locations = restoreData.locations;
-                                    if(restoreData.purchaseOrders) dataToRestore.purchaseOrders = restoreData.purchaseOrders;
-                                    restoredItems.push(`庫存`); 
+                                  if (restoreOptions.inventory && restoreData.inventory) {
+                                    dataToRestore.inventory = restoreData.inventory;
+                                    if (restoreData.locations) dataToRestore.locations = restoreData.locations;
+                                    if (restoreData.purchaseOrders) dataToRestore.purchaseOrders = restoreData.purchaseOrders;
+                                    restoredItems.push(`庫存`);
                                   }
                                   if (restoreOptions.attendance && restoreData.attendance) { dataToRestore.attendance = restoreData.attendance; restoredItems.push(`考勤`); }
                                   if (restoreOptions.payroll && restoreData.payroll) { dataToRestore.payroll = restoreData.payroll; restoredItems.push(`薪資`); }
@@ -431,7 +431,7 @@ const Settings: FC<SettingsProps> = ({
                     </div>
                   )}
                 </div>
-                </div>
+
 
                 <div className="bg-stone-50 border border-stone-200 p-6 rounded-[2rem] shadow-sm space-y-3">
                   <div className="flex items-center gap-3">
@@ -451,158 +451,158 @@ const Settings: FC<SettingsProps> = ({
                 </div>
 
                 {!isReadOnly && (
-              <div className="pt-4 flex justify-end">
+                  <div className="pt-4 flex justify-end">
+                    <button
+                      onClick={onResetData}
+                      className="flex items-center gap-2 text-rose-600 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 px-4 py-2 rounded-xl transition-all"
+                    >
+                      <AlertTriangle size={14} />
+                      清除所有本地快取
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeSection === 'profile' && (
+              <div className="flex flex-col items-center justify-center py-20 space-y-6">
+                <img src={user.picture} className="w-24 h-24 rounded-[2rem] border-4 border-stone-100 shadow-xl" alt="user" />
+                <div className="text-center">
+                  <h3 className="text-xl font-black text-stone-900">{user.name}</h3>
+                  <p className="text-sm text-stone-500 font-bold">{user.email}</p>
+                </div>
+                <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${isReadOnly ? 'bg-stone-900 text-orange-400' : 'bg-stone-100 text-stone-500'}`}>
+                  權限角色：{isReadOnly ? '訪客 (唯讀)' : user.role}
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'modules' && (
+              <div className="space-y-8 animate-in slide-in-from-right-4">
+                <div className="flex items-center gap-5">
+                  <div className="p-5 rounded-[2rem] bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg">
+                    <LayoutDashboard size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-stone-900 uppercase tracking-tight">功能模組管理</h3>
+                    <p className="text-sm text-stone-500 font-medium">為不同客戶設定所需功能</p>
+                  </div>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-100 p-8 rounded-[2rem] space-y-4 text-center">
+                  <div className="flex items-start gap-3 justify-center">
+                    <Info className="text-orange-600 mt-1" size={18} />
+                    <div className="space-y-2">
+                      <p className="text-sm font-black text-orange-900">進階模組管理功能</p>
+                      <p className="text-xs text-orange-700 leading-relaxed font-bold max-w-lg">
+                        請前往側邊欄的「模組管理」查看完整的模組配置介面，您可以在那裡啟用/停用功能模組、管理依賴關係，以及匯入/匯出配置。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Selective Import Modal */}
+      {
+        pendingData && (
+          <div className="fixed inset-0 z-[100] bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 lg:p-12 animate-in fade-in">
+            <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-8 lg:p-10 border-b border-stone-100 flex items-center justify-between bg-stone-50">
+                <div>
+                  <h2 className="text-2xl font-black text-stone-900 uppercase tracking-tight flex items-center gap-3">
+                    <Database className="text-orange-500" /> 選擇要復原的專案
+                  </h2>
+                  <p className="text-sm text-stone-500 font-bold mt-1">從備份檔中偵測到 {pendingData.projects.length} 個專案，請選取您要還原的項目。</p>
+                </div>
                 <button
-                  onClick={onResetData}
-                  className="flex items-center gap-2 text-rose-600 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 px-4 py-2 rounded-xl transition-all"
+                  onClick={() => setPendingData(null)}
+                  className="p-3 hover:bg-white rounded-2xl text-stone-400 hover:text-stone-900 transition-all active:scale-90"
                 >
-                  <AlertTriangle size={14} />
-                  清除所有本地快取
+                  取消
                 </button>
               </div>
-            )}
-          </div>
-            )}
 
-          {activeSection === 'profile' && (
-            <div className="flex flex-col items-center justify-center py-20 space-y-6">
-              <img src={user.picture} className="w-24 h-24 rounded-[2rem] border-4 border-stone-100 shadow-xl" alt="user" />
-              <div className="text-center">
-                <h3 className="text-xl font-black text-stone-900">{user.name}</h3>
-                <p className="text-sm text-stone-500 font-bold">{user.email}</p>
-              </div>
-              <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${isReadOnly ? 'bg-stone-900 text-orange-400' : 'bg-stone-100 text-stone-500'}`}>
-                權限角色：{isReadOnly ? '訪客 (唯讀)' : user.role}
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'modules' && (
-            <div className="space-y-8 animate-in slide-in-from-right-4">
-              <div className="flex items-center gap-5">
-                <div className="p-5 rounded-[2rem] bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg">
-                  <LayoutDashboard size={32} />
+              <div className="flex-1 overflow-y-auto p-6 lg:p-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {pendingData.projects.map((project: any) => (
+                    <label
+                      key={project.id}
+                      className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all cursor-pointer ${selectedProjectIds.has(project.id)
+                        ? 'border-orange-500 bg-orange-50/50 shadow-md'
+                        : 'border-stone-100 hover:border-stone-200 bg-white'
+                        }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 rounded-lg border-stone-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                        checked={selectedProjectIds.has(project.id)}
+                        onChange={() => {
+                          const next = new Set(selectedProjectIds);
+                          if (next.has(project.id)) next.delete(project.id);
+                          else next.add(project.id);
+                          setSelectedProjectIds(next);
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-black bg-stone-900 text-white px-2 py-0.5 rounded-md uppercase tracking-wider">{project.id}</span>
+                          <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{project.source}</span>
+                          {project.deletedAt && <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">(已刪除)</span>}
+                        </div>
+                        <h4 className="font-black text-stone-900 truncate">{project.name}</h4>
+                        <p className="text-[10px] text-stone-500 font-bold mt-1">最後更新：{project.updatedAt ? new Date(project.updatedAt).toLocaleString() : '未知'}</p>
+                      </div>
+                    </label>
+                  ))}
                 </div>
-                <div>
-                  <h3 className="text-xl font-black text-stone-900 uppercase tracking-tight">功能模組管理</h3>
-                  <p className="text-sm text-stone-500 font-medium">為不同客戶設定所需功能</p>
-                </div>
               </div>
 
-              <div className="bg-orange-50 border border-orange-100 p-8 rounded-[2rem] space-y-4 text-center">
-                <div className="flex items-start gap-3 justify-center">
-                  <Info className="text-orange-600 mt-1" size={18} />
-                  <div className="space-y-2">
-                    <p className="text-sm font-black text-orange-900">進階模組管理功能</p>
-                    <p className="text-xs text-orange-700 leading-relaxed font-bold max-w-lg">
-                      請前往側邊欄的「模組管理」查看完整的模組配置介面，您可以在那裡啟用/停用功能模組、管理依賴關係，以及匯入/匯出配置。
-                    </p>
+              <div className="p-8 lg:p-10 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-6">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setSelectedProjectIds(new Set(pendingData.projects.map((p: any) => p.id)))}
+                    className="text-xs font-black text-stone-500 hover:text-stone-900 transition-colors"
+                  >
+                    全部勾選
+                  </button>
+                  <button
+                    onClick={() => setSelectedProjectIds(new Set())}
+                    className="text-xs font-black text-stone-500 hover:text-stone-900 transition-colors"
+                  >
+                    全部取消
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="text-right mr-4">
+                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">目前選取</p>
+                    <p className="text-lg font-black text-stone-900">{selectedProjectIds.size} 個項目</p>
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-
-      {/* Selective Import Modal */ }
-  {
-    pendingData && (
-      <div className="fixed inset-0 z-[100] bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 lg:p-12 animate-in fade-in">
-        <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-          <div className="p-8 lg:p-10 border-b border-stone-100 flex items-center justify-between bg-stone-50">
-            <div>
-              <h2 className="text-2xl font-black text-stone-900 uppercase tracking-tight flex items-center gap-3">
-                <Database className="text-orange-500" /> 選擇要復原的專案
-              </h2>
-              <p className="text-sm text-stone-500 font-bold mt-1">從備份檔中偵測到 {pendingData.projects.length} 個專案，請選取您要還原的項目。</p>
-            </div>
-            <button
-              onClick={() => setPendingData(null)}
-              className="p-3 hover:bg-white rounded-2xl text-stone-400 hover:text-stone-900 transition-all active:scale-90"
-            >
-              取消
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 lg:p-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {pendingData.projects.map((project: any) => (
-                <label
-                  key={project.id}
-                  className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all cursor-pointer ${selectedProjectIds.has(project.id)
-                    ? 'border-orange-500 bg-orange-50/50 shadow-md'
-                    : 'border-stone-100 hover:border-stone-200 bg-white'
-                    }`}
-                >
-                  <input
-                    type="checkbox"
-                    className="w-5 h-5 rounded-lg border-stone-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
-                    checked={selectedProjectIds.has(project.id)}
-                    onChange={() => {
-                      const next = new Set(selectedProjectIds);
-                      if (next.has(project.id)) next.delete(project.id);
-                      else next.add(project.id);
-                      setSelectedProjectIds(next);
+                  <button
+                    disabled={selectedProjectIds.size === 0}
+                    onClick={() => {
+                      const filteredData = {
+                        ...pendingData,
+                        projects: pendingData.projects.filter((p: any) => selectedProjectIds.has(p.id))
+                      };
+                      onImportData(filteredData, importMode);
+                      setPendingData(null);
                     }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black bg-stone-900 text-white px-2 py-0.5 rounded-md uppercase tracking-wider">{project.id}</span>
-                      <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{project.source}</span>
-                      {project.deletedAt && <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">(已刪除)</span>}
-                    </div>
-                    <h4 className="font-black text-stone-900 truncate">{project.name}</h4>
-                    <p className="text-[10px] text-stone-500 font-bold mt-1">最後更新：{project.updatedAt ? new Date(project.updatedAt).toLocaleString() : '未知'}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-8 lg:p-10 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-6">
-            <div className="flex gap-4">
-              <button
-                onClick={() => setSelectedProjectIds(new Set(pendingData.projects.map((p: any) => p.id)))}
-                className="text-xs font-black text-stone-500 hover:text-stone-900 transition-colors"
-              >
-                全部勾選
-              </button>
-              <button
-                onClick={() => setSelectedProjectIds(new Set())}
-                className="text-xs font-black text-stone-500 hover:text-stone-900 transition-colors"
-              >
-                全部取消
-              </button>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-right mr-4">
-                <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">目前選取</p>
-                <p className="text-lg font-black text-stone-900">{selectedProjectIds.size} 個項目</p>
+                    className="bg-orange-600 text-white px-10 py-4 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-orange-100 hover:bg-orange-700 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-3"
+                  >
+                    <RefreshCw size={18} className={selectedProjectIds.size > 0 ? "animate-spin-slow" : ""} />
+                    執行復原匯入
+                  </button>
+                </div>
               </div>
-              <button
-                disabled={selectedProjectIds.size === 0}
-                onClick={() => {
-                  const filteredData = {
-                    ...pendingData,
-                    projects: pendingData.projects.filter((p: any) => selectedProjectIds.has(p.id))
-                  };
-                  onImportData(filteredData, importMode);
-                  setPendingData(null);
-                }}
-                className="bg-orange-600 text-white px-10 py-4 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-orange-100 hover:bg-orange-700 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-3"
-              >
-                <RefreshCw size={18} className={selectedProjectIds.size > 0 ? "animate-spin-slow" : ""} />
-                執行復原匯入
-              </button>
             </div>
           </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
     </div >
   );
 };
