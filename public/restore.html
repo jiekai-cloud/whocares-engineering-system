@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>一鍵資料恢復</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin: 0 0 20px 0;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        #status {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔄 一鍵資料恢復</h1>
+        <p>點擊下方按鈕，從備份恢復您的所有資料</p>
+
+        <button class="btn" onclick="restore()">
+            立即恢復資料
+        </button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function restore() {
+            const status = document.getElementById('status');
+            status.innerHTML = '<p>⏳ 正在載入備份...</p>';
+
+            try {
+                // 載入備份
+                const res = await fetch('/backup_JW2601003.json');
+                const data = await res.json();
+
+                status.innerHTML = '<p>✅ 備份載入成功</p><p>⏳ 正在恢復到資料庫...</p>';
+
+                // 開啟 IndexedDB
+                const db = await new Promise((resolve, reject) => {
+                    const req = indexedDB.open('BuildTrack', 1);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onupgradeneeded = e => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('data')) {
+                            db.createObjectStore('data');
+                        }
+                    };
+                    req.onerror = () => reject(req.error);
+                });
+
+                const save = (key, value) => new Promise((resolve) => {
+                    const tx = db.transaction(['data'], 'readwrite');
+                    tx.objectStore('data').put(value, key).onsuccess = () => resolve();
+                });
+
+                // 恢復所有資料
+                await save('bt_projects', data.projects || []);
+                await save('bt_customers', data.customers || []);
+                await save('bt_vendors', data.vendors || []);
+                await save('bt_team', data.teamMembers || []);
+                await save('bt_leads', data.leads || []);
+
+                status.innerHTML = `
+                    <h2>✅ 恢復完成！</h2>
+                    <p>已恢復：</p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>專案：${data.projects?.length || 0} 個</li>
+                        <li>客戶：${data.customers?.length || 0} 個</li>
+                        <li>廠商：${data.vendors?.length || 0} 個</li>
+                        <li>團隊成員：${data.teamMembers?.length || 0} 位</li>
+                        <li>潛客：${data.leads?.length || 0} 個</li>
+                    </ul>
+                    <p><strong>3秒後自動跳轉...</strong></p>
+                `;
+
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+
+            } catch (error) {
+                status.innerHTML = `<p style="color: red;">❌ 錯誤：${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
