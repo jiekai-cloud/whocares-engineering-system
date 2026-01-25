@@ -3,21 +3,17 @@ import { Project } from "../types";
 
 // 優先採用的穩定模型列表 (依序備援)
 // 優先採用的穩定模型列表 (依序備援，涵蓋穩定版與最新版)
-// 優先採用的穩定模型列表 (依序備援)
 const FALLBACK_MODELS = [
-  'gemini-2.0-flash-exp',
-  'gemini-2.0-flash-thinking-exp',
-  'gemini-2.0-flash-thinking-exp-1219',
-  'gemini-exp-1206',
   'gemini-1.5-flash',
-  'gemini-1.5-flash-001',
-  'gemini-1.5-flash-002',
   'gemini-1.5-pro',
-  'gemini-1.5-pro-001'
+  'gemini-2.0-flash-exp',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-pro-latest'
 ];
 
-const STABLE_MODEL = 'gemini-2.0-flash-exp';
-const EXPERIMENTAL_MODEL = 'gemini-2.0-flash-thinking-exp';
+const STABLE_MODEL = 'gemini-1.5-flash';
+const EXPERIMENTAL_MODEL = 'gemini-2.0-flash-exp';
 
 // Always use an named parameter for apiKey and fetch from process.env.API_KEY
 const getAI = () => {
@@ -335,8 +331,7 @@ export const parseWorkDispatchText = async (text: string, members: any[] = []) =
       ? `目前團隊成員名單 (包含所有外號)：\n${members.map(m => `- ${m.name}${m.nicknames?.length ? ` (外號: ${m.nicknames.join(', ')})` : ''}`).join('\n')}\n\n`
       : '';
 
-    const response = await ai.models.generateContent({
-      model: STABLE_MODEL,
+    const response = await callAIWithFallback({
       contents: [{
         parts: [{
           text: `妳是專業的工務數據解析員。妳能從混亂的通訊軟體對話或手寫日報轉錄文字中，精準提取出派工數據並轉化為 JSON 陣列。
@@ -351,7 +346,7 @@ ${memberContext}
 日報內容：\n\n${text}`
         }]
       }]
-    });
+    }, "日報解析");
     const jsonStr = cleanJsonString(response.text || "[]");
     return JSON.parse(jsonStr);
   } catch (error) {
@@ -603,17 +598,17 @@ export async function parseVoiceCommand(text: string): Promise<{
   response: string;
 }> {
   try {
-    const ai = getAI();
-    const model = ai.getGenerativeModel({ model: STABLE_MODEL });
-
-    const prompt = `
+    const response = await callAIWithFallback({
+      contents: [{
+        parts: [{
+          text: `
       你是營建管理系統的 AI 助理。請分析以下使用者語音指令，並判斷其意圖。
       指令內容："${text}"
 
       可能的意圖 (Intent)：
       1. CREATE_PROJECT: 使用者想要"新增"、"建立"、"添加"一個新案件。
       2. QUERY_PROJECT: 使用者想要"查詢"、"搜尋"、"找"一個案件。
-      3. GENERAL_CHAT: 其他一般對話或詢問建議。
+      3. GENERAL_CHAT: 其他一般對話或詢識建議。
 
       請回傳標準 JSON 格式 (不要有 markdown code block)：
       {
@@ -630,12 +625,12 @@ export async function parseVoiceCommand(text: string): Promise<{
           "keywords": "搜尋關鍵字"
         },
         "response": "請用繁體中文簡短回覆使用者確認動作 (例如：『好的，正在為您建立關於XXX的案件...』)"
-      }
-    `;
+      }`
+        }]
+      }]
+    }, "語音指令解析");
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    let textResponse = response.text();
+    let textResponse = response.text || "";
 
     // Clean up potential markdown blocks
     textResponse = textResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
