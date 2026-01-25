@@ -170,6 +170,12 @@ export interface PreConstructionPrep {
   updatedAt?: string;
 }
 
+export interface ProjectLocation {
+  lat: number;
+  lng: number;
+  address: string;
+}
+
 export interface Project {
   id: string;
   departmentId: string;
@@ -186,10 +192,15 @@ export interface Project {
   startDate: string;
   endDate: string;
   createdDate: string;
-  budget: number;
+  budget?: number; // 專案總預算
+  laborBudget?: number; // 人力預算
+  materialBudget?: number; // 材料預算
+  actualLaborCost?: number; // 實際人力成本 (自動計算)
+  actualMaterialCost?: number; // 實際材料成本 
+  contractAmount?: number; // 合約總金額
   spent: number;
   progress: number;
-  status: ProjectStatus;
+  status: 'Planning' | 'Active' | 'Completed' | 'OnHold'; // 新增 Planning
   tasks: Task[];
   phases: ProjectPhase[];
   dailyLogs?: DailyLogEntry[];
@@ -454,8 +465,15 @@ export interface PayrollRecord {
   overtimeHours: number;
   overtimePay: number;
   deductions: number;
-  total: number;
-  status: 'draft' | 'confirmed' | 'paid';
+  progress: number;
+  // 財務數據 (ERP 核心)
+  budget?: number; // 專案總預算
+  laborBudget?: number; // 人力預算
+  materialBudget?: number; // 材料預算
+  actualLaborCost?: number; // 實際人力成本 (由薪資系統自動計算)
+  actualMaterialCost?: number; // 實際材料成本
+  contractAmount?: number; // 合約總金額 (營收)
+  status: 'Planning' | 'Active' | 'Completed' | 'OnHold'; // 新增 Planning 狀態
   note?: string;
 }
 

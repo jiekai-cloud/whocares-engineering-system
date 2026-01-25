@@ -1,602 +1,411 @@
-
-import React, { useState, useMemo } from 'react';
-import { Search, Plus, FileSpreadsheet, Pencil, Trash2, CalendarDays, FilterX, Activity, XCircle, ChevronLeft, ChevronRight, Hash, ShieldAlert, LayoutGrid, List, Zap, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, Columns, MessageSquare, Camera } from 'lucide-react';
-import { Project, ProjectStatus, User } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Project, TeamMember, AttendanceRecord, ProjectStatus, User } from '../types';
+import { Briefcase, Calendar, Plus, Search, Filter, ArrowUpRight, TrendingUp, DollarSign, Users, AlertTriangle, Wallet, LayoutGrid, List, FileSpreadsheet, RotateCcw, XCircle, Pencil, Trash2, Camera, MessageSquare } from 'lucide-react';
 import { exportProjectsToCSV } from '../utils/csvExport';
 
 interface ProjectListProps {
   projects: Project[];
-  user: User;
+  user: User; // Keep user prop for permission checks
   onAddClick: () => void;
-  onAddTestClick: () => void;
   onEditClick: (project: Project) => void;
   onDeleteClick: (id: string) => void;
   onRestoreClick: (id: string) => void;
   onHardDeleteClick: (id: string) => void;
-  onLossClick: (project: Project) => void;
   onDetailClick: (project: Project) => void;
   showDeleted: boolean;
   onToggleDeleted: (val: boolean) => void;
+
+  // New props for Financial Engine
+  teamMembers: TeamMember[];
+  attendanceRecords: AttendanceRecord[];
 }
 
-const ITEMS_PER_PAGE = 15;
+// Extended Interface for internal use
+interface ProjectWithFinancials extends Project {
+  computedFinancials: {
+    laborCost: number;
+    materialCost: number;
+    totalCost: number;
+    profit: number;
+    profitMargin: number;
+    healthStatus: string;
+    manDays: number;
+    revenue: number;
+  };
+}
 
 const ProjectList: React.FC<ProjectListProps> = ({
-  projects, user, onAddClick, onAddTestClick, onEditClick, onDeleteClick, onRestoreClick, onHardDeleteClick, onLossClick, onDetailClick,
-  showDeleted, onToggleDeleted
+  projects,
+  user,
+  onAddClick,
+  onEditClick,
+  onDeleteClick,
+  onRestoreClick,
+  onHardDeleteClick,
+  onDetailClick,
+  showDeleted,
+  onToggleDeleted,
+  teamMembers = [],
+  attendanceRecords = []
 }) => {
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [selectedYear, setSelectedYear] = useState<string>('2026');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'table' | 'card' | 'kanban'>('table');
-  const [sortBy, setSortBy] = useState<'id' | 'manager' | 'status' | 'progress' | 'budget' | null>('id');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Advanced Financial Calculation Engine
+  const projectsWithFinancials = useMemo<ProjectWithFinancials[]>(() => {
+    // Basic Filtering first
+    let filtered = projects.filter(p => {
+      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.id.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchStatus = statusFilter === 'all' || p.status === statusFilter;
+      const matchDeleted = showDeleted ? p.deletedAt : !p.deletedAt;
+      return matchSearch && matchStatus && matchDeleted;
+    });
+
+    return filtered.map(project => {
+      // 1. Calculate Real-time Labor Cost from Attendance
+      let calculatedLaborCost = 0;
+      let totalManDays = 0;
+
+      if (project.location && project.location.lat && project.location.lng) {
+        // Simple geo-fencing (approx 500m radius) matches
+        const pLat = project.location.lat;
+        const pLng = project.location.lng;
+        const THRESHOLD = 0.005; // approx 500m
+
+        attendanceRecords.forEach(record => {
+          if (record.location && record.type === 'work-start') {
+            const dist = Math.sqrt(Math.pow(record.location.lat - pLat, 2) + Math.pow(record.location.lng - pLng, 2));
+            if (dist < THRESHOLD) {
+              // Match found! Find employee rate
+              const member = teamMembers.find(m => m.id === record.employeeId || m.name === record.name);
+              const dailyCost = member?.dailyRate || 2500; // Fallback rate
+              calculatedLaborCost += dailyCost;
+              totalManDays += 1;
+            }
+          }
+        });
+      }
+
+      // Merge with manual actuals if any
+      const finalLaborCost = Math.max(calculatedLaborCost, project.actualLaborCost || 0);
+      const materialCost = project.actualMaterialCost || 0;
+      const totalCost = finalLaborCost + materialCost;
+      const budget = project.budget || 0;
+      const contract = project.contractAmount || 0;
+      // If contract amount is not set, use budget as a proxy for revenue (for estimation)
+      const revenue = contract > 0 ? contract : budget;
+
+      const profit = revenue > 0 ? (revenue - totalCost) : 0;
+      const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+      // Status update based on budget
+      let healthStatus = 'Healthy';
+      if (budget > 0 && totalCost > budget) healthStatus = 'Critical';
+      else if (budget > 0 && totalCost > budget * 0.9) healthStatus = 'Warning';
+
+      return {
+        ...project,
+        computedFinancials: {
+          laborCost: finalLaborCost,
+          materialCost,
+          totalCost,
+          profit,
+          profitMargin,
+          healthStatus,
+          manDays: totalManDays,
+          revenue
+        }
+      };
+    });
+  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted]);
+
   const isReadOnly = user.role === 'Guest';
 
-  // Sort toggle handler
-  const handleSort = (field: 'id' | 'manager' | 'status' | 'progress' | 'budget') => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
-    }
-  };
-
-  // Render sort indicator
-  const SortIndicator = ({ field }: { field: string }) => {
-    if (sortBy !== field) return <ChevronsUpDown size={12} className="text-stone-300" />;
-    return sortOrder === 'asc' ? <ChevronUp size={12} className="text-orange-600" /> : <ChevronDown size={12} className="text-orange-600" />;
-  };
-
-  // Helper to determine project year consistently
-  const getProjectYear = (p: Project) => {
-    if (p.year) return p.year; // 優先使用手動指定的年度
-    if (p.startDate) return p.startDate.split('-')[0];
-    if (p.createdDate) return p.createdDate.split('-')[0];
-    const idMatch = p.id.match(/^[A-Z]+(\d{2})/);
-    if (idMatch) return '20' + idMatch[1];
-    return '2026';
-  };
-
-  // 1. 強化搜尋與篩選邏輯（含排序）
-  const filteredProjects = useMemo(() => {
-    setCurrentPage(1); // 搜尋時重置分頁
-    let result = projects.filter(p => {
-      const matchSearch =
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.id.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStatus = selectedStatus === 'all' || p.status === selectedStatus;
-
-      const projectYear = getProjectYear(p);
-      const matchYear = projectYear === selectedYear;
-
-      return matchSearch && matchStatus && matchYear;
-    });
-
-    // Apply sorting
-    if (sortBy) {
-      result = [...result].sort((a, b) => {
-        let aVal: any, bVal: any;
-
-        switch (sortBy) {
-          case 'id':
-            // Extract numeric part for sorting (ignore prefix like BNI, JW, OC)
-            const aNum = parseInt(a.id.replace(/\D/g, '')) || 0;
-            const bNum = parseInt(b.id.replace(/\D/g, '')) || 0;
-            if (aNum !== bNum) {
-              aVal = aNum;
-              bVal = bNum;
-            } else {
-              // Fallback to string sort if numbers identify (unlikely but safe)
-              aVal = a.id;
-              bVal = b.id;
-            }
-            break;
-          case 'manager':
-            aVal = a.quotationManager || a.manager || '';
-            bVal = b.quotationManager || b.manager || '';
-            break;
-          case 'status':
-            aVal = a.status;
-            bVal = b.status;
-            break;
-          case 'progress':
-            aVal = a.progress || 0;
-            bVal = b.progress || 0;
-            break;
-          case 'budget':
-            aVal = a.budget || 0;
-            bVal = b.budget || 0;
-            break;
-        }
-
-        if (sortOrder === 'asc') {
-          return aVal > bVal ? 1 : -1;
-        } else {
-          return aVal < bVal ? 1 : -1;
-        }
-      });
-    }
-
-    return result;
-  }, [projects, searchTerm, selectedStatus, selectedYear, sortBy, sortOrder]);
-
-  // 2. 分頁邏輯
-  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
-  const paginatedProjects = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredProjects.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredProjects, currentPage]);
-
-  const getStatusColor = (status: ProjectStatus) => {
-    switch (status) {
-      case ProjectStatus.CONSTRUCTING: return 'bg-orange-100 text-orange-700 border-orange-200';
-      case ProjectStatus.COMPLETED: return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case ProjectStatus.LOST: return 'bg-stone-200 text-stone-500 border-stone-300';
-      case ProjectStatus.CANCELLED: return 'bg-rose-100 text-rose-700 border-rose-200';
-      default: return 'bg-stone-100 text-stone-700 border-stone-200';
-    }
-  };
-
-  // Kanban Column Definition
-  const KANBAN_COLUMNS = [
-    ProjectStatus.INSPECTION,
-    ProjectStatus.PREPARING_PAYMENT,
-    ProjectStatus.SUBMITTED_PAYMENT,
-    ProjectStatus.INVOICED,
-    ProjectStatus.PARTIAL_PAYMENT
-  ];
-
-  const OTHER_STATUSES = Object.values(ProjectStatus).filter(s => !KANBAN_COLUMNS.includes(s) && s !== ProjectStatus.CLOSED && s !== ProjectStatus.CANCELLED && s !== ProjectStatus.LOST);
-
-  // Group projects by status
-  const projectsByStatus = useMemo(() => {
-    const groups: Record<string, Project[]> = {};
-    Object.values(ProjectStatus).forEach(status => {
-      groups[status] = filteredProjects.filter(p => p.status === status);
-    });
-    return groups;
-  }, [filteredProjects]);
-
   return (
-    <div className="p-4 lg:p-8 space-y-4 animate-in fade-in h-screen flex flex-col">
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 flex-shrink-0">
+    <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in h-screen flex flex-col">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4 shrink-0">
         <div>
-          <h1 className="text-xl font-black text-stone-900">案件中心</h1>
-          <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">目前共管理 {projects.length} 件工程項目</p>
+          <h1 className="text-3xl font-black text-stone-900 tracking-tight mb-2">專案財務戰情室</h1>
+          <p className="text-stone-500 font-bold flex items-center gap-2 text-xs uppercase tracking-wider">
+            <TrendingUp size={16} className="text-emerald-500" />
+            即時監控全公司專案損益與預算執行率 (Project Costing Dashboard)
+          </p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-          {/* 視圖切換按鈕 */}
+
+        <div className="flex flex-wrap gap-2">
+          {!isReadOnly && (
+            <button
+              onClick={onAddClick}
+              className="bg-stone-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all shadow-xl shadow-stone-200 text-sm"
+            >
+              <Plus size={18} /> 建立新專案
+            </button>
+          )}
           <div className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1">
             <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'table' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'
-                }`}
-            >
-              <List size={14} />
-              <span className="hidden sm:inline">表格</span>
-            </button>
-            <button
               onClick={() => setViewMode('card')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'card' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'
-                }`}
+              className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'card' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}
             >
-              <LayoutGrid size={14} />
-              <span className="hidden sm:inline">卡片</span>
+              <LayoutGrid size={16} /> 卡片
             </button>
             <button
-              onClick={() => setViewMode('kanban')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'kanban' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'
-                }`}
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'table' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}
             >
-              <Columns size={14} />
-              <span className="hidden sm:inline">看板</span>
+              <List size={16} /> 列表
             </button>
           </div>
-
-          <button onClick={() => exportProjectsToCSV(projects)} className="flex-1 sm:flex-none bg-white border border-stone-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-stone-50 transition-all"><FileSpreadsheet size={14} /> <span className="hidden sm:inline">匯出 CSV</span></button>
-          {!isReadOnly && (
-            <>
-              <button
-                onClick={onAddTestClick}
-                className="flex-1 sm:flex-none bg-white border border-stone-200 border-dashed text-stone-600 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-stone-50 hover:border-stone-400 transition-all"
-              >
-                <Zap size={16} className="text-amber-500" /> 建立測試案件
-              </button>
-              <button
-                onClick={onAddClick}
-                className="flex-1 sm:flex-none bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md hover:bg-orange-700 active:scale-95 transition-all"
-              >
-                <Plus size={16} /> 新增案件
-              </button>
-            </>
-          )}
-          {isReadOnly && (
-            <div className="flex-1 sm:flex-none bg-stone-100 text-stone-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-stone-200 cursor-not-allowed">
-              <ShieldAlert size={14} /> 訪客唯讀模式
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 年度大類別切換 */}
-      <div className="flex flex-wrap gap-2 mb-2 flex-shrink-0">
-        {['2024', '2025', '2026'].map(year => {
-          const yearCount = projects.filter(p => getProjectYear(p) === year).length;
-
-          return (
-            <button
-              key={year}
-              onClick={() => setSelectedYear(year)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedYear === year
-                ? 'bg-orange-600 text-white border-orange-600 shadow-md scale-105 z-10'
-                : 'bg-white text-stone-400 border-stone-200 hover:border-stone-300 hover:text-stone-600'
-                }`}
-            >
-              <CalendarDays size={14} className={selectedYear === year ? 'text-orange-200' : 'text-stone-300'} />
-              {year} 年度
-              <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${selectedYear === year ? 'bg-orange-500 text-white' : 'bg-stone-100 text-stone-400'}`}>
-                {yearCount}
-              </span>
-              {selectedYear === year && <div className="w-1 h-1 rounded-full bg-white ml-0.5 animate-pulse" />}
-            </button>
-          );
-        })}
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
+        <div className="bg-stone-900 text-white p-6 rounded-[2rem] shadow-xl">
+          <div className="flex items-center gap-3 mb-2 opacity-80">
+            <Briefcase size={18} />
+            <span className="text-[10px] font-black uppercase tracking-widest">總進行中專案</span>
+          </div>
+          <div className="text-4xl font-black">{projects.filter(p => !p.deletedAt && p.status === 'Active').length}</div>
+        </div>
+        <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2 text-stone-400">
+            <Wallet size={18} />
+            <span className="text-[10px] font-black uppercase tracking-widest">總預期營收 Revenue</span>
+          </div>
+          <div className="text-3xl font-black text-stone-800 tabular-nums">
+            ${projectsWithFinancials.reduce((acc, p) => acc + (p.computedFinancials.revenue || 0), 0).toLocaleString()}
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2 text-stone-400">
+            <DollarSign size={18} />
+            <span className="text-[10px] font-black uppercase tracking-widest">實際總支出 Cost</span>
+          </div>
+          <div className="text-3xl font-black text-rose-600 tabular-nums">
+            ${projectsWithFinancials.reduce((acc, p) => acc + p.computedFinancials.totalCost, 0).toLocaleString()}
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2 text-stone-400">
+            <TrendingUp size={18} />
+            <span className="text-[10px] font-black uppercase tracking-widest">預估總毛利 Profit</span>
+          </div>
+          <div className="text-3xl font-black text-emerald-600 tabular-nums">
+            ${projectsWithFinancials.reduce((acc, p) => acc + p.computedFinancials.profit, 0).toLocaleString()}
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 flex-shrink-0">
-        <div className="sm:col-span-2 flex items-center bg-white rounded-xl border border-stone-200 px-4 py-2.5 shadow-sm">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 shrink-0">
+        <div className="flex items-center bg-white rounded-xl border border-stone-200 px-4 py-2.5 shadow-sm flex-1 min-w-[200px]">
           <Search size={14} className="text-stone-400 mr-2" />
-          <input className="bg-transparent text-xs font-bold outline-none w-full text-stone-900" placeholder="搜尋案名、業主或案號..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <input className="bg-transparent text-xs font-bold outline-none w-full text-stone-900" placeholder="搜尋專案名稱..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
-        <div className="bg-white rounded-xl border border-stone-200 px-3 py-2.5 shadow-sm">
-          <select className="bg-transparent text-[11px] font-black w-full outline-none" value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
-            <option value="all">所有狀態分佈</option>
-            {Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onToggleDeleted(!showDeleted)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border ${showDeleted
-              ? 'bg-rose-50 border-rose-200 text-rose-600'
-              : 'bg-white border-stone-200 text-stone-400 hover:text-stone-600 hover:border-stone-300'
-              }`}
-          >
-            <Trash2 size={14} />
-            {showDeleted ? '關閉垃圾桶' : '案件垃圾桶'}
-          </button>
-          <button onClick={() => { setSearchTerm(''); setSelectedStatus('all'); onToggleDeleted(false); }} className="flex-1 bg-stone-900 py-2.5 rounded-xl text-[10px] font-black uppercase text-white hover:bg-black transition-all">清除所有篩選</button>
-        </div>
+        <select
+          className="bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none shadow-sm"
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+        >
+          <option value="all">所有狀態</option>
+          {Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button
+          onClick={() => onToggleDeleted(!showDeleted)}
+          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border flex items-center gap-2 ${showDeleted
+            ? 'bg-rose-50 border-rose-200 text-rose-600'
+            : 'bg-white border-stone-200 text-stone-400 hover:text-stone-600'
+            }`}
+        >
+          <Trash2 size={14} />
+          {showDeleted ? '隱藏垃圾桶' : '檢視垃圾桶'}
+        </button>
       </div>
 
-      {viewMode === 'table' ? (
-        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden overflow-x-auto touch-scroll flex-1">
-          <table className="w-full text-left min-w-[850px]">
-            <thead className="bg-stone-50 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-widest">
-              <tr>
-                <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('id')}>
-                  <div className="flex items-center gap-2">
-                    案號 / 案件名稱
-                    <SortIndicator field="id" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('manager')}>
-                  <div className="flex items-center gap-2">
-                    業主 / 負責人
-                    <SortIndicator field="manager" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-center cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('status')}>
-                  <div className="flex items-center justify-center gap-2">
-                    當前狀態
-                    <SortIndicator field="status" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('progress')}>
-                  <div className="flex items-center gap-2">
-                    進度
-                    <SortIndicator field="progress" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-right cursor-pointer hover:bg-stone-100 transition-colors" onClick={() => handleSort('budget')}>
-                  <div className="flex items-center justify-end gap-2">
-                    合約預算
-                    <SortIndicator field="budget" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-center">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100 text-sm">
-              {paginatedProjects.length > 0 ? paginatedProjects.map(p => (
-                <tr key={p.id} onClick={() => onDetailClick(p)} className="hover:bg-orange-50/30 transition-colors cursor-pointer group">
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] font-black text-stone-400">{p.id}</span>
-                        {p.deletedAt && <span className="text-[9px] font-black bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded uppercase tracking-widest">已刪除</span>}
-                      </div>
-                      <span className="font-bold text-stone-900 group-hover:text-orange-600 transition-colors line-clamp-1">{p.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-stone-700 text-xs">{p.client}</span>
-                      <span className="text-[10px] text-stone-400 font-medium whitespace-nowrap">負責人：{p.quotationManager || '未指定'}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-tighter ${getStatusColor(p.status)}`}>{p.status}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 min-w-[60px] bg-stone-100 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${p.progress}%` }}></div>
-                      </div>
-                      <span className="text-[10px] font-black text-stone-900 w-8">{p.progress}%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right font-black text-xs text-stone-900">NT${(p.budget || 0).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-center">
-                    {!isReadOnly ? (
-                      <div className="flex justify-center gap-1">
-                        {p.deletedAt ? (
-                          <div className="flex gap-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onRestoreClick(p.id); }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest"
-                            >
-                              <RotateCcw size={12} /> 復原
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onHardDeleteClick(p.id); }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest"
-                              title="永久刪除"
-                            >
-                              <XCircle size={12} /> 永久刪除
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <button onClick={(e) => { e.stopPropagation(); onEditClick(p); }} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all"><Pencil size={14} className="text-stone-400 group-hover:text-blue-600" /></button>
-                            <button onClick={(e) => { e.stopPropagation(); onDeleteClick(p.id); }} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all"><Trash2 size={14} className="text-stone-400 group-hover:text-rose-600" /></button>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] font-black text-stone-300 uppercase italic">唯讀</span>
-                    )}
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-2 opacity-30">
-                      <Search size={40} />
-                      <p className="text-xs font-black uppercase tracking-widest">找不到符合條件的案件</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      ) : viewMode === 'card' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1 overflow-y-auto pb-20">
-          {paginatedProjects.length > 0 ? paginatedProjects.map(p => (
+      {/* Project Grid / List */}
+      {viewMode === 'card' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto pb-20">
+          {projectsWithFinancials.map((project) => (
             <div
-              key={p.id}
-              onClick={() => onDetailClick(p)}
-              className="bg-white p-6 rounded-[2rem] border border-stone-200 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col group"
+              key={project.id}
+              onClick={() => onDetailClick(project)}
+              className="group bg-white rounded-[2.5rem] border border-stone-200 p-1 cursor-pointer hover:shadow-xl hover:scale-[1.01] hover:border-stone-300 transition-all duration-300 flex flex-col relative"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{p.id}</span>
-                  <h3 className="font-black text-stone-900 leading-tight group-hover:text-orange-600 transition-colors uppercase">{p.name}</h3>
+              {/* Deleted Overlay */}
+              {project.deletedAt && (
+                <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm rounded-[2.5rem] flex flex-col items-center justify-center pointer-events-none">
+                  <p className="text-rose-600 font-black text-xl uppercase tracking-widest mb-4">已刪除專案</p>
+                  <div className="flex gap-2 pointer-events-auto">
+                    <button onClick={(e) => { e.stopPropagation(); onRestoreClick(project.id); }} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-700">
+                      <RotateCcw size={14} /> 復原
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onHardDeleteClick(project.id); }} className="bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-rose-700">
+                      <XCircle size={14} /> 永久刪除
+                    </button>
+                  </div>
                 </div>
-                <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-tighter shrink-0 ${getStatusColor(p.status)}`}>
-                  {p.status}
-                </span>
+              )}
+
+              {/* Project Image & Status */}
+              <div className="relative h-48 rounded-[2rem] overflow-hidden bg-stone-100 mb-2">
+                <img
+                  src={project.coverImage || `https://source.unsplash.com/random/800x600?construction&sig=${project.id}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 grayscale group-hover:grayscale-0"
+                  alt="cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-4 left-6 text-white w-[calc(100%-3rem)]">
+                  <div className="flex justify-between items-end mb-1">
+                    <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-0.5 rounded text-white/90 uppercase tracking-widest border border-white/10">{project.id}</span>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${project.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-stone-500 text-white'}`}>{project.status}</span>
+                  </div>
+                  <h3 className="text-xl font-black leading-tight mb-1 truncate">{project.name}</h3>
+                  <p className="text-xs font-bold opacity-70 flex items-center gap-1 truncate">
+                    <Users size={12} /> {project.computedFinancials.manDays} 人天投入 • {project.location?.address || '無地址'}
+                  </p>
+                </div>
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  {!isReadOnly && !project.deletedAt && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditClick(project); }}
+                        className="p-2 bg-white/90 backdrop-blur text-stone-600 rounded-xl hover:bg-blue-50 hover:text-blue-600 shadow-sm transition-all"
+                        title="編輯專案"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeleteClick(project.id); }}
+                        className="p-2 bg-white/90 backdrop-blur text-stone-600 rounded-xl hover:bg-rose-50 hover:text-rose-600 shadow-sm transition-all"
+                        title="刪除專案"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
+                  {project.computedFinancials.healthStatus !== 'Healthy' && !project.deletedAt && (
+                    <div className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm backdrop-blur-md ${project.computedFinancials.healthStatus === 'Critical' ? 'bg-rose-500/90 text-white' : 'bg-amber-500/90 text-white'
+                      }`}>
+                      <AlertTriangle size={12} />
+                      {project.computedFinancials.healthStatus === 'Critical' ? '超支' : '警戒'}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex-1 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-[10px] font-black text-stone-400 uppercase tracking-widest">
-                    <span>進度</span>
-                    <span>{p.progress}%</span>
+              {/* Financial Dashboard Card */}
+              <div className="p-5 flex-1 flex flex-col gap-4">
+
+                {/* Budget Progress Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] uppercase font-black text-stone-400 tracking-widest">預算執行率 (Costs vs Budget)</span>
+                    <span className="text-xs font-bold text-stone-600">
+                      {project.budget ? Math.round((project.computedFinancials.totalCost / project.budget) * 100) : 0}%
+                    </span>
                   </div>
-                  <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-orange-500 h-full rounded-full transition-all duration-700" style={{ width: `${p.progress}%` }}></div>
+                  <div className="h-3 w-full bg-stone-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-1000 ${project.computedFinancials.healthStatus === 'Critical' ? 'bg-rose-500' :
+                        project.computedFinancials.healthStatus === 'Warning' ? 'bg-amber-500' :
+                          'bg-stone-800'
+                        }`}
+                      style={{ width: `${project.budget ? Math.min((project.computedFinancials.totalCost / project.budget) * 100, 100) : 0}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-bold text-stone-400">
+                    <span>已用 ${project.computedFinancials.totalCost.toLocaleString()}</span>
+                    <span>預算 ${project.budget?.toLocaleString() || 0}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 py-4 border-y border-stone-50">
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">負責人</span>
-                    <p className="text-xs font-bold text-stone-900 truncate">
-                      {p.quotationManager || '未指定'}
-                    </p>
+                {/* Profit Grid */}
+                <div className="grid grid-cols-2 gap-2 mt-auto">
+                  <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
+                    <span className="text-[9px] uppercase font-black text-emerald-600/60 block mb-0.5">預估毛利 Profit</span>
+                    <span className={`text-lg font-black tracking-tight ${project.computedFinancials.profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                      ${project.computedFinancials.profit.toLocaleString()}
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">業主</span>
-                    <p className="text-xs font-bold text-stone-900 truncate">{p.client}</p>
+                  <div className="bg-stone-50 p-3 rounded-2xl border border-stone-100">
+                    <span className="text-[9px] uppercase font-black text-stone-400 block mb-0.5">毛利率 Margin</span>
+                    <span className={`text-lg font-black tracking-tight ${project.computedFinancials.profitMargin >= 20 ? 'text-emerald-600' : 'text-stone-600'}`}>
+                      {project.computedFinancials.profitMargin.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div className="space-y-0.5">
-                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">預算</span>
-                    <p className="font-black text-slate-900 leading-none">NT${(p.budget || 0).toLocaleString()}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    {!isReadOnly ? (
-                      p.deletedAt ? (
-                        <div className="flex flex-col gap-2 w-full">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onRestoreClick(p.id); }}
-                            className="flex items-center justify-center gap-2 py-2 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md hover:bg-emerald-700 active:scale-95 transition-all"
-                          >
-                            <RotateCcw size={12} /> 復原此案件
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onHardDeleteClick(p.id); }}
-                            className="flex items-center justify-center gap-2 py-2 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md hover:bg-rose-700 active:scale-95 transition-all"
-                          >
-                            <XCircle size={12} /> 永久刪除
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onEditClick(p); }}
-                            className="p-2 bg-stone-50 hover:bg-white hover:shadow-sm rounded-xl text-stone-400 hover:text-blue-600 transition-all"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onDeleteClick(p.id); }}
-                            className="p-2 bg-stone-50 hover:bg-white hover:shadow-sm rounded-xl text-stone-400 hover:text-rose-600 transition-all"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )
-                    ) : (
-                      <span className="text-[10px] font-black text-stone-300 uppercase italic">唯讀</span>
-                    )}
+                <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{project.client}</span>
+                  <div className="flex items-center gap-1 text-xs font-bold text-stone-400 group-hover:text-stone-900 transition-colors">
+                    查看財務明細 <ArrowUpRight size={14} />
                   </div>
                 </div>
               </div>
             </div>
-          )) : (
+          ))}
+          {projectsWithFinancials.length === 0 && (
             <div className="col-span-full py-20 bg-white rounded-3xl border border-stone-200 border-dashed flex flex-col items-center justify-center gap-4 text-stone-300">
               <Search size={48} className="opacity-20" />
               <p className="text-sm font-black uppercase tracking-[0.2em] opacity-50">找不到符合條件的案件</p>
-              <button onClick={() => { setSearchTerm(''); setSelectedStatus('all'); }} className="text-[10px] font-black text-orange-600 hover:underline underline-offset-4">清除篩選條件</button>
+              <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }} className="text-[10px] font-black text-orange-600 hover:underline underline-offset-4">清除篩選條件</button>
             </div>
           )}
         </div>
       ) : (
-        /* KANBAN VIEW */
-        <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
-          <div className="flex gap-4 h-full min-w-max px-2">
-            {[...OTHER_STATUSES, ...KANBAN_COLUMNS].filter(s => projectsByStatus[s]?.length > 0 || KANBAN_COLUMNS.includes(s)).map(status => (
-              <div key={status} className="w-80 flex flex-col h-full bg-stone-100/50 rounded-2xl border border-stone-200/50 flex-shrink-0">
-                <div className="p-3 flex justify-between items-center bg-white rounded-t-2xl border-b border-stone-100 shadow-sm z-10 sticky top-0">
-                  <div className="font-bold text-sm text-stone-700 truncate max-w-[200px]" title={status}>{status}</div>
-                  <span className="text-xs font-black bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{projectsByStatus[status]?.length || 0}</span>
-                </div>
-
-                <div className="p-2 space-y-2 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-stone-200 hover:scrollbar-thumb-stone-300">
-                  {projectsByStatus[status]?.map(p => (
-                    <div
-                      key={p.id}
-                      onClick={() => onDetailClick(p)}
-                      className="bg-white p-3 rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-orange-200 hover:-translate-y-0.5 transition-all cursor-pointer group flex flex-col gap-2 relative"
-                    >
-                      {/* Top Bar: ID and Options */}
-                      <div className="flex justify-between items-start">
-                        <span className="text-[9px] font-black text-stone-400 bg-stone-50 px-1.5 py-0.5 rounded uppercase tracking-wider">{p.id}</span>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {!isReadOnly && !p.deletedAt && (
-                            <button onClick={(e) => { e.stopPropagation(); onEditClick(p); }} className="p-1 hover:bg-stone-100 rounded text-stone-400 hover:text-blue-600">
-                              <Pencil size={10} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Main Content */}
-                      <div>
-                        <h4 className="font-bold text-stone-800 text-sm leading-snug line-clamp-2 group-hover:text-orange-600 transition-colors mb-1">
-                          {p.name}
-                        </h4>
-                        <div className="text-[10px] text-stone-500 truncate" title={p.client}>{p.client}</div>
-                        {/* Tags or Managers */}
-                        <div className="flex items-center gap-1 mt-1 text-[10px] text-stone-400">
-                          {p.quotationManager || p.engineeringManager || '未指定'}
-                        </div>
-                      </div>
-
-                      {/* Footer: Comments, etc. */}
-                      <div className="border-t border-stone-50 pt-2 flex justify-between items-center text-[10px] text-stone-400 font-bold">
-                        <div className="flex gap-3">
-                          {(p.comments?.length || 0) > 0 && (
-                            <div className="flex items-center gap-1 text-stone-500">
-                              <MessageSquare size={10} /> {p.comments?.length}
-                            </div>
-                          )}
-                          {(p.dailyLogs?.length || 0) > 0 && (
-                            <div className="flex items-center gap-1 text-stone-500">
-                              <Camera size={10} /> {p.dailyLogs?.length}
-                            </div>
-                          )}
-                          {p.updatedAt && (
-                            <span className="text-[9px] text-stone-300 font-normal">
-                              {new Date(p.updatedAt).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-[9px] font-black text-stone-400 uppercase">
-                          {(p.quotationManager || 'U')[0]}
-                        </div>
-                      </div>
+        /* Table View */
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden overflow-x-auto">
+          <table className="w-full text-left min-w-[1000px]">
+            <thead className="bg-stone-50 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">專案名稱</th>
+                <th className="px-6 py-4">狀態</th>
+                <th className="px-6 py-4 text-right">預算</th>
+                <th className="px-6 py-4 text-right">已支出</th>
+                <th className="px-6 py-4 text-right">預估毛利</th>
+                <th className="px-6 py-4 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              {projectsWithFinancials.map(p => (
+                <tr key={p.id} onClick={() => onDetailClick(p)} className="hover:bg-orange-50/20 cursor-pointer">
+                  <td className="px-6 py-4">
+                    <span className="block font-bold text-stone-900">{p.name}</span>
+                    <span className="text-[10px] text-stone-500">{p.id}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-500'}`}>{p.status}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-sm font-bold text-stone-600">${p.budget?.toLocaleString() || '-'}</td>
+                  <td className="px-6 py-4 text-right font-mono text-sm font-bold text-rose-600">${p.computedFinancials.totalCost.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right font-mono text-sm font-bold text-emerald-600">${p.computedFinancials.profit.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditClick(p); }}
+                        className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-blue-600 transition-colors"
+                        title="編輯"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeleteClick(p.id); }}
+                        className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-rose-600 transition-colors"
+                        title="刪除"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <button className="p-2 hover:bg-stone-100 rounded-lg text-stone-300 hover:text-stone-900 transition-colors">
+                        <ArrowUpRight size={14} />
+                      </button>
                     </div>
-                  ))}
-                  <button
-                    onClick={onAddClick}
-                    className="w-full py-2 rounded-lg border border-dashed border-stone-300 text-stone-400 text-xs font-bold hover:bg-white hover:border-orange-300 hover:text-orange-500 transition-all flex items-center justify-center gap-1 opacity-50 hover:opacity-100"
-                  >
-                    <Plus size={12} /> 新增卡片
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 分頁控制列 */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl border border-stone-200 shadow-sm">
-          <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
-            顯示第 {(currentPage - 1) * ITEMS_PER_PAGE + 1} 至 {Math.min(currentPage * ITEMS_PER_PAGE, filteredProjects.length)} 案，共 {filteredProjects.length} 案
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
-              className="p-2 border border-stone-200 rounded-xl hover:bg-stone-50 disabled:opacity-30 transition-all"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-orange-600 text-white shadow-lg shadow-orange-100' : 'text-stone-500 hover:bg-stone-50'}`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              {totalPages > 5 && <span className="text-stone-300">...</span>}
-            </div>
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              className="p-2 border border-stone-200 rounded-xl hover:bg-stone-50 disabled:opacity-30 transition-all"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

@@ -1559,6 +1559,8 @@ const App: React.FC = () => {
                 onLossClick={() => { }}
                 showDeleted={showDeleted}
                 onToggleDeleted={setShowDeleted}
+                teamMembers={teamMembers}
+                attendanceRecords={attendanceRecords}
               />}
               {activeTab === 'settings' && (
                 <Settings

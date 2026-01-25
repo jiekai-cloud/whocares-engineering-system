@@ -392,6 +392,37 @@ const TeamModal: React.FC<TeamModalProps> = ({ onClose, onConfirm, initialData, 
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-400">TWD / 日</span>
                   </div>
                 </div>
+                <div className="pt-4 border-t border-amber-100 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">勞保自付額 Labor Fee</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        placeholder="例如: 1100"
+                        disabled={!canEditPayroll}
+                        className="w-full bg-white border border-amber-100 rounded-xl pl-4 pr-12 py-3 text-sm font-bold"
+                        value={formData.laborFee || ''}
+                        onChange={e => setFormData({ ...formData, laborFee: Number(e.target.value) })}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-400">/ 月</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">健保自付額 Health Fee</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        placeholder="例如: 500"
+                        disabled={!canEditPayroll}
+                        className="w-full bg-white border border-amber-100 rounded-xl pl-4 pr-12 py-3 text-sm font-bold"
+                        value={formData.healthFee || ''}
+                        onChange={e => setFormData({ ...formData, healthFee: Number(e.target.value) })}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-400">/ 月</span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="pt-4 border-t border-amber-100">
                   <label className="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">🕷️ 蜘蛛人津貼 Spider-Man Allowance</label>
                   <div className="relative">

@@ -274,9 +274,9 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
         });
 
         // 3. Process each day of the month for each employee
-        teamMembers.forEach(m => {
+        Object.values(stats).forEach(context => {
+            const m = context.member!;
             const empId = m.employeeId || m.id;
-            const context = stats[empId];
             const dailyRate = m.dailyRate || 0;
             // Assuming 8-hour work day for hourly rate calc
             const hourlyRate = dailyRate > 0 ? dailyRate / 8 : 0;
