@@ -2,6 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { Project, TeamMember, AttendanceRecord, ProjectStatus, User } from '../types';
 import { Briefcase, Calendar, Plus, Search, Filter, ArrowUpRight, TrendingUp, DollarSign, Users, AlertTriangle, Wallet, LayoutGrid, List, FileSpreadsheet, RotateCcw, XCircle, Pencil, Trash2 } from 'lucide-react';
 
+// Ag-Grid Imports
+import { AgGridReact } from 'ag-grid-react';
+import { ColDef, GridReadyEvent } from 'ag-grid-community';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-quartz.css'; // Using the modern Quartz theme
+
 interface ProjectListProps {
   projects: Project[];
   user: User;
@@ -97,63 +103,126 @@ const CardView = ({ projects, isReadOnly, onDetailClick, onEditClick, onDeleteCl
   );
 };
 
-// Sub-component: Table View
-const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick, onSort, sortConfig }: any) => {
-  const getSortIcon = (key: string) => {
-    if (sortConfig.key !== key) return <div className="w-4" />; // placeholder
-    return <span className="text-xs text-stone-800 font-bold ml-1">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>;
-  };
+// Sub-component: Ag-Grid Table View (Replaced)
+const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any) => {
+  const columnDefs: ColDef<ProjectWithFinancials>[] = [
+    {
+      headerName: "專案名稱 / 編號",
+      field: "name",
+      minWidth: 300,
+      flex: 2,
+      cellRenderer: (params: any) => (
+        <div className="flex flex-col justify-center h-full leading-tight">
+          <span className="font-bold text-stone-900 text-sm mb-0.5">{params.data.name}</span>
+          <span className="text-[10px] font-mono text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded w-fit">{params.data.id}</span>
+        </div>
+      )
+    },
+    {
+      headerName: "會勘負責人",
+      field: "quotationManager",
+      minWidth: 150,
+      flex: 1,
+      cellRenderer: (params: any) => (
+        <div className="flex items-center gap-2 h-full">
+          <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-black text-stone-600 border border-stone-200">
+            {(params.value || 'U')[0]}
+          </div>
+          <span className="text-xs font-bold text-stone-600">{params.value || '未指定'}</span>
+        </div>
+      )
+    },
+    {
+      headerName: "狀態",
+      field: "status",
+      width: 120,
+      cellRenderer: (params: any) => {
+        const val = params.value;
+        const colorClass = val === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+          val === 'Planning' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+            val === 'Completed' ? 'bg-stone-100 text-stone-500 border-stone-200' :
+              'bg-slate-50 text-slate-500 border-slate-200';
+        return (
+          <div className="h-full flex items-center">
+            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${colorClass}`}>{val}</span>
+          </div>
+        );
+      }
+    },
+    {
+      headerName: "預算",
+      field: "budget",
+      width: 120,
+      type: "numericColumn",
+      valueFormatter: (params: any) => params.value ? `$${params.value.toLocaleString()}` : '-',
+      cellClass: "font-mono font-bold text-stone-600 text-xs"
+    },
+    {
+      headerName: "已支出",
+      field: "computedFinancials.totalCost",
+      width: 120,
+      type: "numericColumn",
+      valueFormatter: (params: any) => `$${params.value?.toLocaleString()}`,
+      cellClass: "font-mono font-bold text-rose-600 text-xs"
+    },
+    {
+      headerName: "預估毛利",
+      field: "computedFinancials.profit",
+      width: 120,
+      type: "numericColumn",
+      valueFormatter: (params: any) => `$${params.value?.toLocaleString()}`,
+      cellClass: "font-mono font-bold text-emerald-600 text-xs"
+    },
+    {
+      headerName: "操作",
+      sortable: false,
+      filter: false,
+      width: 120,
+      cellRenderer: (params: any) => (
+        <div className="flex items-center justify-center gap-1 h-full">
+          <button onClick={(e) => { e.stopPropagation(); onEditClick(params.data); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDeleteClick(params.data.id); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-rose-600 transition-colors"><Trash2 size={14} /></button>
+          <button className="p-2 hover:bg-stone-100 rounded-lg text-stone-300 hover:text-stone-900 transition-colors"><ArrowUpRight size={14} /></button>
+        </div>
+      )
+    }
+  ];
+
+  const defaultColDef = useMemo(() => ({
+    sortable: true,
+    filter: true,
+    resizable: true,
+    headerClass: "text-[10px] font-black text-stone-400 uppercase tracking-widest bg-stone-50 border-b border-stone-200",
+  }), []);
 
   return (
-    <div className="h-full overflow-auto bg-white rounded-2xl border border-stone-200 shadow-sm">
-      <table className="w-full text-left min-w-[1200px]">
-        <thead className="bg-stone-50 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm bg-stone-50/90">
-          <tr>
-            <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors select-none group" onClick={() => onSort('id')}>
-              <div className="flex items-center gap-1">專案名稱 / 編號 {getSortIcon('id')}</div>
-            </th>
-            <th className="px-4 py-4">會勘負責人</th>
-            <th className="px-6 py-4">狀態</th>
-            <th className="px-6 py-4 text-right cursor-pointer hover:bg-stone-100 transition-colors select-none group" onClick={() => onSort('budget')}>
-              <div className="flex items-center justify-end gap-1">預算 {getSortIcon('budget')}</div>
-            </th>
-            <th className="px-6 py-4 text-right">已支出</th>
-            <th className="px-6 py-4 text-right">預估毛利</th>
-            <th className="px-6 py-4 text-center">操作</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-stone-100">
-          {projects.map((p: ProjectWithFinancials) => (
-            <tr key={p.id} onClick={() => onDetailClick(p)} className="hover:bg-orange-50/20 cursor-pointer">
-              <td className="px-6 py-4">
-                <span className="block font-bold text-stone-900 text-sm mb-0.5">{p.name}</span>
-                <span className="text-[10px] font-mono text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">{p.id}</span>
-              </td>
-              <td className="px-4 py-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-black text-stone-600 border border-stone-200">
-                    {(p.quotationManager || 'U')[0]}
-                  </div>
-                  <span className="text-xs font-bold text-stone-600">{p.quotationManager || '未指定'}</span>
-                </div>
-              </td>
-              <td className="px-6 py-4">
-                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : p.status === 'Planning' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-stone-100 text-stone-500 border-stone-200'}`}>{p.status}</span>
-              </td>
-              <td className="px-6 py-4 text-right font-mono text-xs font-bold text-stone-600">${p.budget?.toLocaleString() || '-'}</td>
-              <td className="px-6 py-4 text-right font-mono text-xs font-bold text-rose-600">${p.computedFinancials.totalCost.toLocaleString()}</td>
-              <td className="px-6 py-4 text-right font-mono text-xs font-bold text-emerald-600">${p.computedFinancials.profit.toLocaleString()}</td>
-              <td className="px-6 py-4 text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); onEditClick(p); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); onDeleteClick(p.id); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-rose-600 transition-colors"><Trash2 size={14} /></button>
-                  <button className="p-2 hover:bg-stone-100 rounded-lg text-stone-300 hover:text-stone-900 transition-colors"><ArrowUpRight size={14} /></button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="h-full bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden ag-theme-quartz">
+      <style>{`
+        .ag-theme-quartz {
+            --ag-header-height: 48px;
+            --ag-row-height: 60px;
+            --ag-header-background-color: #fafaf9;
+            --ag-header-foreground-color: #a8a29e;
+            --ag-border-color: #e7e5e4;
+            --ag-font-family: inherit;
+            --ag-font-size: 13px;
+        }
+        .ag-header-cell-text {
+            font-weight: 900 !important;
+            letter-spacing: 0.05em;
+        }
+      `}</style>
+      <AgGridReact
+        rowData={projects}
+        columnDefs={columnDefs}
+        defaultColDef={defaultColDef}
+        onRowClicked={(e) => onDetailClick(e.data)}
+        rowClass="cursor-pointer hover:bg-orange-50/20 transition-colors"
+        animateRows={true}
+        pagination={true}
+        paginationPageSize={10}
+        suppressCellFocus={true}
+      />
     </div>
   );
 };
@@ -224,17 +293,10 @@ const ProjectList: React.FC<ProjectListProps> = ({
   teamMembers = [],
   attendanceRecords = []
 }) => {
-  const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>('kanban');
+  const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>('table'); // Default Set to Table to show off AgGrid
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'desc' });
-
-  const handleSort = (key: string) => {
-    setSortConfig(current => ({
-      key,
-      direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
-    }));
-  };
+  // Removed custom sortConfig as Ag-Grid handles it internally
 
   const projectsWithFinancials = useMemo<ProjectWithFinancials[]>(() => {
     let filtered = projects.filter(p => {
@@ -245,8 +307,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
     });
 
     const mapped = filtered.map(project => {
-      let calculatedLaborCost = 0;
-      let totalManDays = 0;
       // ... Attendance Logic ...
       // 1. Calculate Real-time Labor Cost from Attendance
       let attLaborCost = 0;
@@ -299,21 +359,10 @@ const ProjectList: React.FC<ProjectListProps> = ({
       };
     });
 
-    return mapped.sort((a, b) => {
-      let valA: any = a[sortConfig.key as keyof ProjectWithFinancials];
-      let valB: any = b[sortConfig.key as keyof ProjectWithFinancials];
+    // Sort logic removed, let Ag-Grid handle it
+    return mapped;
 
-      if (sortConfig.key === 'budget') { // example number sort
-        valA = a.budget || 0;
-        valB = b.budget || 0;
-      }
-
-      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted, sortConfig]);
+  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted]);
 
   const projectsByStatus = useMemo(() => {
     const groups: Record<string, ProjectWithFinancials[]> = {};
@@ -343,7 +392,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
             {!isReadOnly && (<button onClick={onAddClick} className="bg-stone-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all shadow-xl shadow-stone-200 text-sm"><Plus size={18} /> 建立新專案</button>)}
             <div className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1 shadow-sm">
               <button onClick={() => setViewMode('card')} className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'card' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}><LayoutGrid size={16} /> 卡片</button>
-              <button onClick={() => setViewMode('table')} className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'table' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}><List size={16} /> 列表</button>
+              <button onClick={() => setViewMode('table')} className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'table' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}><List size={16} /> AgGrid (Beta)</button>
               <button onClick={() => setViewMode('kanban')} className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'kanban' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}><Briefcase size={16} /> 看板</button>
             </div>
           </div>
@@ -362,15 +411,24 @@ const ProjectList: React.FC<ProjectListProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 shrink-0 mb-6">
-          <div className="flex items-center bg-white rounded-xl border border-stone-200 px-4 py-2.5 shadow-sm flex-1 min-w-[200px]"><Search size={14} className="text-stone-400 mr-2" /><input className="bg-transparent text-xs font-bold outline-none w-full text-stone-900" placeholder="搜尋專案名稱..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
-          <select className="bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none shadow-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">所有狀態</option>{Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}</select>
-          <button onClick={() => onToggleDeleted(!showDeleted)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border flex items-center gap-2 ${showDeleted ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-stone-200 text-stone-400 hover:text-stone-600'}`}><Trash2 size={14} /> {showDeleted ? '隱藏垃圾桶' : '檢視垃圾桶'}</button>
-        </div>
+        {/* Only show filters if NOT in Ag-Grid mode, as Ag-Grid has its own filters */}
+        {viewMode !== 'table' && (
+          <div className="flex flex-wrap gap-2 shrink-0 mb-6">
+            <div className="flex items-center bg-white rounded-xl border border-stone-200 px-4 py-2.5 shadow-sm flex-1 min-w-[200px]"><Search size={14} className="text-stone-400 mr-2" /><input className="bg-transparent text-xs font-bold outline-none w-full text-stone-900" placeholder="搜尋專案名稱..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+            <select className="bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none shadow-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">所有狀態</option>{Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}</select>
+            <button onClick={() => onToggleDeleted(!showDeleted)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border flex items-center gap-2 ${showDeleted ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-stone-200 text-stone-400 hover:text-stone-600'}`}><Trash2 size={14} /> {showDeleted ? '隱藏垃圾桶' : '檢視垃圾桶'}</button>
+          </div>
+        )}
+        {viewMode === 'table' && (
+          <div className="mb-4 flex justify-between items-center">
+            <div className="text-xs font-bold text-stone-500">Ag-Grid 模式：點擊表頭排序，或使用表頭過濾器進行篩選</div>
+            <button onClick={() => onToggleDeleted(!showDeleted)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border flex items-center gap-2 ${showDeleted ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-stone-200 text-stone-400 hover:text-stone-600'}`}><Trash2 size={14} /> {showDeleted ? '隱藏垃圾桶' : '檢視垃圾桶'}</button>
+          </div>
+        )}
 
         <div className="flex-1 min-h-0 overflow-hidden relative">
           {viewMode === 'card' && <CardView projects={projectsWithFinancials} isReadOnly={isReadOnly} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} onRestoreClick={onRestoreClick} onHardDeleteClick={onHardDeleteClick} setSearchTerm={setSearchTerm} setStatusFilter={setStatusFilter} />}
-          {viewMode === 'table' && <TableView projects={projectsWithFinancials} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} onSort={handleSort} sortConfig={sortConfig} />}
+          {viewMode === 'table' && <TableView projects={projectsWithFinancials} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} />}
           {viewMode === 'kanban' && <KanbanView projectsByStatus={projectsByStatus} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} getStatusColor={getStatusColor} />}
         </div>
       </div>

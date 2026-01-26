@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
+    "ag-grid-community": "^35.0.1",
+    "ag-grid-react": "^35.0.1",
     "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.0.0",
