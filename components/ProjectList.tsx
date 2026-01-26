@@ -199,9 +199,8 @@ const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any)
   }), []);
 
   return (
-    <div className="ag-theme-quartz" style={{ height: '100%', width: '100%' }}>
-      <div className="h-full w-full bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-        <style>{`
+    <div className="h-full w-full bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col">
+      <style>{`
             .ag-theme-quartz {
                 --ag-header-height: 48px;
                 --ag-row-height: 60px;
@@ -210,14 +209,15 @@ const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any)
                 --ag-border-color: #e7e5e4;
                 --ag-font-family: inherit;
                 --ag-font-size: 13px;
-                height: 100%;
                 width: 100%;
+                height: 100%;
             }
             .ag-header-cell-text {
                 font-weight: 900 !important;
                 letter-spacing: 0.05em;
             }
         `}</style>
+      <div className="ag-theme-quartz flex-1 w-full relative">
         <AgGridReact
           rowData={projects}
           columnDefs={columnDefs}
@@ -228,7 +228,6 @@ const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any)
           pagination={true}
           paginationPageSize={15}
           suppressCellFocus={true}
-          domLayout='normal' // Ensure it scrolls within the container
         />
       </div>
     </div>
