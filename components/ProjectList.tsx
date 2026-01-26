@@ -347,6 +347,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>('table'); // Default Set to Table to show off AgGrid
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
   // Removed custom sortConfig as Ag-Grid handles it internally
 
   const projectsWithFinancials = useMemo<ProjectWithFinancials[]>(() => {
@@ -354,7 +355,21 @@ const ProjectList: React.FC<ProjectListProps> = ({
       const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchStatus = statusFilter === 'all' || p.status === statusFilter;
       const matchDeleted = showDeleted ? p.deletedAt : !p.deletedAt;
-      return matchSearch && matchStatus && matchDeleted;
+
+      let pYear = 'others';
+      // Priority 1: Extract from ID (e.g. BNI26... -> 2026)
+      const idMatch = p.id.match(/[A-Za-z]+(\d{2})/);
+      if (idMatch && idMatch[1]) {
+        pYear = `20${idMatch[1]}`;
+      } else if (p.startDate) {
+        pYear = p.startDate.split('-')[0];
+      } else if (p.createdAt) {
+        pYear = new Date(p.createdAt).getFullYear().toString();
+      }
+
+      const matchYear = yearFilter === 'all' || pYear === yearFilter;
+
+      return matchSearch && matchStatus && matchDeleted && matchYear;
     });
 
     const mapped = filtered.map(project => {
@@ -462,6 +477,29 @@ const ProjectList: React.FC<ProjectListProps> = ({
           </div>
         </div>
 
+
+        {/* Year Filter Tabs */}
+        <div className="flex items-center gap-4 mb-6 overflow-x-auto pb-2">
+          <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
+            {['all', '2026', '2025', '2024'].map(y => (
+              <button
+                key={y}
+                onClick={() => setYearFilter(y)}
+                className={`px-6 py-2 rounded-lg text-xs font-black transition-all ${yearFilter === y ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
+              >
+                {y === 'all' ? '全部年份' : `${y}年`}
+              </button>
+            ))}
+          </div>
+          {viewMode === 'table' && (
+            <div className="flex-1 flex justify-end">
+              <div className="flex gap-2">
+                <select className="bg-white border border-stone-200 rounded-xl px-4 py-2 text-xs font-bold outline-none shadow-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">所有狀態</option>{Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}</select>
+                <button onClick={() => onToggleDeleted(!showDeleted)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border flex items-center gap-2 ${showDeleted ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-stone-200 text-stone-400 hover:text-stone-600'}`}><Trash2 size={14} /> {showDeleted ? '顯示垃圾桶' : '垃圾桶'}</button>
+              </div>
+            </div>
+          )}
+        </div>
         {/* Only show filters if NOT in Ag-Grid mode, as Ag-Grid has its own filters */}
         {viewMode !== 'table' && (
           <div className="flex flex-wrap gap-2 shrink-0 mb-6">
@@ -483,6 +521,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           {viewMode === 'kanban' && <KanbanView projectsByStatus={projectsByStatus} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} getStatusColor={getStatusColor} />}
         </div>
       </div>
+
     </div>
   );
 };
