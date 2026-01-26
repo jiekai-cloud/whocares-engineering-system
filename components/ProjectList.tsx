@@ -98,21 +98,51 @@ const CardView = ({ projects, isReadOnly, onDetailClick, onEditClick, onDeleteCl
 };
 
 // Sub-component: Table View
-const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any) => {
+const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick, onSort, sortConfig }: any) => {
+  const getSortIcon = (key: string) => {
+    if (sortConfig.key !== key) return <div className="w-4" />; // placeholder
+    return <span className="text-xs text-stone-800 font-bold ml-1">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>;
+  };
+
   return (
     <div className="h-full overflow-auto bg-white rounded-2xl border border-stone-200 shadow-sm">
-      <table className="w-full text-left min-w-[1000px]">
+      <table className="w-full text-left min-w-[1200px]">
         <thead className="bg-stone-50 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm bg-stone-50/90">
-          <tr><th className="px-6 py-4">專案名稱</th><th className="px-6 py-4">狀態</th><th className="px-6 py-4 text-right">預算</th><th className="px-6 py-4 text-right">已支出</th><th className="px-6 py-4 text-right">預估毛利</th><th className="px-6 py-4 text-center">操作</th></tr>
+          <tr>
+            <th className="px-6 py-4 cursor-pointer hover:bg-stone-100 transition-colors select-none group" onClick={() => onSort('id')}>
+              <div className="flex items-center gap-1">專案名稱 / 編號 {getSortIcon('id')}</div>
+            </th>
+            <th className="px-4 py-4">會勘負責人</th>
+            <th className="px-6 py-4">狀態</th>
+            <th className="px-6 py-4 text-right cursor-pointer hover:bg-stone-100 transition-colors select-none group" onClick={() => onSort('budget')}>
+              <div className="flex items-center justify-end gap-1">預算 {getSortIcon('budget')}</div>
+            </th>
+            <th className="px-6 py-4 text-right">已支出</th>
+            <th className="px-6 py-4 text-right">預估毛利</th>
+            <th className="px-6 py-4 text-center">操作</th>
+          </tr>
         </thead>
         <tbody className="divide-y divide-stone-100">
           {projects.map((p: ProjectWithFinancials) => (
             <tr key={p.id} onClick={() => onDetailClick(p)} className="hover:bg-orange-50/20 cursor-pointer">
-              <td className="px-6 py-4"><span className="block font-bold text-stone-900">{p.name}</span><span className="text-[10px] text-stone-500">{p.id}</span></td>
-              <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-500'}`}>{p.status}</span></td>
-              <td className="px-6 py-4 text-right font-mono text-sm font-bold text-stone-600">${p.budget?.toLocaleString() || '-'}</td>
-              <td className="px-6 py-4 text-right font-mono text-sm font-bold text-rose-600">${p.computedFinancials.totalCost.toLocaleString()}</td>
-              <td className="px-6 py-4 text-right font-mono text-sm font-bold text-emerald-600">${p.computedFinancials.profit.toLocaleString()}</td>
+              <td className="px-6 py-4">
+                <span className="block font-bold text-stone-900 text-sm mb-0.5">{p.name}</span>
+                <span className="text-[10px] font-mono text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">{p.id}</span>
+              </td>
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-black text-stone-600 border border-stone-200">
+                    {(p.quotationManager || 'U')[0]}
+                  </div>
+                  <span className="text-xs font-bold text-stone-600">{p.quotationManager || '未指定'}</span>
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : p.status === 'Planning' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-stone-100 text-stone-500 border-stone-200'}`}>{p.status}</span>
+              </td>
+              <td className="px-6 py-4 text-right font-mono text-xs font-bold text-stone-600">${p.budget?.toLocaleString() || '-'}</td>
+              <td className="px-6 py-4 text-right font-mono text-xs font-bold text-rose-600">${p.computedFinancials.totalCost.toLocaleString()}</td>
+              <td className="px-6 py-4 text-right font-mono text-xs font-bold text-emerald-600">${p.computedFinancials.profit.toLocaleString()}</td>
               <td className="px-6 py-4 text-center">
                 <div className="flex items-center justify-center gap-1">
                   <button onClick={(e) => { e.stopPropagation(); onEditClick(p); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
@@ -197,6 +227,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'desc' });
+
+  const handleSort = (key: string) => {
+    setSortConfig(current => ({
+      key,
+      direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
 
   const projectsWithFinancials = useMemo<ProjectWithFinancials[]>(() => {
     let filtered = projects.filter(p => {
@@ -206,19 +244,10 @@ const ProjectList: React.FC<ProjectListProps> = ({
       return matchSearch && matchStatus && matchDeleted;
     });
 
-    return filtered.map(project => {
+    const mapped = filtered.map(project => {
       let calculatedLaborCost = 0;
       let totalManDays = 0;
-
-      if (project.location?.lat && project.location?.lng) {
-        // Mock calculation logic for brevity in this rewrite
-        const pLat = project.location.lat;
-        const pLng = project.location.lng;
-        // ... (Geo logic same as before)
-      }
-
-      // Financial calc logic same as before...
-      // Simplified for cleaner file writing, trusting React will optimize
+      // ... Attendance Logic ...
       // 1. Calculate Real-time Labor Cost from Attendance
       let attLaborCost = 0;
       let attManDay = 0;
@@ -269,7 +298,22 @@ const ProjectList: React.FC<ProjectListProps> = ({
         }
       };
     });
-  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted]);
+
+    return mapped.sort((a, b) => {
+      let valA: any = a[sortConfig.key as keyof ProjectWithFinancials];
+      let valB: any = b[sortConfig.key as keyof ProjectWithFinancials];
+
+      if (sortConfig.key === 'budget') { // example number sort
+        valA = a.budget || 0;
+        valB = b.budget || 0;
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted, sortConfig]);
 
   const projectsByStatus = useMemo(() => {
     const groups: Record<string, ProjectWithFinancials[]> = {};
@@ -307,9 +351,15 @@ const ProjectList: React.FC<ProjectListProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0 mb-8">
           <div className="bg-stone-900 text-white p-6 rounded-[2rem] shadow-xl"><div className="flex items-center gap-3 mb-2 opacity-80"><Briefcase size={18} /><span className="text-[10px] font-black uppercase tracking-widest">總進行中專案</span></div><div className="text-4xl font-black">{projects.filter(p => !p.deletedAt && p.status === 'Active').length}</div></div>
-          <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm"><div className="flex items-center gap-3 mb-2 text-stone-400"><Wallet size={18} /><span className="text-[10px] font-black uppercase tracking-widest">總預期營收 Revenue</span></div><div className="text-3xl font-black text-stone-800 tabular-nums">${projectsWithFinancials.reduce((acc, p) => acc + (p.computedFinancials.revenue || 0), 0).toLocaleString()}</div></div>
-          <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm"><div className="flex items-center gap-3 mb-2 text-stone-400"><DollarSign size={18} /><span className="text-[10px] font-black uppercase tracking-widest">實際總支出 Cost</span></div><div className="text-3xl font-black text-rose-600 tabular-nums">${projectsWithFinancials.reduce((acc, p) => acc + p.computedFinancials.totalCost, 0).toLocaleString()}</div></div>
-          <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm"><div className="flex items-center gap-3 mb-2 text-stone-400"><TrendingUp size={18} /><span className="text-[10px] font-black uppercase tracking-widest">預估總毛利 Profit</span></div><div className="text-3xl font-black text-emerald-600 tabular-nums">${projectsWithFinancials.reduce((acc, p) => acc + p.computedFinancials.profit, 0).toLocaleString()}</div></div>
+          <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm"><div className="flex items-center gap-3 mb-2 text-stone-400"><Wallet size={18} /><span className="text-[10px] font-black uppercase tracking-widest">總預期營收 Revenue</span></div>
+            <div className="text-2xl xl:text-3xl font-black text-stone-800 tabular-nums tracking-tight truncate" title={projectsWithFinancials.reduce((acc, p) => acc + (p.computedFinancials.revenue || 0), 0).toLocaleString()}>${projectsWithFinancials.reduce((acc, p) => acc + (p.computedFinancials.revenue || 0), 0).toLocaleString()}</div>
+          </div>
+          <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm"><div className="flex items-center gap-3 mb-2 text-stone-400"><DollarSign size={18} /><span className="text-[10px] font-black uppercase tracking-widest">實際總支出 Cost</span></div>
+            <div className="text-2xl xl:text-3xl font-black text-rose-600 tabular-nums tracking-tight truncate">${projectsWithFinancials.reduce((acc, p) => acc + p.computedFinancials.totalCost, 0).toLocaleString()}</div>
+          </div>
+          <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm"><div className="flex items-center gap-3 mb-2 text-stone-400"><TrendingUp size={18} /><span className="text-[10px] font-black uppercase tracking-widest">預估總毛利 Profit</span></div>
+            <div className="text-2xl xl:text-3xl font-black text-emerald-600 tabular-nums tracking-tight truncate">${projectsWithFinancials.reduce((acc, p) => acc + p.computedFinancials.profit, 0).toLocaleString()}</div>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 shrink-0 mb-6">
@@ -320,7 +370,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
 
         <div className="flex-1 min-h-0 overflow-hidden relative">
           {viewMode === 'card' && <CardView projects={projectsWithFinancials} isReadOnly={isReadOnly} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} onRestoreClick={onRestoreClick} onHardDeleteClick={onHardDeleteClick} setSearchTerm={setSearchTerm} setStatusFilter={setStatusFilter} />}
-          {viewMode === 'table' && <TableView projects={projectsWithFinancials} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} />}
+          {viewMode === 'table' && <TableView projects={projectsWithFinancials} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} onSort={handleSort} sortConfig={sortConfig} />}
           {viewMode === 'kanban' && <KanbanView projectsByStatus={projectsByStatus} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} getStatusColor={getStatusColor} />}
         </div>
       </div>
