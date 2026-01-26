@@ -492,7 +492,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
     // Apply year filter after mapping
     const yearFiltered = yearFilter === 'all'
       ? mapped
-      : mapped.filter(p =\u003e p.calculatedYear === yearFilter);
+      : mapped.filter(p => p.calculatedYear === yearFilter);
 
     // Sort logic removed, let Ag-Grid handle it
     return yearFiltered;
