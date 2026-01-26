@@ -494,6 +494,21 @@ const ProjectList: React.FC<ProjectListProps> = ({
       ? mapped
       : mapped.filter(p => p.calculatedYear === yearFilter);
 
+    // Debug logging
+    if (typeof window !== 'undefined') {
+      console.log('[ProjectList Debug]', {
+        totalProjects: projects.length,
+        afterMapping: mapped.length,
+        afterYearFilter: yearFiltered.length,
+        currentYearFilter: yearFilter,
+        yearDistribution: mapped.reduce((acc, p) => {
+          const year = p.calculatedYear || 'unknown';
+          acc[year] = (acc[year] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      });
+    }
+
     // Sort logic removed, let Ag-Grid handle it
     return yearFiltered;
 
@@ -556,8 +571,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
             <button
               onClick={() => setYearFilter('all')}
               className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === 'all'
-                  ? 'bg-stone-900 text-white border-stone-900 shadow-lg scale-105'
-                  : 'bg-white text-stone-400 border-stone-200 hover:border-stone-400 hover:text-stone-600'
+                ? 'bg-stone-900 text-white border-stone-900 shadow-lg scale-105'
+                : 'bg-white text-stone-400 border-stone-200 hover:border-stone-400 hover:text-stone-600'
                 }`}
             >
               📊 全部年份
@@ -565,8 +580,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
             <button
               onClick={() => setYearFilter('2026')}
               className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === '2026'
-                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg scale-105'
-                  : 'bg-white text-stone-400 border-stone-200 hover:border-emerald-300 hover:text-emerald-600'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg scale-105'
+                : 'bg-white text-stone-400 border-stone-200 hover:border-emerald-300 hover:text-emerald-600'
                 }`}
             >
               🎯 2026 年度
@@ -574,8 +589,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
             <button
               onClick={() => setYearFilter('2025')}
               className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === '2025'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105'
-                  : 'bg-white text-stone-400 border-stone-200 hover:border-blue-300 hover:text-blue-600'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105'
+                : 'bg-white text-stone-400 border-stone-200 hover:border-blue-300 hover:text-blue-600'
                 }`}
             >
               📅 2025 年度
@@ -583,8 +598,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
             <button
               onClick={() => setYearFilter('2024')}
               className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === '2024'
-                  ? 'bg-amber-600 text-white border-amber-600 shadow-lg scale-105'
-                  : 'bg-white text-stone-400 border-stone-200 hover:border-amber-300 hover:text-amber-600'
+                ? 'bg-amber-600 text-white border-amber-600 shadow-lg scale-105'
+                : 'bg-white text-stone-400 border-stone-200 hover:border-amber-300 hover:text-amber-600'
                 }`}
             >
               📆 2024 年度
