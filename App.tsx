@@ -1767,7 +1767,7 @@ const App: React.FC = () => {
         </div>
 
         {
-          !selectedProjectId && (
+          !selectedProjectId && activeTab === 'dashboard' && (
             <div className="fixed bottom-8 right-8 z-[45] flex flex-col items-end gap-3 no-print">
               <div className="bg-white/90 backdrop-blur-2xl border border-stone-200 p-4 rounded-[2rem] shadow-2xl flex items-center gap-6 animate-in slide-in-from-right-12">
                 <div className="flex items-center gap-3 border-r border-stone-100 pr-6">

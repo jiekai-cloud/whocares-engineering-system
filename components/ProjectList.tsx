@@ -398,7 +398,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>('table'); // Default Set to Table to show off AgGrid
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  /* Year Filter Removed to restore stability */
+  const [yearFilter, setYearFilter] = useState<string>('all'); // New Year Filter State
   // Removed custom sortConfig as Ag-Grid handles it internally
 
   const projectsWithFinancials = useMemo<ProjectWithFinancials[]>(() => {
@@ -489,10 +489,15 @@ const ProjectList: React.FC<ProjectListProps> = ({
       };
     });
 
-    // Sort logic removed, let Ag-Grid handle it
-    return mapped;
+    // Apply year filter after mapping
+    const yearFiltered = yearFilter === 'all'
+      ? mapped
+      : mapped.filter(p =\u003e p.calculatedYear === yearFilter);
 
-  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted]);
+    // Sort logic removed, let Ag-Grid handle it
+    return yearFiltered;
+
+  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted, yearFilter]);
 
   const projectsByStatus = useMemo(() => {
     const groups: Record<string, ProjectWithFinancials[]> = {};
@@ -538,6 +543,55 @@ const ProjectList: React.FC<ProjectListProps> = ({
           </div>
           <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm"><div className="flex items-center gap-3 mb-2 text-stone-400"><TrendingUp size={18} /><span className="text-[10px] font-black uppercase tracking-widest">預估總毛利 Profit</span></div>
             <div className="text-2xl xl:text-3xl font-black text-emerald-600 tabular-nums tracking-tight truncate">${projectsWithFinancials.reduce((acc, p) => acc + p.computedFinancials.profit, 0).toLocaleString()}</div>
+          </div>
+        </div>
+
+        {/* Year Filter - Prominent and Easy to Use */}
+        <div className="shrink-0 mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Calendar size={20} className="text-orange-600" />
+            <h3 className="text-sm font-black text-stone-900 uppercase tracking-widest">篩選年度 YEAR FILTER</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setYearFilter('all')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === 'all'
+                  ? 'bg-stone-900 text-white border-stone-900 shadow-lg scale-105'
+                  : 'bg-white text-stone-400 border-stone-200 hover:border-stone-400 hover:text-stone-600'
+                }`}
+            >
+              📊 全部年份
+            </button>
+            <button
+              onClick={() => setYearFilter('2026')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === '2026'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg scale-105'
+                  : 'bg-white text-stone-400 border-stone-200 hover:border-emerald-300 hover:text-emerald-600'
+                }`}
+            >
+              🎯 2026 年度
+            </button>
+            <button
+              onClick={() => setYearFilter('2025')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === '2025'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105'
+                  : 'bg-white text-stone-400 border-stone-200 hover:border-blue-300 hover:text-blue-600'
+                }`}
+            >
+              📅 2025 年度
+            </button>
+            <button
+              onClick={() => setYearFilter('2024')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-sm border-2 ${yearFilter === '2024'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-lg scale-105'
+                  : 'bg-white text-stone-400 border-stone-200 hover:border-amber-300 hover:text-amber-600'
+                }`}
+            >
+              📆 2024 年度
+            </button>
+          </div>
+          <div className="mt-2 text-xs font-bold text-stone-400">
+            目前顯示: {yearFilter === 'all' ? '全部年份' : `${yearFilter} 年度`} | 共 {projectsWithFinancials.length} 個專案
           </div>
         </div>
 

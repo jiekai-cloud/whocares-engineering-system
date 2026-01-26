@@ -201,7 +201,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ projects, onAddProject, onPro
 
   return (
     <div
-      className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 z-[150] transition-transform duration-75 ease-out will-change-transform"
+      className="fixed bottom-20 left-4 lg:bottom-24 lg:left-6 z-[150] transition-transform duration-75 ease-out will-change-transform"
       style={{
         transform: isOpen ? 'none' : `translate(${position.x}px, ${position.y}px)`
       }}
@@ -221,7 +221,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ projects, onAddProject, onPro
       )}
 
       {isOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:right-6 sm:bottom-6 bg-white sm:w-[450px] sm:h-[650px] sm:rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-stone-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
+        <div className="fixed inset-0 sm:inset-auto sm:left-6 sm:bottom-6 bg-white sm:w-[450px] sm:h-[650px] sm:rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-stone-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
           {/* Header */}
           <div
             className="bg-stone-900 text-white p-5 flex items-center justify-between shrink-0 cursor-move"
