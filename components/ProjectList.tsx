@@ -347,7 +347,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [viewMode, setViewMode] = useState<'card' | 'table' | 'kanban'>('table'); // Default Set to Table to show off AgGrid
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
+  /* Year Filter Removed to restore stability */
   // Removed custom sortConfig as Ag-Grid handles it internally
 
   const projectsWithFinancials = useMemo<ProjectWithFinancials[]>(() => {
@@ -355,43 +355,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchStatus = statusFilter === 'all' || p.status === statusFilter;
       const matchDeleted = showDeleted ? p.deletedAt : !p.deletedAt;
-
-      let pYear = 'others';
-
-      // 0. Priority: Manual "Attributed Year" field
-      if (p.year && p.year.trim() !== '') {
-        pYear = p.year;
-      } else {
-        // 1. Try to match full 4-digit year in ID (e.g. BNI2024001 -> 2024)
-        const yearFullMatch = p.id.match(/(20\d{2})/);
-
-        if (yearFullMatch) {
-          pYear = yearFullMatch[1];
-        } else {
-          // 2. Try to match 2-digit year after letters (e.g. JW2601003 -> 26 -> 2026)
-          const yearShortMatch = p.id.match(/^[A-Za-z]+(\d{2})/);
-          if (yearShortMatch) {
-            pYear = `20${yearShortMatch[1]}`;
-          } else if (p.startDate) {
-            pYear = p.startDate.split('-')[0];
-          } else {
-            // Handle both createdAt and createdDate (legacy data)
-            const d = p.createdAt || (p as any).createdDate;
-            if (d) {
-              pYear = new Date(d).getFullYear().toString();
-            }
-          }
-        }
-      }
-
-      const matchYear = yearFilter === 'all' || pYear === yearFilter;
-
-      // DEBUG: Print parsing result for first few items or if filter is active
-      if (yearFilter !== 'all') {
-        console.log(`Debug Year Parse: ID=${p.id}, ManualYear=${p.year}, FinalYear=${pYear}, Match=${matchYear}`);
-      }
-
-      return matchSearch && matchStatus && matchDeleted && matchYear;
+      return matchSearch && matchStatus && matchDeleted;
     });
 
     const mapped = filtered.map(project => {
@@ -500,28 +464,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         </div>
 
 
-        {/* Year Filter Tabs */}
-        <div className="flex items-center gap-4 mb-6 overflow-x-auto pb-2">
-          <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
-            {['all', '2026', '2025', '2024'].map(y => (
-              <button
-                key={y}
-                onClick={() => setYearFilter(y)}
-                className={`px-6 py-2 rounded-lg text-xs font-black transition-all ${yearFilter === y ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
-              >
-                {y === 'all' ? '全部年份' : `${y}年`}
-              </button>
-            ))}
-          </div>
-          {viewMode === 'table' && (
-            <div className="flex-1 flex justify-end">
-              <div className="flex gap-2">
-                <select className="bg-white border border-stone-200 rounded-xl px-4 py-2 text-xs font-bold outline-none shadow-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">所有狀態</option>{Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}</select>
-                <button onClick={() => onToggleDeleted(!showDeleted)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border flex items-center gap-2 ${showDeleted ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-stone-200 text-stone-400 hover:text-stone-600'}`}><Trash2 size={14} /> {showDeleted ? '顯示垃圾桶' : '垃圾桶'}</button>
-              </div>
-            </div>
-          )}
-        </div>
+
         {/* Only show filters if NOT in Ag-Grid mode, as Ag-Grid has its own filters */}
         {viewMode !== 'table' && (
           <div className="flex flex-wrap gap-2 shrink-0 mb-6">
