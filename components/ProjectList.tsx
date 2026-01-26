@@ -228,6 +228,8 @@ const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any)
           paginationPageSize={15}
           suppressCellFocus={true}
           domLayout='autoHeight'
+          rowHeight={68}
+          headerHeight={50}
         />
       </div>
     </div>
