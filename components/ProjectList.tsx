@@ -4,9 +4,12 @@ import { Briefcase, Calendar, Plus, Search, Filter, ArrowUpRight, TrendingUp, Do
 
 // Ag-Grid Imports
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridReadyEvent } from 'ag-grid-community';
+import { ColDef, ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-quartz.css'; // Using the modern Quartz theme
+import 'ag-grid-community/styles/ag-theme-quartz.css';
+
+// Register Ag-Grid Modules
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 interface ProjectListProps {
   projects: Project[];
