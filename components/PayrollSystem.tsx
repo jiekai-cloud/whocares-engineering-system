@@ -21,10 +21,15 @@ interface DailyStatus {
     date: string;
     status: 'work' | 'leave' | 'absent' | 'rest';
     hours: number;
-    overtimeHours: number; // 新增：加班時數
+    overtimeHours: number; // 總加班時數（僅用於顯示）
+    approvedOvertimeHours: number; // 新增：核准的加班時數（用於計算加班費）
+    isLate: boolean; // 新增：是否遲到
+    lateMinutes: number; // 新增：遲到分鐘數
+    actualStartTime?: string; // 新增：實際打卡上班時間
+    actualEndTime?: string; // 新增：實際打卡下班時間
     note?: string;
     salary: number; // 本薪
-    overtimePay: number; // 新增：加班費
+    overtimePay: number; // 新增：加班費（僅計算已核准的加班）
     allowance: number; // 新增：當日津貼
 }
 
@@ -422,17 +427,57 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                     return reqRequester && reqDate;
                 });
 
-                // Calculate Hours
+                // Check Approved Overtime Request for this date
+                const overtimeRequest = approvalRequests.find(req => {
+                    const isOvertime = req.templateName.includes('加班') || req.title.includes('加班');
+                    const isApproved = req.status === 'approved';
+                    const reqRequester = req.requesterId === m.id;
+                    const reqDate = req.formData?.date === dateStr || req.formData?.startDate === dateStr;
+                    return isOvertime && isApproved && reqRequester && reqDate;
+                });
+
+                const approvedOvertimeHours = overtimeRequest ? (parseFloat(overtimeRequest.formData?.hours) || 0) : 0;
+
+                // Calculate Hours and Late Status
                 let dayHours = 0;
+                let isLate = false;
+                let lateMinutes = 0;
+                let actualStartTime: string | undefined;
+                let actualEndTime: string | undefined;
+
                 if (hasWorkStart) {
-                    const starts = dayWorkRecs.filter(r => r.type === 'work-start').map(r => new Date(r.timestamp).getTime());
-                    const ends = dayWorkRecs.filter(r => r.type === 'work-end').map(r => new Date(r.timestamp).getTime());
+                    const starts = dayWorkRecs.filter(r => r.type === 'work-start').map(r => ({
+                        time: new Date(r.timestamp).getTime(),
+                        timestamp: r.timestamp
+                    }));
+                    const ends = dayWorkRecs.filter(r => r.type === 'work-end').map(r => ({
+                        time: new Date(r.timestamp).getTime(),
+                        timestamp: r.timestamp
+                    }));
 
                     if (starts.length > 0 && ends.length > 0) {
-                        const start = Math.min(...starts);
-                        const end = Math.max(...ends);
-                        dayHours = (end - start) / (1000 * 60 * 60);
+                        const earliestStart = starts.reduce((min, cur) => cur.time < min.time ? cur : min);
+                        const latestEnd = ends.reduce((max, cur) => cur.time > max.time ? cur : max);
+
+                        actualStartTime = new Date(earliestStart.timestamp).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                        actualEndTime = new Date(latestEnd.timestamp).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
+
+                        dayHours = (latestEnd.time - earliestStart.time) / (1000 * 60 * 60);
+
+                        // Check if late (compare with member's standard work start time)
+                        if (m.workStartTime) {
+                            const [expectedHour, expectedMinute] = m.workStartTime.split(':').map(Number);
+                            const expectedStartDate = new Date(earliestStart.timestamp);
+                            expectedStartDate.setHours(expectedHour, expectedMinute, 0, 0);
+                            const expectedStartTime = expectedStartDate.getTime();
+
+                            if (earliestStart.time > expectedStartTime) {
+                                isLate = true;
+                                lateMinutes = Math.round((earliestStart.time - expectedStartTime) / (1000 * 60));
+                            }
+                        }
                     } else if (starts.length > 0) {
+                        actualStartTime = new Date(starts[0].timestamp).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
                         dayHours = 8; // Default fallback
                     }
                 }
@@ -455,20 +500,24 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                     context.baseSalary += salary;
                     context.records.push(...dayWorkRecs);
 
-                    // Overtime Calculation (Labor Standards Act Style)
-                    // First 2 hours: 1.34x, Next 2+ hours: 1.67x
+                    // Overtime Calculation - Only for approved overtime
+                    // Display actual overtime hours but only calculate pay for approved hours
                     if (dayHours > 8) {
                         overtimeHours = dayHours - 8;
                         context.overtimeHours += overtimeHours;
 
-                        const first2OT = Math.min(overtimeHours, 2);
-                        const restOT = Math.max(0, overtimeHours - 2);
+                        // Only calculate pay for approved overtime hours
+                        if (approvedOvertimeHours > 0) {
+                            const payableOT = Math.min(approvedOvertimeHours, overtimeHours);
+                            const first2OT = Math.min(payableOT, 2);
+                            const restOT = Math.max(0, payableOT - 2);
 
-                        overtimePay += (first2OT * hourlyRate * 1.34);
-                        overtimePay += (restOT * hourlyRate * 1.67);
+                            overtimePay += (first2OT * hourlyRate * 1.34);
+                            overtimePay += (restOT * hourlyRate * 1.67);
 
-                        overtimePay = Math.round(overtimePay); // Round to integer
-                        context.overtimePay += overtimePay;
+                            overtimePay = Math.round(overtimePay); // Round to integer
+                            context.overtimePay += overtimePay;
+                        }
                     }
 
                     // Allowance Calculation
@@ -488,6 +537,11 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                     status,
                     hours: dayHours,
                     overtimeHours,
+                    approvedOvertimeHours,
+                    isLate,
+                    lateMinutes,
+                    actualStartTime,
+                    actualEndTime,
                     note,
                     salary,
                     overtimePay,
@@ -830,7 +884,10 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                                                                         </span>
                                                                                     </td>
                                                                                     <td className="px-6 py-3 whitespace-nowrap font-mono text-sm text-stone-600">
-                                                                                        {new Date(record.timestamp).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <span>{new Date(record.timestamp).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                                                            {/* 遲到標記待添加 */}
+                                                                                        </div>
                                                                                     </td>
                                                                                     <td className="px-6 py-3 whitespace-nowrap text-sm text-stone-500">
                                                                                         <div

@@ -302,6 +302,8 @@ export interface TeamMember {
   laborFee?: number; // 新增：勞保自付額
   healthFee?: number; // 新增：健保自付額
   spiderManAllowance?: number; // 新增：蜘蛛人津貼 (繩索吊掛作業額外津貼)
+  workStartTime?: string; // 新增：標準上班時間 (HH:MM 格式，如 "09:00")
+  workEndTime?: string; // 新增：標準下班時間 (HH:MM 格式，如 "18:00")
   role: '總經理' | '副總經理' | '總經理特助' | '經理' | '副經理' | '專案經理' | '工地主任' | '工地助理' | '工務主管' | '現場工程師' | '行政助理' | '助理' | '設計師' | '工頭' | '外部協力' | '財務部經理';
   systemRole: 'SuperAdmin' | 'DeptAdmin' | 'AdminStaff' | 'Staff' | 'Guest' | 'SyncOnly'; // 新增 AdminStaff (行政人員)
   phone: string;
