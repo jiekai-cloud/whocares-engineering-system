@@ -257,6 +257,10 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
                                 </div>
                             </h2>
                             <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{month} 月份 • {member.role}</p>
+                            <p className="text-xs text-slate-400 font-mono mt-1 flex items-center gap-1">
+                                <Clock size={12} />
+                                標準工時: {member.workStartTime || '未設定'} - {member.workEndTime || '未設定'}
+                            </p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400 print:hidden">

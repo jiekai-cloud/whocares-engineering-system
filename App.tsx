@@ -661,6 +661,15 @@ const App: React.FC = () => {
             initialTeamData.push(mockM);
           }
         });
+
+        // Ensure daily workers have default work hours if missing
+        initialTeamData.forEach((m: any) => {
+          if ((m.salaryType === 'daily' || m.dailyRate > 0) && !m.workStartTime) {
+            console.log(`[Migration] Setting default work hours for daily worker: ${m.name}`);
+            m.workStartTime = '08:00';
+            m.workEndTime = '17:00';
+          }
+        });
       }
 
       setTeamMembers(initialTeamData.map((m: any) => ({
