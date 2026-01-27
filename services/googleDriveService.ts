@@ -30,6 +30,13 @@ class GoogleDriveService {
       }
 
       try {
+        // 嘗試從 localStorage 恢復 token
+        const savedToken = localStorage.getItem('bt_google_access_token');
+        if (savedToken) {
+          this.accessToken = savedToken;
+          console.log('[Drive] Restored access token from localStorage');
+        }
+
         this.tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: clientId,
           scope: SCOPES,
@@ -39,6 +46,11 @@ class GoogleDriveService {
               reject(response);
             }
             this.accessToken = response.access_token;
+            // 保存 token 到 localStorage
+            if (this.accessToken) {
+              localStorage.setItem('bt_google_access_token', this.accessToken);
+              console.log('[Drive] Saved access token to localStorage');
+            }
             this.isInitialized = true;
             resolve();
           },
@@ -76,6 +88,11 @@ class GoogleDriveService {
         return reject(response);
       }
       this.accessToken = response.access_token;
+      // 保存 token 到 localStorage
+      if (this.accessToken) {
+        localStorage.setItem('bt_google_access_token', this.accessToken);
+        console.log('[Drive] Saved access token to localStorage');
+      }
       resolve(this.accessToken!);
     };
     this.tokenClient.requestAccessToken({ prompt: prompt === 'none' ? '' : 'consent' });
@@ -96,6 +113,8 @@ class GoogleDriveService {
 
     if (res.status === 401) {
       this.accessToken = null;
+      localStorage.removeItem('bt_google_access_token'); // 清除無效的 token
+      console.log('[Drive] Token expired, cleared from localStorage');
       await this.authenticate(isBackground ? 'none' : 'consent', isBackground);
       res = await fetch(url, {
         ...options,
