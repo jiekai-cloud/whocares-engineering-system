@@ -1176,8 +1176,8 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                         .filter(d => {
                                             // Visual Filter: Hide Virtual Members (Safety Net)
                                             if (!d.member) return false;
-                                            const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬', '陳信寬'];
-                                            const PURGE_PREFIXES = ['T-', 'CEO'];
+                                            const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬'];
+                                            const PURGE_PREFIXES = ['T-'];
                                             const isVirtualId = typeof d.member.id === 'string' && PURGE_PREFIXES.some(prefix => d.member.id.startsWith(prefix) && d.member.id.length < 8);
                                             const isVirtualName = PURGE_NAMES.includes(d.member.name);
                                             return !isVirtualId && !isVirtualName;

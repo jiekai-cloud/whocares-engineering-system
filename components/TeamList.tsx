@@ -176,8 +176,8 @@ const TeamList: React.FC<TeamListProps> = ({ members, departments, projects, onA
               {sortedMembers
                 .filter(member => {
                   // Visual Filter: Hide Virtual Members (Safety Net)
-                  const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬', '陳信寬'];
-                  const PURGE_PREFIXES = ['T-', 'CEO'];
+                  const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬'];
+                  const PURGE_PREFIXES = ['T-'];
                   const isVirtualId = typeof member.id === 'string' && PURGE_PREFIXES.some(prefix => member.id.startsWith(prefix) && member.id.length < 8);
                   const isVirtualName = PURGE_NAMES.includes(member.name);
                   return !isVirtualId && !isVirtualName;

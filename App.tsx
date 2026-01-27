@@ -657,8 +657,8 @@ const App: React.FC = () => {
       let processedTeamData = [...initialTeamData];
 
       // 1. Purge Virtual Members (Force cleanup for ALL departments)
-      const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬', '陳信寬'];
-      const PURGE_PREFIXES = ['T-', 'CEO'];
+      const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬'];
+      const PURGE_PREFIXES = ['T-'];
 
       const originalCount = processedTeamData.length;
       processedTeamData = processedTeamData.filter((m: any) => {
@@ -687,6 +687,36 @@ const App: React.FC = () => {
           m.workEndTime = '17:00';
         }
       });
+
+      // Emergency Restore for JK001 (If missing)
+      if (!processedTeamData.some((m: any) => m.name === '陳信寬' || m.employeeId === 'JK001')) {
+        processedTeamData.push({
+          id: 'JK001',
+          employeeId: 'JK001',
+          name: '陳信寬',
+          role: '工務主管',
+          systemRole: 'DeptAdmin',
+          departmentId: 'DEPT-4',
+          departmentIds: ['DEPT-4'],
+          phone: '',
+          email: '',
+          status: 'Available',
+          activeProjectsCount: 0,
+          avatar: '', // User can re-upload
+          specialty: [],
+          certifications: [],
+          joinDate: new Date().toISOString().split('T')[0],
+          salaryType: 'monthly',
+          monthlySalary: 0,
+          dailyRate: 0,
+          workStartTime: '09:00',
+          workEndTime: '18:00'
+        });
+        console.log('[Migration] Emergency restored JK001 陳信寬');
+        // Trigger save
+        const storageKey = dept === 'FirstDept' ? 'bt_team' : (dept === 'ThirdDept' ? 'dept3_bt_team' : 'bt_team');
+        storageService.saveItem(storageKey, processedTeamData);
+      }
 
       setTeamMembers(processedTeamData.map((m: any) => ({
         ...m,
