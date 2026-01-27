@@ -103,6 +103,20 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
         health: data.deductions.health
     });
 
+    // 當 data 更新時同步表單狀態
+    useEffect(() => {
+        setForm({
+            baseSalary: data.baseSalary,
+            meal: data.allowances.meal,
+            transport: data.allowances.transport,
+            otherAllowance: data.allowances.other,
+            leave: data.deductions.leave,
+            otherDeduction: data.deductions.other,
+            labor: data.deductions.labor,
+            health: data.deductions.health
+        });
+    }, [data]);
+
     const handleSave = () => {
         onUpdateAdjustment(form);
         setIsEditing(false);
@@ -127,8 +141,23 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
 
     const handleReset = () => {
         if (!window.confirm('確定要還原為系統預設值嗎？這將清除目前的調整。')) return;
+
+        // 根據薪資類型計算預設 baseSalary
+        let defaultBaseSalary = 0;
+        if (member.salaryType === 'monthly' || !member.salaryType) {
+            defaultBaseSalary = member.monthlySalary || 0;
+        } else if (member.salaryType === 'daily') {
+            // 日薪制需要根據工作天數計算（使用當前計算出的值）
+            // 注意：這裡不乘以 workDays，因為 data.baseSalary 已經是計算後的值
+            defaultBaseSalary = (member.dailyRate || 0) * data.workDays;
+        } else if (member.salaryType === 'hourly') {
+            // 計時制已在每日計算中累加，直接使用已計算的值
+            // 不應該重置為 0，而是保持當前計算出的值
+            defaultBaseSalary = 0; // 會在日誌中累加
+        }
+
         setForm({
-            baseSalary: member.monthlySalary || 0,
+            baseSalary: defaultBaseSalary,
             meal: 0,
             transport: 0,
             otherAllowance: 0,
@@ -144,17 +173,64 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @media print {
+                    /* 隱藏所有頁面元素 */
+                    body * {
+                        visibility: hidden;
+                    }
+                    
+                    /* 只顯示打印內容 */
+                    #printable-payroll-content,
+                    #printable-payroll-content * {
+                        visibility: visible !important;
+                    }
+                    
+                    /* 重置頁面樣式 */
                     body, html { 
                         height: auto !important; 
                         overflow: visible !important;
                         background: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
-                    .no-print { display: none !important; }
-                    #root > div { height: auto !important; overflow: visible !important; display: block !important; }
-                    main { height: auto !important; overflow: visible !important; display: block !important; }
+                    
+                    /* 將打印內容定位到頁面頂部 */
+                    #printable-payroll-content {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        max-height: none !important;
+                        background: white !important;
+                        padding: 20px !important;
+                        margin: 0 !important;
+                    }
+                    
+                    /* 隱藏不需要的元素 */
+                    .print\:hidden {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+                    
+                    /* 確保表格完整顯示 */
+                    table {
+                        page-break-inside: auto !important;
+                        width: 100% !important;
+                    }
+                    tr {
+                        page-break-inside: avoid !important;
+                        page-break-after: auto !important;
+                    }
+                    
+                    /* 移除小數點 */
+                    * {
+                        border-radius: 0 !important;
+                        box-shadow: none !important;
+                    }
                 }
             `}} />
-            <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:rounded-none print:w-full print:h-auto print:overflow-visible print:animate-none print:block">
+            <div id="printable-payroll-content" className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:rounded-none print:w-full print:h-auto print:overflow-visible print:block print:max-w-none">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4">
                         <img
@@ -183,7 +259,7 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
                             <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{month} 月份 • {member.role}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400">
+                    <button onClick={onClose} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400 print:hidden">
                         <XCircle size={28} />
                     </button>
                 </div>
@@ -789,10 +865,17 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                         salary = 0;
                         note = '打卡不完整 (不計薪，需補打卡)';
                     } else if (m.salaryType === 'hourly' && m.hourlyRate) {
+                        // 計時制：按實際工時計算
                         salary = Math.round(dayHours * m.hourlyRate);
+                    } else if (m.salaryType === 'daily' && m.dailyRate) {
+                        // 日薪制：每工作一天給予完整日薪
+                        salary = m.dailyRate;
                     } else if (m.salaryType === 'monthly') {
-                        salary = 0; // 月薪制每日不計薪，最後總結時計算
-                    } else {
+                        // 月薪制每日不計薪，最後總結時計算
+                        salary = 0;
+                    } else if (m.dailyRate) {
+                        // 如果沒有設定 salaryType 但有 dailyRate，視為日薪制
+                        salary = m.dailyRate;
                     }
                     context.baseSalary += salary;
                     context.records.push(...dayWorkRecs);
@@ -899,6 +982,11 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
             const adj = payrollAdjustments[adjKey];
 
             if (adj) {
+                // 如果調整資料中有 baseSalary，則覆蓋自動計算的值
+                if (adj.baseSalary !== undefined) {
+                    context.baseSalary = Number(adj.baseSalary);
+                }
+
                 if (adj.labor !== undefined) context.deductions.labor = Number(adj.labor);
                 if (adj.health !== undefined) context.deductions.health = Number(adj.health);
                 context.deductions.leave = Number(adj.leave || 0);

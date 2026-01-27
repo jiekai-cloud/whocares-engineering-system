@@ -138,6 +138,30 @@ export const MOCK_PROJECTS: Project[] = [
 
 export const MOCK_TEAM_MEMBERS: TeamMember[] = [
   {
+    id: 'T-001',
+    employeeId: 'CEO001',
+    name: '陳信寬',
+    role: '總經理',
+    systemRole: 'SuperAdmin',
+    departmentId: 'DEPT-1', // 戰略指揮部
+    departmentIds: ['DEPT-1', 'DEPT-4', 'DEPT-8'], // 可以訪問所有工程部
+    phone: '0900-000-001',
+    email: 'chen.ceo@lifequality.ai',
+    status: 'Available',
+    activeProjectsCount: 3,
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200',
+    specialty: ['企業管理', '專案統籌', '商業開發'],
+    certifications: ['營造業甲級'],
+    joinDate: '2020-01-01',
+    salaryType: 'monthly',
+    monthlySalary: 80000,
+    dailyRate: 0,
+    laborFee: 1500,
+    healthFee: 800,
+    workStartTime: '09:00',
+    workEndTime: '18:00'
+  },
+  {
     id: 'T-101',
     employeeId: 'ENG101',
     name: '林志豪',
