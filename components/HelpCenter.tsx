@@ -4,7 +4,7 @@ import {
   HelpCircle, Search, BookOpen, MessageSquare,
   Settings, ShieldCheck, Zap, ChevronRight,
   ExternalLink, PlayCircle, Bot, Mail, X, CheckCircle2, ArrowRight,
-  Info, Sparkles, Send, Loader2, Navigation, MessageCircle
+  Info, Sparkles, Send, Loader2, Navigation, MessageCircle, AlertCircle
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -134,6 +134,23 @@ const HelpCenter: React.FC<HelpCenterProps> = ({ onStartTour }) => {
         { title: '無網作業', desc: '即使現場沒有網路，您仍可新增任務與查看圖表。' },
         { title: '自動持久化', desc: '關閉瀏覽器後資料依然存在，直到您手動點擊「清除快取」。' }
       ]
+    },
+    '薪資顯示為 0 或未設定': {
+      title: '為什麼薪資顯示為 $0 或未設定？',
+      steps: [
+        { title: '檢查人員設定', desc: '進入「人員管理」，找到該成員並點擊編輯。' },
+        { title: '確認薪資類型', desc: '確保「薪資結構」已選擇「月薪制」並輸入正確金額。' },
+        { title: '重新儲存', desc: '即使金額正確，也請再次點擊「儲存成員資料」以強制更新快取。' },
+        { title: '重新整理頁面', desc: '回到薪資清單後按下 F5 重新整理，確保數據已更新。' }
+      ]
+    },
+    'PDF 匯出空白排查': {
+      title: '導出 PDF 是一片空白怎麼辦？',
+      steps: [
+        { title: '忽略瀏覽器預覽', desc: '部分瀏覽器預覽時會黑屏，請嘗試直接點擊「下載」或「儲存為 PDF」。' },
+        { title: '檢查視窗縮放', desc: '請將瀏覽器縮放比例調整為 100% 以確保佈局正確捕捉。' },
+        { title: '強迫更新框架', desc: '按下 Ctrl+F5 強制重新整理頁面，載入我們最新的 Print-Shield 修正檔。' }
+      ]
     }
   };
 
@@ -165,6 +182,13 @@ const HelpCenter: React.FC<HelpCenterProps> = ({ onStartTour }) => {
       icon: ShieldCheck,
       desc: '關於 Google 登入、備份與本地資料清除說明。',
       items: ['OAuth Client ID 設定', '重置系統資料的影響', '離線模式運作機制']
+    },
+    {
+      id: 'troubleshooting',
+      title: '故障診斷',
+      icon: AlertCircle,
+      desc: '解決 PDF 空白、資料不一致或薪資計算異常等常見技術問題。',
+      items: ['薪資顯示為 0 或未設定', 'PDF 匯出空白排查']
     }
   ];
 
@@ -327,8 +351,8 @@ const HelpCenter: React.FC<HelpCenterProps> = ({ onStartTour }) => {
               {guideMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] p-5 rounded-3xl ${msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-tr-none shadow-xl'
-                      : 'bg-white/5 text-slate-200 border border-white/5 rounded-tl-none'
+                    ? 'bg-blue-600 text-white rounded-tr-none shadow-xl'
+                    : 'bg-white/5 text-slate-200 border border-white/5 rounded-tl-none'
                     }`}>
                     <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                   </div>

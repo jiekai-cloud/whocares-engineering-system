@@ -140,8 +140,21 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
     };
 
     return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:absolute print:inset-0 print:z-[9999] print:bg-white print:p-0 print:block print:animate-none print:opacity-100 print:visible">
-            <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:rounded-none print:w-full print:h-auto print:overflow-visible print:animate-none">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:static print:bg-white print:p-0 print:block print:animate-none print:opacity-100 print:visible">
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @media print {
+                    body, html { 
+                        height: auto !important; 
+                        overflow: visible !important;
+                        background: white !important;
+                    }
+                    .no-print { display: none !important; }
+                    #root > div { height: auto !important; overflow: visible !important; display: block !important; }
+                    main { height: auto !important; overflow: visible !important; display: block !important; }
+                }
+            `}} />
+            <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:rounded-none print:w-full print:h-auto print:overflow-visible print:animate-none print:block">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4">
                         <img
@@ -604,7 +617,13 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                 const weekend = isWeekend(dateStr);
 
                 // Check Work
-                const dayWorkRecs = monthRecords.filter(r => r.timestamp.startsWith(dateStr) && (r.employeeId === empId || r.name === m.name));
+                // Check Work - Enhanced matching with trimming
+                const memberName = (m.name || '').trim();
+                const dayWorkRecs = monthRecords.filter(r =>
+                    r.timestamp.startsWith(dateStr) &&
+                    ((r.employeeId && (r.employeeId === empId)) ||
+                        (r.name && r.name.trim() === memberName))
+                );
                 const hasWorkStart = dayWorkRecs.some(r => r.type === 'work-start');
 
                 // Check Leave
@@ -864,8 +883,15 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
             // Final Totals
             // 如果是月薪制，本薪直接使用月薪（還需要考慮缺勤扣款，這裡暫時簡化為固定月薪）
             // 如果是月薪制，本薪直接使用月薪
-            if (m.monthlySalary && (m.salaryType === 'monthly' || !m.salaryType)) {
-                context.baseSalary = m.monthlySalary;
+            const mMonthlySalary = Number(m.monthlySalary || 0);
+            if (mMonthlySalary > 0 && (m.salaryType === 'monthly' || !m.salaryType)) {
+                context.baseSalary = mMonthlySalary;
+            } else if (mMonthlySalary > 0 && m.salaryType === 'daily' && context.workDays > 0) {
+                // Fallback: If salary is set but type is daily, and it looks like a large amount, treat as monthly?
+                // Or just trust monthlySalary if dailyRate is 0
+                if ((m.dailyRate || 0) === 0) {
+                    context.baseSalary = mMonthlySalary;
+                }
             }
 
             // Apply Adjustments
@@ -1084,11 +1110,11 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right hidden md:table-cell">
-                                                    <span className={`text-xs font-mono font-bold ${d.member?.monthlySalary || d.member?.dailyRate ? 'text-slate-600' : 'text-rose-400'}`}>
-                                                        {d.member?.monthlySalary
-                                                            ? `$${d.member.monthlySalary.toLocaleString()}`
-                                                            : d.member?.dailyRate
-                                                                ? `$${d.member.dailyRate.toLocaleString()}`
+                                                    <span className={`text-xs font-mono font-bold ${Number(d.member?.monthlySalary || 0) > 0 || Number(d.member?.dailyRate || 0) > 0 ? 'text-slate-600' : 'text-rose-400'}`}>
+                                                        {Number(d.member?.monthlySalary || 0) > 0
+                                                            ? `$${Number(d.member!.monthlySalary).toLocaleString()}`
+                                                            : Number(d.member?.dailyRate || 0) > 0
+                                                                ? `$${Number(d.member!.dailyRate).toLocaleString()}(日)`
                                                                 : '未設定'}
                                                     </span>
                                                 </td>
