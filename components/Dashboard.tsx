@@ -94,15 +94,21 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], cloudError,
     const counts: Record<string, number> = {};
     let totalBudget = 0;
     let totalSpent = 0;
+    let totalNetProfit = 0; // 總毛利
 
     filteredProjects.forEach(p => {
       if (!p) return;
       counts[p.status] = (counts[p.status] || 0) + 1;
       totalBudget += (p.budget || 0);
       totalSpent += (p.spent || 0);
+      // 毛利 = 預算 - 已支出
+      totalNetProfit += ((p.budget || 0) - (p.spent || 0));
     });
 
-    return { counts, totalBudget, totalSpent };
+    // 毛利率 = (總毛利 / 總預算) * 100
+    const profitMargin = totalBudget > 0 ? ((totalNetProfit / totalBudget) * 100) : 0;
+
+    return { counts, totalBudget, totalSpent, totalNetProfit, profitMargin };
   }, [filteredProjects]);
 
   // 3. 進階異常檢測：工資超標、進度落後、預算超支
@@ -239,6 +245,14 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], cloudError,
     { label: '案件總量', value: filteredProjects.length, icon: Layers, color: 'text-slate-600', bg: 'bg-slate-50' },
     { label: '總合約金額', value: `$${formatMoney(stats.totalBudget)}`, icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50' },
     {
+      label: '目前預估毛利',
+      value: `$${formatMoney(stats.totalNetProfit)}`,
+      subValue: `${stats.profitMargin.toFixed(1)}%`,
+      icon: Activity,
+      color: stats.totalNetProfit >= 0 ? 'text-emerald-600' : 'text-rose-600',
+      bg: stats.totalNetProfit >= 0 ? 'bg-emerald-50' : 'bg-rose-50'
+    },
+    {
       label: '報價逾期',
       value: riskProjects.filter(r => r.riskType === 'delay').length,
       icon: FileWarning,
@@ -352,7 +366,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], cloudError,
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
         {statsCards.map((stat, i) => (
           <div key={i} className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-100 shadow-sm hover:shadow-lg hover:border-stone-200 transition-all group">
             <div className="flex items-center gap-3 sm:gap-4">
@@ -362,6 +376,9 @@ const Dashboard: React.FC<DashboardProps> = ({ projects, leads = [], cloudError,
               <div className="flex-1 min-w-0">
                 <p className="text-[9px] sm:text-[10px] font-black text-stone-400 uppercase tracking-widest mb-0.5 sm:mb-1 truncate">{stat.label}</p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-black text-stone-900 leading-tight">{stat.value}</p>
+                {(stat as any).subValue && (
+                  <p className="text-xs font-bold text-emerald-600 mt-1">{(stat as any).subValue}</p>
+                )}
               </div>
             </div>
           </div>
