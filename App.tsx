@@ -653,32 +653,40 @@ const App: React.FC = () => {
       ]);
 
       setCustomers(customersData);
-      // Migration Logic
+      // Migration Logic: Strong Cleanup & Fixes
       let processedTeamData = [...initialTeamData];
-      if (dept === 'FirstDept') {
-        // 1. Purge Virtual Members (Requested by User)
-        // 这些是系统默认的虚構人物，用户希望删除
-        const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬', '陳信寬'];
-        const PURGE_IDS = ['T-101', 'T-102', 'T-301', 'T-302', 'T-001', 'CEO001'];
 
-        const originalCount = processedTeamData.length;
-        processedTeamData = processedTeamData.filter((m: any) => {
-          return !PURGE_NAMES.includes(m.name) && !PURGE_IDS.includes(m.id);
-        });
+      // 1. Purge Virtual Members (Force cleanup for ALL departments)
+      const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬', '陳信寬'];
+      const PURGE_PREFIXES = ['T-', 'CEO'];
 
-        if (processedTeamData.length < originalCount) {
-          console.log(`[Migration] Purged ${originalCount - processedTeamData.length} virtual members.`);
-        }
+      const originalCount = processedTeamData.length;
+      processedTeamData = processedTeamData.filter((m: any) => {
+        const isPurgeName = PURGE_NAMES.includes(m.name);
+        const isPurgeId = typeof m.id === 'string' && PURGE_PREFIXES.some(prefix => m.id.startsWith(prefix) && m.id.length < 8); // Only purge short IDs (Mock usually short)
+        return !isPurgeName && !isPurgeId;
+      });
 
-        // 2. Ensure daily workers have default work hours if missing (Only for remaining real users)
-        processedTeamData.forEach((m: any) => {
-          if ((m.salaryType === 'daily' || m.dailyRate > 0) && !m.workStartTime) {
-            console.log(`[Migration] Setting default work hours for daily worker: ${m.name}`);
-            m.workStartTime = '08:00';
-            m.workEndTime = '17:00';
-          }
-        });
+      if (processedTeamData.length < originalCount) {
+        console.log(`[Migration] Purged ${originalCount - processedTeamData.length} virtual members. FORCE SAVING...`);
+        // Force save to prevent them from coming back
+        const storageKey = dept === 'FirstDept' ? 'bt_team' : (dept === 'ThirdDept' ? 'dept3_bt_team' : 'bt_team');
+        storageService.saveItem(storageKey, processedTeamData);
       }
+
+      // 2. Fix Data Integrity for Real Users
+      processedTeamData.forEach((m: any) => {
+        // Fix monthly salary display if missing
+        if (m.salaryType === 'monthly' && m.monthlySalary === undefined) {
+          m.monthlySalary = 0;
+        }
+        // Ensure daily workers have default work hours
+        if ((m.salaryType === 'daily' || m.dailyRate > 0) && !m.workStartTime) {
+          console.log(`[Migration] Setting default work hours for daily worker: ${m.name}`);
+          m.workStartTime = '08:00';
+          m.workEndTime = '17:00';
+        }
+      });
 
       setTeamMembers(processedTeamData.map((m: any) => ({
         ...m,
