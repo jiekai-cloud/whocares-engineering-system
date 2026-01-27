@@ -658,7 +658,7 @@ const App: React.FC = () => {
 
       // 1. Purge Virtual Members (Force cleanup for ALL departments)
       const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬'];
-      const PURGE_PREFIXES = ['T-'];
+      const PURGE_PREFIXES = ['T-', 'CEO'];
 
       const originalCount = processedTeamData.length;
       processedTeamData = processedTeamData.filter((m: any) => {

@@ -27,8 +27,17 @@ const HIERARCHY: Record<string, number> = {
 };
 
 const OrgChart: React.FC<OrgChartProps> = ({ members, departments }) => {
+    // Filter out virtual members
+    const filteredMembers = members.filter(member => {
+        const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬'];
+        const PURGE_PREFIXES = ['T-', 'CEO'];
+        const isVirtualId = typeof member.id === 'string' && PURGE_PREFIXES.some(prefix => member.id.startsWith(prefix) && member.id.length < 8);
+        const isVirtualName = PURGE_NAMES.includes(member.name);
+        return !isVirtualId && !isVirtualName;
+    });
+
     // 按等級分組
-    const levels = members.reduce((acc: Record<number, TeamMember[]>, m) => {
+    const levels = filteredMembers.reduce((acc: Record<number, TeamMember[]>, m) => {
         const level = HIERARCHY[m.role as string] ?? 6;
         if (!acc[level]) acc[level] = [];
         acc[level].push(m);
