@@ -228,6 +228,14 @@ const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any)
       cellClass: "font-mono font-bold text-emerald-600 text-xs"
     },
     {
+      headerName: "毛利率",
+      field: "computedFinancials.profitMargin",
+      width: 100,
+      type: "numericColumn",
+      valueFormatter: (params: any) => `${params.value?.toFixed(1)}%`,
+      cellClass: "font-mono font-bold text-emerald-600 text-xs"
+    },
+    {
       headerName: "操作",
       sortable: false,
       filter: false,
