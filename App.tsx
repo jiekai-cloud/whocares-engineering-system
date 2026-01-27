@@ -655,20 +655,21 @@ const App: React.FC = () => {
       setCustomers(customersData);
       // Migration Logic
       if (dept === 'FirstDept') {
-        // 1. Sync Salary Info from MOCK to Local (Fix missing monthly salaries)
-        initialTeamData.forEach((m: any) => {
-          const mock = MOCK_TEAM_MEMBERS.find(mm => mm.id === m.id || mm.employeeId === m.employeeId);
-          if (mock) {
-            // Restore monthly salary if missing or 0 but mock has it
-            if ((!m.monthlySalary || m.monthlySalary === 0) && mock.monthlySalary > 0) {
-              console.log(`[Migration] Restoring monthly salary for: ${m.name}`);
-              m.monthlySalary = mock.monthlySalary;
-              if (!m.salaryType) m.salaryType = mock.salaryType;
-            }
-          }
+        // 1. Purge Virtual Members (Requested by User)
+        // 这些是系统默认的虚構人物，用户希望删除
+        const PURGE_NAMES = ['林志豪', '陳建宏', '黃國華', '李美玲', '李大維', '張家銘', '陳小美', '王雪芬', '陳信寬'];
+        const PURGE_IDS = ['T-101', 'T-102', 'T-301', 'T-302', 'T-001', 'CEO001'];
+
+        const originalCount = initialTeamData.length;
+        initialTeamData = initialTeamData.filter((m: any) => {
+          return !PURGE_NAMES.includes(m.name) && !PURGE_IDS.includes(m.id);
         });
 
-        // Ensure daily workers have default work hours if missing
+        if (initialTeamData.length < originalCount) {
+          console.log(`[Migration] Purged ${originalCount - initialTeamData.length} virtual members.`);
+        }
+
+        // 2. Ensure daily workers have default work hours if missing (Only for remaining real users)
         initialTeamData.forEach((m: any) => {
           if ((m.salaryType === 'daily' || m.dailyRate > 0) && !m.workStartTime) {
             console.log(`[Migration] Setting default work hours for daily worker: ${m.name}`);
