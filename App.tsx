@@ -1366,7 +1366,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-[#fafaf9] overflow-hidden">
+    <div className="flex h-screen w-screen bg-[#fafaf9] overflow-hidden print:overflow-visible print:h-auto print:block">
       {/* Mobile Sidebar Backdrop */}
       {isSidebarOpen && (
         <div
@@ -1375,11 +1375,11 @@ const App: React.FC = () => {
         />
       )}
 
-      <div className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static transition-transform duration-500 z-[101] w-64 h-full shrink-0`}>
+      <div className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static transition-transform duration-500 z-[101] w-64 h-full shrink-0 print:hidden`}>
         <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setSelectedProjectId(null); setIsSidebarOpen(false); }} user={{ ...user, accessibleModules: currentUserPermissions }} onMenuClose={() => setIsSidebarOpen(false)} isSyncing={isSyncing} />
       </div>
 
-      <main className="flex-1 flex flex-col h-full w-full min-0 relative">
+      <main className="flex-1 flex flex-col h-full w-full min-0 relative print:h-auto print:overflow-visible print:block">
         <header className="h-16 shrink-0 bg-white/80 backdrop-blur-xl border-b border-stone-200 px-4 lg:px-8 flex items-center justify-between no-print z-40">
           <div className="flex items-center gap-2 sm:gap-4">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-stone-600 hover:bg-stone-100 rounded-lg"><Menu size={24} /></button>
