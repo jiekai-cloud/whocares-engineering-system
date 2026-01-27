@@ -30,6 +30,7 @@ interface ProjectWithFinancials extends Project {
   computedFinancials: {
     laborCost: number;
     materialCost: number;
+    introducerFee: number;
     totalCost: number;
     profit: number;
     profitMargin: number;
@@ -469,7 +470,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
 
       const finalLaborCost = Math.max(attLaborCost, project.actualLaborCost || 0);
       const materialCost = project.actualMaterialCost || 0;
-      const totalCost = finalLaborCost + materialCost;
+      // 介紹費計入成本
+      const introducerFee = (project.introducerFeeRequired && project.introducerFeeAmount) ? project.introducerFeeAmount : 0;
+      const totalCost = finalLaborCost + materialCost + introducerFee;
       const budget = project.budget || 0;
       const contract = project.contractAmount || 0;
       const revenue = contract > 0 ? contract : budget;
@@ -487,6 +490,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         computedFinancials: {
           laborCost: finalLaborCost,
           materialCost,
+          introducerFee,
           totalCost,
           profit,
           profitMargin,
