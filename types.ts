@@ -298,7 +298,9 @@ export interface TeamMember {
   accessibleModules?: string[]; // 可存取的模組 ID 列表
   name: string;
   nicknames?: string[]; // 新增：多個外號 (用於 AI 辨識)
-  dailyRate?: number; // 新增：日薪 (用於成本計算)
+  salaryType?: 'monthly' | 'daily'; // 新增：薪資類型（月薪制或日薪制）
+  monthlySalary?: number; // 新增：月薪（月薪制使用）
+  dailyRate?: number; // 新增：日薪 (日薪制使用，用於成本計算)
   laborFee?: number; // 新增：勞保自付額
   healthFee?: number; // 新增：健保自付額
   spiderManAllowance?: number; // 新增：蜘蛛人津貼 (繩索吊掛作業額外津貼)

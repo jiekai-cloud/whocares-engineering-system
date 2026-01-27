@@ -25,6 +25,9 @@ interface DailyStatus {
     approvedOvertimeHours: number; // 新增：核准的加班時數（用於計算加班費）
     isLate: boolean; // 新增：是否遲到
     lateMinutes: number; // 新增：遲到分鐘數
+    lateDeduction: number; // 新增：遲到扣款金額
+    isEarlyLeave: boolean; // 新增：是否早退
+    earlyLeaveMinutes: number; // 新增：早退分鐘數
     actualStartTime?: string; // 新增：實際打卡上班時間
     actualEndTime?: string; // 新增：實際打卡下班時間
     note?: string;
@@ -49,6 +52,7 @@ interface PayrollData {
     };
     grossSalary: number; // 新增：稅前應發總額 (本薪+加班+津貼)
     deductions: {
+        late: number; // 新增：遲到扣款
         labor: number;
         health: number;
         other: number;
@@ -121,6 +125,12 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
                                 <span className="font-bold text-slate-500">健保自付</span>
                                 <span className="font-black text-rose-600">-${data.deductions.health.toLocaleString()}</span>
                             </div>
+                            {data.deductions.late > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="font-bold text-rose-500">遲到扣款</span>
+                                    <span className="font-black text-rose-600">-${data.deductions.late.toLocaleString()}</span>
+                                </div>
+                            )}
                         </div>
                         <div className="bg-slate-900 p-4 rounded-2xl text-white shadow-xl shadow-slate-200 flex flex-col justify-center">
                             <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">本月實領薪資</p>
@@ -156,6 +166,8 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
                                             {log.status === 'work' && <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-1 rounded">出勤</span>}
                                             {log.status === 'leave' && <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-1 rounded">請假</span>}
                                             {log.status === 'absent' && <span className="text-slate-300 text-[10px] font-bold">-</span>}
+                                            {log.isLate && <div className="mt-1"><span className="bg-rose-100 text-rose-700 text-[9px] font-black px-1.5 py-0.5 rounded">遲到{log.lateMinutes}分</span></div>}
+                                            {log.isEarlyLeave && <div className="mt-1"><span className="bg-orange-100 text-orange-700 text-[9px] font-black px-1.5 py-0.5 rounded">早退{log.earlyLeaveMinutes}分</span></div>}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex flex-col items-center">
@@ -173,7 +185,8 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
                                             {log.allowance > 0 ? `$${log.allowance.toLocaleString()}` : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-right font-mono text-sm font-black text-emerald-700 bg-emerald-50/30">
-                                            ${(log.salary + log.overtimePay + log.allowance).toLocaleString()}
+                                            ${(log.salary + log.overtimePay + log.allowance - log.lateDeduction).toLocaleString()}
+                                            {log.lateDeduction > 0 && <div className="text-[9px] text-rose-500 font-bold">- ${log.lateDeduction}</div>}
                                         </td>
                                     </tr>
                                 ))}
@@ -396,6 +409,7 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                 },
                 grossSalary: 0,
                 deductions: {
+                    late: 0,
                     labor: m.laborFee || 0,
                     health: m.healthFee || 0,
                     other: 0
@@ -442,6 +456,8 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                 let dayHours = 0;
                 let isLate = false;
                 let lateMinutes = 0;
+                let isEarlyLeave = false;
+                let earlyLeaveMinutes = 0;
                 let actualStartTime: string | undefined;
                 let actualEndTime: string | undefined;
 
@@ -476,6 +492,19 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                 lateMinutes = Math.round((earliestStart.time - expectedStartTime) / (1000 * 60));
                             }
                         }
+
+                        // Check if early leave (compare with member's standard work end time)
+                        if (m.workEndTime) {
+                            const [expectedHour, expectedMinute] = m.workEndTime.split(':').map(Number);
+                            const expectedEndDate = new Date(latestEnd.timestamp);
+                            expectedEndDate.setHours(expectedHour, expectedMinute, 0, 0);
+                            const expectedEndTime = expectedEndDate.getTime();
+
+                            if (latestEnd.time < expectedEndTime) {
+                                isEarlyLeave = true;
+                                earlyLeaveMinutes = Math.round((expectedEndTime - latestEnd.time) / (1000 * 60));
+                            }
+                        }
                     } else if (starts.length > 0) {
                         actualStartTime = new Date(starts[0].timestamp).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
                         dayHours = 8; // Default fallback
@@ -489,6 +518,7 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                 let overtimePay = 0;
                 let allowance = 0;
                 let overtimeHours = 0;
+                let lateDeduction = 0;
 
                 if (hasWorkStart) {
                     status = 'work';
@@ -499,6 +529,30 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                     salary = dailyRate;
                     context.baseSalary += salary;
                     context.records.push(...dayWorkRecs);
+
+                    // Calculate Late Deduction
+                    if (isLate && lateMinutes > 0) {
+                        let perMinuteRate = 0;
+
+                        if (m.salaryType === 'monthly' && m.monthlySalary) {
+                            // 月薪制：月薪 / 30天 / 8小時 / 60分鐘
+                            perMinuteRate = m.monthlySalary / 30 / 8 / 60;
+                        } else if (m.salaryType === 'daily' && m.dailyRate) {
+                            // 日薪制：日薪 / 8小時 / 60分鐘
+                            perMinuteRate = m.dailyRate / 8 / 60;
+                        } else if (m.dailyRate) {
+                            // 預設使用日薪計算
+                            perMinuteRate = m.dailyRate / 8 / 60;
+                        }
+
+                        lateDeduction = Math.round(perMinuteRate * lateMinutes);
+                        context.deductions.late += lateDeduction;
+                    }
+
+                    // Add note for early leave (for manager notification)
+                    if (isEarlyLeave && earlyLeaveMinutes > 0) {
+                        note = `早退 ${earlyLeaveMinutes} 分鐘（需主管確認是否扣款）`;
+                    }
 
                     // Overtime Calculation - Only for approved overtime
                     // Display actual overtime hours but only calculate pay for approved hours
@@ -540,6 +594,9 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                     approvedOvertimeHours,
                     isLate,
                     lateMinutes,
+                    lateDeduction,
+                    isEarlyLeave,
+                    earlyLeaveMinutes,
                     actualStartTime,
                     actualEndTime,
                     note,
@@ -550,16 +607,23 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
             }
 
             // Final Totals
+            // 如果是月薪制，本薪直接使用月薪（還需要考慮缺勤扣款，這裡暫時簡化為固定月薪）
+            if (m.salaryType === 'monthly' && m.monthlySalary) {
+                context.baseSalary = m.monthlySalary;
+            }
+
             context.allowances.total = context.allowances.spiderman + context.allowances.other;
             context.grossSalary = context.baseSalary + context.overtimePay + context.allowances.total;
-            context.netSalary = Math.max(0, context.grossSalary - context.deductions.labor - context.deductions.health);
+
+            // 實領薪資 = 應發總額 - 勞健保 - 遲到扣款
+            context.netSalary = Math.max(0, context.grossSalary - context.deductions.labor - context.deductions.health - context.deductions.late);
         });
 
         return Object.values(stats).sort((a, b) => (b.workDays - a.workDays));
     }, [validRecords, teamMembers, selectedMonth, approvalRequests]);
 
     const exportPayrollCSV = () => {
-        const headers = ['員工姓名', '員工編號', '職稱', '出勤天數', '請假天數', '總工時', '加班工時', '日薪', '本薪總額', '加班費', '各項津貼', '勞保費', '健保費', '實領薪資'];
+        const headers = ['員工姓名', '員工編號', '職稱', '出勤天數', '請假天數', '總工時', '加班工時', '日薪/月薪', '本薪總額', '加班費', '各項津貼', '遲到扣款', '勞保費', '健保費', '實領薪資'];
         const rows = payrollData.map(d => {
             return [
                 d.member?.name || '未知',
@@ -569,10 +633,11 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                 d.leaveDays,
                 d.hours.toFixed(1),
                 d.overtimeHours.toFixed(1),
-                d.member?.dailyRate || 0,
+                d.member?.salaryType === 'monthly' ? `${d.member?.monthlySalary}(月)` : d.member?.dailyRate || 0,
                 d.baseSalary,
                 d.overtimePay,
                 d.allowances.total,
+                d.deductions.late,
                 d.deductions.labor,
                 d.deductions.health,
                 d.netSalary
@@ -871,36 +936,72 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                                                 {/* Records for this day */}
                                                                 <table className="w-full">
                                                                     <tbody>
-                                                                        {dayRecords.map((record) => {
-                                                                            const locString = safeLocation(record.location);
-                                                                            return (
-                                                                                <tr key={record.id} className="hover:bg-stone-50 transition-colors">
-                                                                                    <td className="px-6 py-3 whitespace-nowrap w-24">
-                                                                                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${record.type === 'work-start'
-                                                                                            ? 'bg-emerald-100 text-emerald-700'
-                                                                                            : 'bg-indigo-100 text-indigo-700'
-                                                                                            }`}>
-                                                                                            {record.type === 'work-start' ? '上班' : '下班'}
-                                                                                        </span>
-                                                                                    </td>
-                                                                                    <td className="px-6 py-3 whitespace-nowrap font-mono text-sm text-stone-600">
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <span>{new Date(record.timestamp).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                                                                            {/* 遲到標記待添加 */}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td className="px-6 py-3 whitespace-nowrap text-sm text-stone-500">
-                                                                                        <div
-                                                                                            className={`flex items-center gap-1 ${locString ? 'cursor-pointer hover:text-orange-500 hover:underline' : ''}`}
-                                                                                            onClick={() => locString && setViewingLocation(record)}
-                                                                                        >
-                                                                                            <MapPin size={14} />
-                                                                                            {locString || '未知位置'}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                </tr>
-                                                                            );
-                                                                        })}
+                                                                        {(() => {
+                                                                            // Find the earliest work-start record for this day
+                                                                            const startRecords = dayRecords.filter(r => r.type === 'work-start');
+                                                                            const earliestStartRecord = startRecords.length > 0
+                                                                                ? startRecords.reduce((prev, curr) =>
+                                                                                    new Date(prev.timestamp).getTime() < new Date(curr.timestamp).getTime() ? prev : curr
+                                                                                )
+                                                                                : null;
+
+                                                                            return dayRecords.map((record) => {
+                                                                                const locString = safeLocation(record.location);
+                                                                                const recordTime = new Date(record.timestamp);
+                                                                                const member = teamMembers.find(m => m.name === name);
+
+                                                                                // Check if this is the earliest start record and if it's late
+                                                                                let isRecordLate = false;
+                                                                                let lateMinutes = 0;
+
+                                                                                if (record.type === 'work-start' &&
+                                                                                    earliestStartRecord &&
+                                                                                    record.id === earliestStartRecord.id &&
+                                                                                    member?.workStartTime) {
+
+                                                                                    const [expectedHour, expectedMinute] = member.workStartTime.split(':').map(Number);
+                                                                                    const expectedTime = new Date(recordTime);
+                                                                                    expectedTime.setHours(expectedHour, expectedMinute, 0, 0);
+
+                                                                                    if (recordTime > expectedTime) {
+                                                                                        isRecordLate = true;
+                                                                                        lateMinutes = Math.round((recordTime.getTime() - expectedTime.getTime()) / (1000 * 60));
+                                                                                    }
+                                                                                }
+
+                                                                                return (
+                                                                                    <tr key={record.id} className="hover:bg-stone-50 transition-colors">
+                                                                                        <td className="px-6 py-3 whitespace-nowrap w-24">
+                                                                                            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${record.type === 'work-start'
+                                                                                                ? 'bg-emerald-100 text-emerald-700'
+                                                                                                : 'bg-indigo-100 text-indigo-700'
+                                                                                                }`}>
+                                                                                                {record.type === 'work-start' ? '上班' : '下班'}
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        <td className="px-6 py-3 whitespace-nowrap font-mono text-sm text-stone-600">
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <span>{recordTime.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                                                                {isRecordLate && (
+                                                                                                    <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                                                                                                        遲到 {lateMinutes}分
+                                                                                                    </span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-stone-500">
+                                                                                            <div
+                                                                                                className={`flex items-center gap-1 ${locString ? 'cursor-pointer hover:text-orange-500 hover:underline' : ''}`}
+                                                                                                onClick={() => locString && setViewingLocation(record)}
+                                                                                            >
+                                                                                                <MapPin size={14} />
+                                                                                                {locString || '未知位置'}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                );
+                                                                            });
+                                                                        })()}
                                                                     </tbody>
                                                                 </table>
                                                             </div>
