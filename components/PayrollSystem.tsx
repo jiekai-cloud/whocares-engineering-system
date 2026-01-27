@@ -439,59 +439,64 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                     return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
                 });
 
-                // Group by date and calculate daily hours
+                // Group by date
                 const dailyGroups = new Map<string, {
+                    records: AttendanceRecord[];
+                    hours: number;
                     workStart?: AttendanceRecord;
                     workEnd?: AttendanceRecord;
-                    hours: number;
-                    isIncomplete?: boolean; // UI Display Support
                 }>();
 
                 sortedRecs.forEach(record => {
-                    const dateStr = record.timestamp.split('T')[0]; // YYYY-MM-DD
-
+                    const dateStr = record.timestamp.split('T')[0];
                     if (!dailyGroups.has(dateStr)) {
-                        dailyGroups.set(dateStr, { hours: 0 });
+                        dailyGroups.set(dateStr, { records: [], hours: 0 });
                     }
-
                     const dayData = dailyGroups.get(dateStr)!;
-                    const recordTime = new Date(record.timestamp).getTime();
-
-                    // Simple UI Logic: Just trying to pair for display.
-                    // Note: This logic is for the detailed list view, distinct from the payroll calculation logic.
-                    // We'll try to mirror logic: if strictly start/end pairs exist.
-
-                    if (record.type === 'work-start') {
-                        if (!dayData.workStart || recordTime < new Date(dayData.workStart.timestamp).getTime()) {
-                            dayData.workStart = record;
-                        }
-                    } else if (record.type === 'work-end') {
-                        if (!dayData.workEnd || recordTime > new Date(dayData.workEnd.timestamp).getTime()) {
-                            dayData.workEnd = record;
-                        }
-                    }
+                    dayData.records.push(record);
                 });
 
-                // Calculate hours for UI display
-                dailyGroups.forEach((data) => {
-                    if (data.workStart && data.workEnd) {
-                        const start = new Date(data.workStart.timestamp).getTime();
-                        const end = new Date(data.workEnd.timestamp).getTime();
-                        data.hours = Math.max(0, (end - start) / (1000 * 60 * 60));
-                        // Basic lunch check
-                        if (new Date(data.workStart.timestamp).getHours() < 12 && new Date(data.workEnd.timestamp).getHours() >= 13) {
-                            data.hours = Math.max(0, data.hours - 1);
+                // Calculate hours per day
+                let totalMonthHours = 0;
+                const dailyRecordsArray: any[] = [];
+
+                dailyGroups.forEach((data, date) => {
+                    // Find start/end
+                    const starts = data.records.filter(r => r.type === 'work-start').sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                    const ends = data.records.filter(r => r.type === 'work-end').sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Latest end
+
+                    if (starts.length > 0 && ends.length > 0) {
+                        const start = new Date(starts[0].timestamp).getTime();
+                        const end = new Date(ends[0].timestamp).getTime();
+                        // Use earliest start and latest end for naive duration
+                        if (end > start) {
+                            let h = (end - start) / (1000 * 60 * 60);
+                            // Deduct lunch
+                            if (new Date(starts[0].timestamp).getHours() < 12 && new Date(ends[0].timestamp).getHours() >= 13) {
+                                h = Math.max(0, h - 1);
+                            }
+                            data.hours = h;
                         }
-                    } else {
-                        data.hours = 0;
-                        data.isIncomplete = true;
                     }
+
+                    totalMonthHours += data.hours;
+
+                    dailyRecordsArray.push({
+                        date,
+                        records: data.records,
+                        hours: data.hours
+                    });
                 });
+
+                dailyRecordsArray.sort((a, b) => b.date.localeCompare(a.date));
 
                 return {
                     name,
-                    dailyGroups,
-                    records: sortedRecs
+                    records: sortedRecs,
+                    count: sortedRecs.length,
+                    dailyRecords: dailyRecordsArray,
+                    totalMonthHours,
+                    dailyGroups // Keep if needed for debug, but mapped above
                 };
 
             })
@@ -1008,7 +1013,7 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                     <tr>
                                         <th className="px-6 py-4 text-left text-[10px] font-black text-stone-400 uppercase tracking-widest">員工資訊</th>
                                         <th className="px-6 py-4 text-center text-[10px] font-black text-stone-400 uppercase tracking-widest">出勤 / 請假</th>
-                                        <th className="px-6 py-4 text-right text-[10px] font-black text-stone-400 uppercase tracking-widest hidden md:table-cell">日薪設定</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-black text-stone-400 uppercase tracking-widest hidden md:table-cell">薪資結構</th>
                                         <th className="px-6 py-4 text-right text-[10px] font-black text-stone-400 uppercase tracking-widest hidden md:table-cell">勞健保</th>
                                         <th className="px-6 py-4 text-right text-[10px] font-black text-stone-400 uppercase tracking-widest">實領薪資</th>
                                         <th className="px-6 py-4 text-center text-[10px] font-black text-stone-400 uppercase tracking-widest">操作</th>
