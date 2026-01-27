@@ -1198,12 +1198,14 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right hidden md:table-cell">
-                                                    <span className={`text-xs font-mono font-bold ${Number(d.member?.monthlySalary || 0) > 0 || Number(d.member?.dailyRate || 0) > 0 ? 'text-slate-600' : 'text-rose-400'}`}>
+                                                    <span className={`text-xs font-mono font-bold ${Number(d.member?.monthlySalary || 0) > 0 || Number(d.member?.dailyRate || 0) > 0 || Number(d.member?.hourlyRate || 0) > 0 ? 'text-slate-600' : 'text-rose-400'}`}>
                                                         {Number(d.member?.monthlySalary || 0) > 0
                                                             ? `$${Number(d.member!.monthlySalary).toLocaleString()}`
                                                             : Number(d.member?.dailyRate || 0) > 0
                                                                 ? `$${Number(d.member!.dailyRate).toLocaleString()}(日)`
-                                                                : '未設定'}
+                                                                : Number(d.member?.hourlyRate || 0) > 0
+                                                                    ? `$${Number(d.member!.hourlyRate).toLocaleString()}(時)`
+                                                                    : '未設定'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right hidden md:table-cell">

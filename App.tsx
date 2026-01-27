@@ -653,6 +653,16 @@ const App: React.FC = () => {
       ]);
 
       setCustomers(customersData);
+      // Merge missing MOCK members into the loaded data (Migration for new members like CEO)
+      if (dept === 'FirstDept') {
+        MOCK_TEAM_MEMBERS.forEach(mockM => {
+          if (!initialTeamData.some((m: any) => m.id === mockM.id || m.employeeId === mockM.employeeId)) {
+            console.log(`[Migration] Adding missing mock member: ${mockM.name}`);
+            initialTeamData.push(mockM);
+          }
+        });
+      }
+
       setTeamMembers(initialTeamData.map((m: any) => ({
         ...m,
         specialty: m.specialty || [],
