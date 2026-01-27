@@ -653,12 +653,18 @@ const App: React.FC = () => {
       ]);
 
       setCustomers(customersData);
-      // Merge missing MOCK members into the loaded data (Migration for new members like CEO)
+      // Migration Logic
       if (dept === 'FirstDept') {
-        MOCK_TEAM_MEMBERS.forEach(mockM => {
-          if (!initialTeamData.some((m: any) => m.id === mockM.id || m.employeeId === mockM.employeeId)) {
-            console.log(`[Migration] Adding missing mock member: ${mockM.name}`);
-            initialTeamData.push(mockM);
+        // 1. Sync Salary Info from MOCK to Local (Fix missing monthly salaries)
+        initialTeamData.forEach((m: any) => {
+          const mock = MOCK_TEAM_MEMBERS.find(mm => mm.id === m.id || mm.employeeId === m.employeeId);
+          if (mock) {
+            // Restore monthly salary if missing or 0 but mock has it
+            if ((!m.monthlySalary || m.monthlySalary === 0) && mock.monthlySalary > 0) {
+              console.log(`[Migration] Restoring monthly salary for: ${m.name}`);
+              m.monthlySalary = mock.monthlySalary;
+              if (!m.salaryType) m.salaryType = mock.salaryType;
+            }
           }
         });
 
