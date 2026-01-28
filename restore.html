@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>選擇性資料恢復</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin: 0 0 10px 0;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .options {
+            margin: 20px 0;
+        }
+
+        .option {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .option:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+        }
+
+        .option input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .option-content {
+            flex: 1;
+        }
+
+        .option-title {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .option-count {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px 0;
+            color: #856404;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: none;
+        }
+
+        #status.show {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔄 選擇性資料恢復</h1>
+        <p class="subtitle">從備份中選擇您要恢復的資料類型</p>
+
+        <div class="warning">
+            <strong>⚠️ 注意：</strong> 恢復資料會<strong>覆蓋</strong>現有的相同類型資料。建議先備份當前資料再執行恢復。
+        </div>
+
+        <div class="options" id="options">
+            <label class="option">
+                <input type="checkbox" id="restore_customers" checked>
+                <div class="option-content">
+                    <div class="option-title">客戶資料</div>
+                    <div class="option-count" id="count_customers">載入中...</div>
+                </div>
+            </label>
+
+            <label class="option">
+                <input type="checkbox" id="restore_vendors" checked>
+                <div class="option-content">
+                    <div class="option-title">廠商資料</div>
+                    <div class="option-count" id="count_vendors">載入中...</div>
+                </div>
+            </label>
+
+            <label class="option">
+                <input type="checkbox" id="restore_team" checked>
+                <div class="option-content">
+                    <div class="option-title">團隊成員</div>
+                    <div class="option-count" id="count_team">載入中...</div>
+                </div>
+            </label>
+
+            <label class="option">
+                <input type="checkbox" id="restore_leads" checked>
+                <div class="option-content">
+                    <div class="option-title">潛在客戶</div>
+                    <div class="option-count" id="count_leads">載入中...</div>
+                </div>
+            </label>
+
+            <label class="option">
+                <input type="checkbox" id="restore_projects">
+                <div class="option-content">
+                    <div class="option-title">專案資料</div>
+                    <div class="option-count" id="count_projects">載入中...</div>
+                    <div style="font-size: 12px; color: #999; margin-top: 5px;">⚠️ 預設不勾選，以保留您最新的專案資料</div>
+                </div>
+            </label>
+
+            <label class="option">
+                <input type="checkbox" id="restore_inventory" checked>
+                <div class="option-content">
+                    <div class="option-title">庫存資料</div>
+                    <div class="option-count" id="count_inventory">載入中...</div>
+                </div>
+            </label>
+
+            <label class="option">
+                <input type="checkbox" id="restore_attendance" checked>
+                <div class="option-content">
+                    <div class="option-title">考勤薪資</div>
+                    <div class="option-count" id="count_attendance">載入中...</div>
+                </div>
+            </label>
+        </div>
+
+        <button class="btn" id="restoreBtn" onclick="restore()">
+            開始恢復選中的資料
+        </button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        let backupData = null;
+
+        async function loadBackup() {
+            try {
+                // 使用精簡的備份檔案
+                const res = await fetch('./essential_backup.json');
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                backupData = await res.json();
+
+                document.getElementById('count_customers').textContent = `${backupData.customers?.length || 0} 個客戶`;
+                document.getElementById('count_vendors').textContent = `${backupData.vendors?.length || 0} 個廠商`;
+                document.getElementById('count_team').textContent = `${backupData.teamMembers?.length || 0} 位成員`;
+                document.getElementById('count_leads').textContent = `${backupData.leads?.length || 0} 個潛客`;
+                document.getElementById('count_projects').textContent = `${backupData.projects?.length || 0} 個專案`;
+                document.getElementById('count_inventory').textContent = `${backupData.inventory?.length || 0} 項庫存`;
+                document.getElementById('count_attendance').textContent = `${backupData.attendance?.length || 0} 筆打卡`;
+
+            } catch (error) {
+                alert('無法載入備份檔案: ' + error.message);
+            }
+        }
+
+        async function restore() {
+            const status = document.getElementById('status');
+            const restoreBtn = document.getElementById('restoreBtn');
+
+            // 檢查是否至少選擇一項
+            const selected = {
+                customers: document.getElementById('restore_customers').checked,
+                vendors: document.getElementById('restore_vendors').checked,
+                team: document.getElementById('restore_team').checked,
+                leads: document.getElementById('restore_leads').checked,
+                projects: document.getElementById('restore_projects').checked,
+                inventory: document.getElementById('restore_inventory').checked,
+                attendance: document.getElementById('restore_attendance').checked
+            };
+
+            if (!Object.values(selected).some(v => v)) {
+                alert('請至少選擇一項要恢復的資料');
+                return;
+            }
+
+            restoreBtn.disabled = true;
+            status.className = 'show';
+            status.innerHTML = '<p>⏳ 正在恢復資料...</p>';
+
+            try {
+                // 開啟 IndexedDB
+                const db = await new Promise((resolve, reject) => {
+                    const req = indexedDB.open('BuildTrack', 1);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onupgradeneeded = e => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('data')) {
+                            db.createObjectStore('data');
+                        }
+                    };
+                    req.onerror = () => reject(req.error);
+                });
+
+                const save = (key, value) => new Promise((resolve) => {
+                    const tx = db.transaction(['data'], 'readwrite');
+                    tx.objectStore('data').put(value, key).onsuccess = () => resolve();
+                });
+
+                let restored = [];
+
+                // 根據選擇恢復對應資料
+                if (selected.customers) {
+                    await save('bt_customers', backupData.customers || []);
+                    restored.push(`客戶：${backupData.customers?.length || 0} 個`);
+                }
+
+                if (selected.vendors) {
+                    await save('bt_vendors', backupData.vendors || []);
+                    restored.push(`廠商：${backupData.vendors?.length || 0} 個`);
+                }
+
+                if (selected.team) {
+                    await save('bt_team', backupData.teamMembers || []);
+                    restored.push(`團隊成員：${backupData.teamMembers?.length || 0} 位`);
+                }
+
+                if (selected.leads) {
+                    await save('bt_leads', backupData.leads || []);
+                    restored.push(`潛客：${backupData.leads?.length || 0} 個`);
+                }
+
+                if (selected.projects) {
+                    await save('bt_projects', backupData.projects || []);
+                    restored.push(`專案：${backupData.projects?.length || 0} 個`);
+                }
+
+                if (selected.inventory) {
+                    await save('bt_inventory', backupData.inventory || []);
+                    if (backupData.locations) await save('bt_inventory_locations', backupData.locations);
+                    if (backupData.purchaseOrders) await save('bt_purchase_orders', backupData.purchaseOrders);
+                    restored.push(`庫存與地點：${backupData.inventory?.length || 0} 項`);
+                }
+
+                if (selected.attendance) {
+                    await save('bt_attendance_records', backupData.attendance || []);
+                    if (backupData.payroll) await save('bt_payroll_records', backupData.payroll);
+                    restored.push(`考勤與薪資：${backupData.attendance?.length || 0} 筆`);
+                }
+
+                status.innerHTML = `
+                    <h2 style="color: #28a745;">✅ 恢復完成！</h2>
+                    <p>已恢復以下資料：</p>
+                    <ul style="text-align: left; display: inline-block;">
+                        ${restored.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                    <p><strong>3秒後自動跳轉到主頁面...</strong></p>
+                `;
+
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+
+            } catch (error) {
+                status.innerHTML = `<p style="color: #dc3545;">❌ 恢復失敗：${error.message}</p>`;
+                restoreBtn.disabled = false;
+            }
+        }
+
+        // 頁面載入時自動載入備份資料
+        loadBackup();
+    </script>
+</body>
+
+</html>

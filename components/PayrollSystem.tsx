@@ -1212,9 +1212,9 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-right hidden md:table-cell">
-                                                        <span className={`text-xs font-mono font-bold ${Number(d.member?.monthlySalary || 0) > 0 || Number(d.member?.dailyRate || 0) > 0 || Number(d.member?.hourlyRate || 0) > 0 ? 'text-slate-600' : 'text-rose-400'}`}>
-                                                            {Number(d.member?.monthlySalary || 0) > 0
-                                                                ? `$${Number(d.member!.monthlySalary).toLocaleString()}`
+                                                        <span className={`text-xs font-mono font-bold ${d.member?.salaryType === 'monthly' || Number(d.member?.monthlySalary || 0) > 0 || Number(d.member?.dailyRate || 0) > 0 || Number(d.member?.hourlyRate || 0) > 0 ? 'text-slate-600' : 'text-rose-400'}`}>
+                                                            {d.member?.salaryType === 'monthly'
+                                                                ? `$${Number(d.member!.monthlySalary || 0).toLocaleString()}`
                                                                 : Number(d.member?.dailyRate || 0) > 0
                                                                     ? `$${Number(d.member!.dailyRate).toLocaleString()}(日)`
                                                                     : Number(d.member?.hourlyRate || 0) > 0

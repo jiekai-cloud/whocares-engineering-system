@@ -422,42 +422,46 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleClockRecord = (type: 'work-start' | 'work-end', location: { lat: number; lng: number; address?: string }) => {
+  const handleClockRecord = (type: 'work-start' | 'work-end', location: { lat: number; lng: number; address?: string }, customTimestamp?: string) => {
     if (!user) return;
 
     // User ID is reliable enough. TeamMember lookup is secondary.
     const employeeId = user.id;
+    const isSupplement = !!customTimestamp;
+    const recordTime = customTimestamp || new Date().toISOString();
 
     const newRecord: AttendanceRecord = {
       id: crypto.randomUUID(),
       employeeId: employeeId,
       name: user.name,
       type,
-      timestamp: new Date().toISOString(),
+      timestamp: recordTime,
       location,
       departmentId: user.department === 'FirstDept' ? 'DEPT-4' : user.department === 'ThirdDept' ? 'DEPT-8' : 'DEPT-9'
     };
 
     setAttendanceRecords(prev => [...prev, newRecord]);
 
-    // Update Team Member Status
-    setTeamMembers(prev => prev.map(member => {
-      // Match user to member by ID or Name
-      if (member.id === user.id || member.employeeId === user.id || member.name === user.name) {
-        return {
-          ...member,
-          // If work-start -> Available (OnDuty)
-          // If work-end -> OffDuty
-          status: type === 'work-start' ? 'Available' : 'OffDuty',
-          currentWorkStatus: type === 'work-start' ? 'OnDuty' : 'OffDuty',
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return member;
-    }));
+    // Update Team Member Status (Only if it's a real-time clock in, supplement shouldn't change current status ideally, but let's keep it simple)
+    if (!isSupplement) {
+      setTeamMembers(prev => prev.map(member => {
+        // Match user to member by ID or Name
+        if (member.id === user.id || member.employeeId === user.id || member.name === user.name) {
+          return {
+            ...member,
+            status: type === 'work-start' ? 'Available' : 'OffDuty',
+            currentWorkStatus: type === 'work-start' ? 'OnDuty' : 'OffDuty',
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return member;
+      }));
+    }
 
     const action = type === 'work-start' ? '上班' : '下班';
-    alert(`${action}打卡成功！\n成員狀態已更新為：${type === 'work-start' ? '上班中' : '未上班'}\n時間：${new Date().toLocaleTimeString()}\n地點：${location.address || 'GPS ' + location.lat.toFixed(4)}`);
+    const displayTime = new Date(recordTime).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    alert(`${isSupplement ? '✅ 補打卡' : action + '打卡'}成功！\n${isSupplement ? '記錄類型：' + action : '狀態變更：' + (type === 'work-start' ? '上班中' : '未上班')}\n時間：${displayTime}\n地點：${location.address || 'GPS ' + location.lat.toFixed(4)}`);
   };
 
   const handleSaveApprovalRequest = (request: ApprovalRequest) => {
@@ -629,10 +633,10 @@ const App: React.FC = () => {
             description: '各類假別申請流程',
             workflow: ['Manager', 'AdminStaff'],
             formFields: [
-              { key: '假別', label: '假別類型', type: 'text', required: true },
-              { key: '開始日期', label: '開始日期', type: 'date', required: true },
-              { key: '結束日期', label: '結束日期', type: 'date', required: true },
-              { key: '原因', label: '詳細原因', type: 'text', required: true }
+              { key: '假別', label: '假別類型', type: 'select', options: ['事假', '病假', '特休', '公假', '喪假', '婚假', '補休', '其他'], required: true },
+              { key: 'startDate', label: '開始日期', type: 'date', required: true },
+              { key: 'endDate', label: '結束日期', type: 'date', required: true },
+              { key: 'reason', label: '詳細原因', type: 'text', required: true }
             ],
             updatedAt: new Date().toISOString()
           },
@@ -650,6 +654,25 @@ const App: React.FC = () => {
             updatedAt: new Date().toISOString()
           }
         ])
+          // Ensure TPL-CORRECTION exists if not present (Migration)
+          .then(templates => {
+            if (!templates.find(t => t.id === 'TPL-CORRECTION')) {
+              templates.push({
+                id: 'TPL-CORRECTION',
+                name: '補打卡申請',
+                description: '忘記打卡或打卡異常時使用',
+                workflow: ['Manager', 'AdminStaff'],
+                formFields: [
+                  { key: 'date', label: '補打卡日期', type: 'date', required: true },
+                  { key: 'time', label: '補打卡時間', type: 'time', required: true },
+                  { key: 'type', label: '打卡類型', type: 'select', options: ['上班', '下班'], required: true },
+                  { key: 'reason', label: '補打卡原因', type: 'text', required: true }
+                ],
+                updatedAt: new Date().toISOString()
+              });
+            }
+            return templates;
+          })
       ]);
 
       setCustomers(customersData);
@@ -707,7 +730,7 @@ const App: React.FC = () => {
           certifications: [],
           joinDate: new Date().toISOString().split('T')[0],
           salaryType: 'monthly',
-          monthlySalary: 0,
+          monthlySalary: 80000,
           dailyRate: 0,
           workStartTime: '09:00',
           workEndTime: '18:00'
@@ -804,20 +827,27 @@ const App: React.FC = () => {
         }
       }
 
+      // SAFETY CHECK: Prevent overwriting cloud with empty local state (Crisis Prevention)
+      const localData = dataRef.current;
+      if (localData.projects.length === 0 && localData.teamMembers.length === 0) {
+        console.warn('[Sync] Aborted save: Local state appears empty. Preventing cloud overwrite.');
+        return;
+      }
+
       const success = await googleDriveService.saveToCloud({
-        projects: dataRef.current.projects,
-        customers: dataRef.current.customers,
-        teamMembers: dataRef.current.teamMembers,
-        vendors: dataRef.current.vendors,
-        leads: dataRef.current.leads,
-        inventory: dataRef.current.inventoryItems,
-        locations: dataRef.current.inventoryLocations,
-        purchaseOrders: dataRef.current.purchaseOrders,
-        attendance: dataRef.current.attendanceRecords,
-        payroll: dataRef.current.payrollRecords,
-        approvalRequests: dataRef.current.approvalRequests,
-        approvalTemplates: dataRef.current.approvalTemplates,
-        activityLogs: dataRef.current.activityLogs,
+        projects: localData.projects,
+        customers: localData.customers,
+        teamMembers: localData.teamMembers,
+        vendors: localData.vendors,
+        leads: localData.leads,
+        inventory: localData.inventoryItems,
+        locations: localData.inventoryLocations,
+        purchaseOrders: localData.purchaseOrders,
+        attendance: localData.attendanceRecords,
+        payroll: localData.payrollRecords,
+        approvalRequests: localData.approvalRequests,
+        approvalTemplates: localData.approvalTemplates,
+        activityLogs: localData.activityLogs,
         lastUpdated: new Date().toISOString(),
         userEmail: user?.email
       }, true);

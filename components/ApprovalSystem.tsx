@@ -377,6 +377,28 @@ const ApprovalSystem: React.FC<ApprovalSystemProps> = ({
                                             onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}
                                         />
                                     )}
+                                    {field.type === 'time' && (
+                                        <input
+                                            type="time"
+                                            required={field.required}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-bold"
+                                            value={formData[field.key] || ''}
+                                            onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}
+                                        />
+                                    )}
+                                    {field.type === 'select' && (
+                                        <select
+                                            required={field.required}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-bold"
+                                            value={formData[field.key] || ''}
+                                            onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}
+                                        >
+                                            <option value="">請選擇...</option>
+                                            {field.options?.map(opt => (
+                                                <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                        </select>
+                                    )}
                                     {field.type === 'teamMember' && (
                                         <select
                                             required={field.required}
@@ -440,12 +462,33 @@ const ApprovalSystem: React.FC<ApprovalSystemProps> = ({
                             </div>
 
                             <div className="grid grid-cols-1 gap-6">
-                                {Object.entries(selectedRequest.formData).map(([key, value]) => (
-                                    <div key={key} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key}</p>
-                                        <p className="text-slate-800 font-bold whitespace-pre-wrap">{value}</p>
-                                    </div>
-                                ))}
+                                {Object.entries(selectedRequest.formData).map(([key, value]) => {
+                                    const template = templates.find(t => t.id === selectedRequest.templateId);
+                                    const fieldDef = template?.formFields.find(f => f.key === key);
+                                    // Skip hidden fields if any (like targetEmployeeId which might not be in formFields)
+                                    // But showing them is fine for now, or we can filter.
+                                    // Let's show label if found, otherwise show key (for custom/meta data)
+                                    const label = fieldDef?.label || key;
+
+                                    // Simple filter: Don't show targetEmployeeId/Name if they are duplicates of requester or internal logic
+                                    if (key === 'targetEmployeeId' || key === 'targetEmployeeName') {
+                                        // If it's different from requester, maybe show it?
+                                        if (selectedRequest.requesterId === selectedRequest.formData.targetEmployeeId) return null;
+                                        return (
+                                            <div key={key} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key === 'targetEmployeeName' ? '補卡對象' : key}</p>
+                                                <p className="text-slate-800 font-bold whitespace-pre-wrap">{value}</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div key={key} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                                            <p className="text-slate-800 font-bold whitespace-pre-wrap">{value}</p>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             <div className="space-y-4">
@@ -625,8 +668,22 @@ const ApprovalSystem: React.FC<ApprovalSystemProps> = ({
                                                 <option value="text">文字輸入</option>
                                                 <option value="number">數字</option>
                                                 <option value="date">日期</option>
+                                                <option value="time">時間</option>
+                                                <option value="select">下拉選單</option>
                                                 <option value="teamMember">團隊成員</option>
                                             </select>
+                                            {field.type === 'select' && (
+                                                <input
+                                                    className="w-full bg-white border border-slate-200 p-2 text-xs font-bold rounded-lg mt-2"
+                                                    placeholder="選項 (用逗號分隔 e.g. 上班,下班)"
+                                                    value={field.options?.join(',') || ''}
+                                                    onChange={e => {
+                                                        const newFields = [...(editingTemplate?.formFields || [])];
+                                                        newFields[i].options = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                                        setEditingTemplate(p => p ? ({ ...p, formFields: newFields }) : null);
+                                                    }}
+                                                />
+                                            )}
                                             <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 pb-2">
                                                 <input type="checkbox" checked={field.required} onChange={e => {
                                                     const newFields = [...(editingTemplate?.formFields || [])];

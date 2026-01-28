@@ -493,8 +493,9 @@ export interface ApprovalTemplate {
   formFields: {
     key: string;
     label: string;
-    type: 'text' | 'number' | 'date' | 'boolean' | 'teamMember';
+    type: 'text' | 'number' | 'date' | 'time' | 'select' | 'boolean' | 'teamMember';
     required?: boolean;
+    options?: string[]; // For select type
   }[];
   updatedAt: string;
 }

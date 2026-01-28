@@ -1,0 +1,16 @@
+{
+  "short_name": "工程管家",
+  "name": "生活品質智慧工程管理系統",
+  "icons": [
+    {
+      "src": "./pwa-icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "./",
+  "display": "standalone",
+  "theme_color": "#7A9A7E",
+  "background_color": "#FAF9F6",
+  "orientation": "portrait-primary"
+}
