@@ -464,6 +464,16 @@ const App: React.FC = () => {
     alert(`${isSupplement ? '✅ 補打卡' : action + '打卡'}成功！\n${isSupplement ? '記錄類型：' + action : '狀態變更：' + (type === 'work-start' ? '上班中' : '未上班')}\n時間：${displayTime}\n地點：${location.address || 'GPS ' + location.lat.toFixed(4)}`);
   };
 
+  const handleImportRecords = (newRecords: AttendanceRecord[]) => {
+    setAttendanceRecords(prev => [...prev, ...newRecords]);
+    addActivityLog('批量匯入打卡紀錄', `${newRecords.length} 筆`, 'IMPORT', 'system');
+  };
+
+  const handleImportLeaves = (newRequests: ApprovalRequest[]) => {
+    setApprovalRequests(prev => [...prev, ...newRequests]);
+    addActivityLog('批量匯入請假紀錄', `${newRequests.length} 筆`, 'IMPORT', 'system');
+  };
+
   const handleSaveApprovalRequest = (request: ApprovalRequest) => {
     setApprovalRequests(prev => [request, ...prev]);
     addActivityLog('提交了簽核申請', request.title, request.id, 'system');
@@ -1598,6 +1608,8 @@ const App: React.FC = () => {
                   currentUser={user}
                   approvalRequests={approvalRequests}
                   onCreateApproval={handleSaveApprovalRequest}
+                  onImportRecords={handleImportRecords}
+                  onImportLeaves={handleImportLeaves}
                 />
               )}
               {activeTab === 'approvals' && moduleService.isModuleEnabled(ModuleId.APPROVALS) && (

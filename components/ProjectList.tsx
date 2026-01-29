@@ -1,6 +1,6 @@
 import React, { useMemo, useState, forwardRef, useImperativeHandle } from 'react';
 import { Project, TeamMember, AttendanceRecord, ProjectStatus, User } from '../types';
-import { Briefcase, Calendar, Plus, Search, Filter, ArrowUpRight, TrendingUp, DollarSign, Users, AlertTriangle, Wallet, LayoutGrid, List, FileSpreadsheet, RotateCcw, XCircle, Pencil, Trash2 } from 'lucide-react';
+import { Briefcase, Calendar, Plus, Search, Filter, ArrowUpRight, TrendingUp, DollarSign, Users, AlertTriangle, Wallet, LayoutGrid, List, FileSpreadsheet, RotateCcw, XCircle, Pencil, Trash2, ArrowDown, ArrowUp } from 'lucide-react';
 
 // Ag-Grid Imports
 import { AgGridReact } from 'ag-grid-react';
@@ -409,6 +409,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [yearFilter, setYearFilter] = useState<string>('all'); // New Year Filter State
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   // Removed custom sortConfig as Ag-Grid handles it internally
 
   const projectsWithFinancials = useMemo<ProjectWithFinancials[]>(() => {
@@ -514,13 +515,24 @@ const ProjectList: React.FC<ProjectListProps> = ({
       ? mapped
       : mapped.filter(p => p.calculatedYear === yearFilter);
 
+    // SORTING LOGIC: Sort by Sequence Number (Last 3 digits of ID) Descending
+    // The user requested: "按照案件編號的流水號來排序 也就是最後三個數字來排序"
+    const sorted = yearFiltered.sort((a, b) => {
+      // Extract last 3 digits
+      const seqA = parseInt(a.id.slice(-3)) || 0;
+      const seqB = parseInt(b.id.slice(-3)) || 0;
+      return sortOrder === 'desc' ? seqB - seqA : seqA - seqB;
+    });
+
     // Debug logging
     if (typeof window !== 'undefined') {
       console.log('[ProjectList Debug]', {
         totalProjects: projects.length,
         afterMapping: mapped.length,
         afterYearFilter: yearFiltered.length,
+        afterSorting: sorted.length,
         currentYearFilter: yearFilter,
+        currentSortOrder: sortOrder,
         yearDistribution: mapped.reduce((acc, p) => {
           const year = p.calculatedYear || 'unknown';
           acc[year] = (acc[year] || 0) + 1;
@@ -529,10 +541,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
       });
     }
 
-    // Sort logic removed, let Ag-Grid handle it
-    return yearFiltered;
+    return sorted;
 
-  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted, yearFilter]);
+  }, [projects, attendanceRecords, teamMembers, searchTerm, statusFilter, showDeleted, yearFilter, sortOrder]);
 
   const projectsByStatus = useMemo(() => {
     const groups: Record<string, ProjectWithFinancials[]> = {};
@@ -560,6 +571,15 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <div><h1 className="text-3xl font-black text-stone-900 tracking-tight mb-2">專案財務戰情室</h1><p className="text-stone-500 font-bold flex items-center gap-2 text-xs uppercase tracking-wider"><TrendingUp size={16} className="text-emerald-500" /> Project Costing Dashboard</p></div>
           <div className="flex flex-wrap gap-2">
             {!isReadOnly && (<button onClick={onAddClick} className="bg-stone-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all shadow-xl shadow-stone-200 text-sm"><Plus size={18} /> 建立新專案</button>)}
+
+            <button
+              onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+              className="bg-white border border-stone-200 text-stone-600 px-4 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-50 transition-all shadow-sm text-xs"
+            >
+              {sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+              {sortOrder === 'desc' ? '編號 9→0' : '編號 0→9'}
+            </button>
+
             <div className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1 shadow-sm">
               <button onClick={() => setViewMode('card')} className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'card' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}><LayoutGrid size={16} /> 卡片</button>
               <button onClick={() => setViewMode('table')} className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewMode === 'table' ? 'bg-stone-900 text-white' : 'text-stone-400 hover:text-stone-600'}`}><List size={16} /> AgGrid (Beta)</button>

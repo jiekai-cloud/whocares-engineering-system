@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { AttendanceRecord, TeamMember, User, ApprovalRequest } from '../types';
-import { Calendar, User as UserIcon, MapPin, Download, Printer, Calculator, DollarSign, Clock, Filter, FileSpreadsheet, FileText, XCircle, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Calendar, User as UserIcon, MapPin, Download, Printer, Calculator, DollarSign, Clock, Filter, FileSpreadsheet, FileText, XCircle, CheckCircle2, ChevronDown, ChevronRight, Upload } from 'lucide-react';
 import LocationModal from './LocationModal';
+import DataImportModal from './DataImportModal';
 
 const TAIWAN_HOLIDAYS_2026: Record<string, string> = {
     '2026-01-01': '元旦',
@@ -32,6 +33,8 @@ interface PayrollSystemProps {
     currentUser: User;
     approvalRequests: ApprovalRequest[];
     onCreateApproval?: (request: ApprovalRequest) => void;
+    onImportRecords?: (records: AttendanceRecord[]) => void;
+    onImportLeaves?: (requests: ApprovalRequest[]) => void;
 }
 
 interface PayrollDetailModalProps {
@@ -461,8 +464,9 @@ const PayrollDetailModal: React.FC<PayrollDetailModalProps> = ({ member, data, m
     );
 };
 
-const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers, currentUser, approvalRequests = [], onCreateApproval }) => {
+const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers, currentUser, approvalRequests = [], onCreateApproval, onImportRecords, onImportLeaves }) => {
     const [activeTab, setActiveTab] = useState<'records' | 'payroll'>('payroll');
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [correctionTarget, setCorrectionTarget] = useState<{ date: string, memberId: string, memberName: string } | null>(null);
     const [payrollAdjustments, setPayrollAdjustments] = useState<Record<string, any>>({});
 
@@ -1155,6 +1159,14 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                         >
                             <FileSpreadsheet size={16} /> 匯出 CSV 報表
                         </button>
+                        {onImportRecords && onImportLeaves && (
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="bg-white border border-stone-200 text-stone-600 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-stone-50 active:scale-95 transition-all"
+                            >
+                                <Upload size={16} /> 匯入資料
+                            </button>
+                        )}
                     </div>
 
                     {/* Payroll Table */}
@@ -1510,6 +1522,14 @@ const PayrollSystem: React.FC<PayrollSystemProps> = ({ records = [], teamMembers
                         </form>
                     </div>
                 </div>
+            )}
+
+            {isImportModalOpen && onImportRecords && onImportLeaves && (
+                <DataImportModal
+                    onClose={() => setIsImportModalOpen(false)}
+                    onImportAttendance={onImportRecords}
+                    onImportLeaves={onImportLeaves}
+                />
             )}
         </div>
     );
