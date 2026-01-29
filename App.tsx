@@ -848,14 +848,32 @@ const App: React.FC = () => {
             console.log('[Sync] Merging cloud data...');
             updateStateWithMerge(cloudData);
             lastRemoteModifiedTime.current = metadata.modifiedTime;
+
+            // CRITICAL FIX: Stop execution here! 
+            // We must allow React to process the state update (updateStateWithMerge) 
+            // and update dataRef.current in the next render cycle BEFORE we try to save back to cloud.
+            // If we proceed now, we would be uploading STALE local data (dataRef.current), 
+            // effectively undoing the merge we just requested and overwriting remote changes.
+            console.log('[Sync] Cloud merge requested. Pausing upload to allow state update.');
+            setCloudError(null);
+
+            // Reset flags
+            isSyncingRef.current = false;
+            setIsSyncing(false);
+            return;
           }
         }
       }
 
       // SAFETY CHECK: Prevent overwriting cloud with empty local state (Crisis Prevention)
       const localData = dataRef.current;
-      if (localData.projects.length === 0 && localData.teamMembers.length === 0) {
-        console.warn('[Sync] Aborted save: Local state appears empty. Preventing cloud overwrite.');
+
+      // Enhanced Check: checking projects/team is empty is good, but let's be more specific.
+      // If we have "defaults" only, maybe we shouldn't overwrite a populated cloud?
+      if (!localData.projects || (localData.projects.length === 0 && localData.teamMembers.length <= 1)) {
+        console.warn('[Sync] Aborted save: Local state appears empty or uninitialized. Preventing cloud overwrite.');
+        isSyncingRef.current = false;
+        setIsSyncing(false);
         return;
       }
 
