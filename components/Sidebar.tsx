@@ -93,7 +93,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, user, onMenu
       <div className="p-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3">
-            <img src="./pwa-icon.png" alt="Whocares Logo" className="w-48 h-auto object-contain" />
+            <img src="./pwa-icon.png" alt="Logo" className="w-12 h-12 object-contain" />
+            <div className="flex flex-col">
+              <span className="text-[14px] font-black tracking-tighter leading-none text-white font-serif italic">Whocares?</span>
+              <span className="text-[10px] font-bold text-stone-400 tracking-widest uppercase mt-0.5">We Care.</span>
+            </div>
           </div>
         </div>
         {onMenuClose && (
