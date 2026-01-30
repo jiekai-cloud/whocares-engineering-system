@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [viewingDeptId, setViewingDeptId] = useState<string>('all');
-  const [currentDept, setCurrentDept] = useState<SystemContext>('FirstDept');
+  const [currentDept, setCurrentDept] = useState<SystemContext>('FourthDept');
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);

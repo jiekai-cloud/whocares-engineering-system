@@ -14,7 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDept, setSelectedDept] = useState<SystemContext>('FirstDept');
+  const [selectedDept, setSelectedDept] = useState<SystemContext>('FourthDept');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +95,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         setIsLoading(false);
       }
     } else {
-      setError(`找不到該員工編號 (新設備請先以 test 下載 ${selectedDept === 'FirstDept' ? '第一' : selectedDept === 'ThirdDept' ? '第三' : '第四'}工程部 團隊清單)`);
+      setError(`找不到該員工編號 (新設備請先以 test 下載 琥凱爾工程 第四工程部 團隊清單)`);
       setIsLoading(false);
     }
   };
@@ -137,20 +137,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">2026 Professional Edition</span>
             </div>
             <div className="space-y-4">
-              <div onClick={() => setSelectedDept('FirstDept')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${selectedDept === 'FirstDept' ? 'bg-orange-500/20 border-orange-500/50' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-white">生活品質<br />第一工程部</span>
-                  {selectedDept === 'FirstDept' && <Check size={16} className="text-orange-500" />}
-                </div>
-                <p className="text-xs text-stone-400">住宅修繕、防水工程、空間改造</p>
-              </div>
-              <div onClick={() => setSelectedDept('ThirdDept')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${selectedDept === 'ThirdDept' ? 'bg-blue-500/20 border-blue-500/50' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-white">傑凱工程<br />第三工程部</span>
-                  {selectedDept === 'ThirdDept' && <Check size={16} className="text-blue-500" />}
-                </div>
-                <p className="text-xs text-stone-400">大型建案、公設維護、機電整合</p>
-              </div>
               <div onClick={() => setSelectedDept('FourthDept')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${selectedDept === 'FourthDept' ? 'bg-purple-500/20 border-purple-500/50' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-white">琥凱爾工程<br />第四工程部</span>
@@ -175,8 +161,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
               {/* Mobile Selector */}
               <div className="lg:hidden flex gap-2 mt-4 p-1 bg-stone-100 rounded-xl">
-                <button type="button" onClick={() => setSelectedDept('FirstDept')} className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${selectedDept === 'FirstDept' ? 'bg-white shadow text-orange-600' : 'text-stone-400'}`}>生活品質<br />第一工程部</button>
-                <button type="button" onClick={() => setSelectedDept('ThirdDept')} className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${selectedDept === 'ThirdDept' ? 'bg-white shadow text-blue-600' : 'text-stone-400'}`}>傑凱工程<br />第三工程部</button>
                 <button type="button" onClick={() => setSelectedDept('FourthDept')} className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${selectedDept === 'FourthDept' ? 'bg-white shadow text-purple-600' : 'text-stone-400'}`}>琥凱爾工程<br />第四工程部</button>
               </div>
             </div>
