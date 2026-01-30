@@ -216,7 +216,7 @@ class GoogleDriveService {
         method = 'PATCH';
       }
 
-      console.log(`[Drive] Syncing: ${method} (Hash: ${contentHash})`);
+      console.log(`[Drive] Syncing: ${method}, Data Size: ${fileContent.length} chars (Hash: ${contentHash})`);
       const response = await this.fetchWithAuth(url, {
         method,
         body
