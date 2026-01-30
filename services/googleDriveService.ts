@@ -191,38 +191,53 @@ class GoogleDriveService {
         cloudSyncTimestamp: new Date().toISOString()
       });
 
-      // Strict Multipart Construction
-      const boundary = '-------314159265358979323846';
-      const dashDashBoundary = `--${boundary}`;
-      const crlf = "\r\n";
+      console.log(`[Drive] Syncing Data Size: ${fileContent.length} chars`);
 
-      const parts = [
-        dashDashBoundary + crlf,
-        'Content-Type: application/json; charset=UTF-8' + crlf + crlf,
-        JSON.stringify(metadata) + crlf,
-        dashDashBoundary + crlf,
-        'Content-Type: application/json' + crlf + crlf,
-        fileContent + crlf,
-        dashDashBoundary + '--' + crlf
-      ];
-
-      const body = new Blob(parts, { type: `multipart/related; boundary=${boundary}` });
-
-      let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-      let method = 'POST';
+      let url: string;
+      let method: string;
+      let body: any;
+      let headers: any = {};
 
       if (existingFile) {
-        url = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`;
+        // [Strategy A] Update existing file: Use Simple Upload (uploadType=media)
+        // This is more robust as it avoids multipart formatting issues for pure content updates.
+        url = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`;
         method = 'PATCH';
+        body = fileContent;
+        headers = {
+          'Content-Type': 'application/json'
+        };
+      } else {
+        // [Strategy B] Create new file: Use Multipart Upload (uploadType=multipart)
+        // Required validity to set both Metadata (Filename) and Content in one go.
+        url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+        method = 'POST';
+
+        const boundary = '-------314159265358979323846';
+        const dashDashBoundary = `--${boundary}`;
+        const crlf = "\r\n";
+
+        const parts = [
+          dashDashBoundary + crlf,
+          'Content-Type: application/json; charset=UTF-8' + crlf + crlf,
+          JSON.stringify(metadata) + crlf,
+          dashDashBoundary + crlf,
+          'Content-Type: application/json' + crlf + crlf,
+          fileContent + crlf,
+          dashDashBoundary + '--' + crlf
+        ];
+
+        body = new Blob(parts, { type: `multipart/related; boundary=${boundary}` });
+        headers = {
+          'Content-Type': `multipart/related; boundary=${boundary}`
+        };
       }
 
-      console.log(`[Drive] Syncing: ${method}, Data Size: ${fileContent.length} chars (Hash: ${contentHash})`);
+      console.log(`[Drive] Syncing: ${method} (Hash: ${contentHash})`);
       const response = await this.fetchWithAuth(url, {
         method,
-        body
-        // Note: We deliberately do NOT set Content-Type header here.
-        // The Blob has the correct type 'multipart/related; boundary=...'
-        // and fetch will automatically set the Content-Type header to match the Blob's type.
+        body,
+        headers
       }, isBackground);
 
       if (!response.ok) {
@@ -246,18 +261,21 @@ class GoogleDriveService {
           const fileId = result.id || existingFile?.id;
 
           if (fileId) {
-            const permissionUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
-            await this.fetchWithAuth(permissionUrl, {
-              method: 'POST',
-              body: JSON.stringify({
-                role: 'reader',
-                type: 'anyone'
-              }),
-              headers: { 'Content-Type': 'application/json' }
-            }, isBackground);
-
-            console.log('[Drive] Public read permission set.');
-            this.hasSetPublicPermission = true; // Mark as done for this session
+            // Check if it's a new file or we just never checked permissions
+            // For updates, we usually assume permissions are fine, but let's be safe for new files
+            if (!existingFile) {
+              const permissionUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
+              await this.fetchWithAuth(permissionUrl, {
+                method: 'POST',
+                body: JSON.stringify({
+                  role: 'reader',
+                  type: 'anyone'
+                }),
+                headers: { 'Content-Type': 'application/json' }
+              }, isBackground);
+              console.log('[Drive] Public read permission set.');
+            }
+            this.hasSetPublicPermission = true;
           }
         } catch (permError) {
           console.warn('[Drive] Permission set skipped:', permError);
