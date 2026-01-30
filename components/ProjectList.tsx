@@ -153,111 +153,118 @@ const YearFilter = forwardRef((props: IFilterParams, ref) => {
 });
 
 // Sub-component: Ag-Grid Table View (Replaced)
-const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any) => {
+const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick, isReadOnly }: any) => {
   // Removed external sort clearing logic as sortOrder prop is gone
 
-  const columnDefs: ColDef<ProjectWithFinancials>[] = [
-    {
-      headerName: "專案名稱 / 編號",
-      field: "name",
-      minWidth: 300,
-      flex: 2,
-      // Custom Comparator to sort by Sequence Number (Last 3 Digits)
-      comparator: (valueA: string, valueB: string, nodeA: any, nodeB: any, isDescending: boolean) => {
-        const getSeq = (id: string) => parseInt(id.slice(-3)) || 0;
-        return getSeq(nodeA.data.id) - getSeq(nodeB.data.id);
+  const columnDefs: ColDef<ProjectWithFinancials>[] = useMemo(() => {
+    const cols: ColDef<ProjectWithFinancials>[] = [
+      {
+        headerName: "專案名稱 / 編號",
+        field: "name",
+        minWidth: 300,
+        flex: 2,
+        // Custom Comparator to sort by Sequence Number (Last 3 Digits)
+        comparator: (valueA: string, valueB: string, nodeA: any, nodeB: any, isDescending: boolean) => {
+          const getSeq = (id: string) => parseInt(id.slice(-3)) || 0;
+          return getSeq(nodeA.data.id) - getSeq(nodeB.data.id);
+        },
+        cellRenderer: (params: any) => (
+          <div className="flex flex-col justify-center h-full leading-tight">
+            <span className="font-bold text-stone-900 text-sm mb-0.5">{params.data.name}</span>
+            <span className="text-[10px] font-mono text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded w-fit">{params.data.id}</span>
+          </div>
+        )
       },
-      cellRenderer: (params: any) => (
-        <div className="flex flex-col justify-center h-full leading-tight">
-          <span className="font-bold text-stone-900 text-sm mb-0.5">{params.data.name}</span>
-          <span className="text-[10px] font-mono text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded w-fit">{params.data.id}</span>
-        </div>
-      )
-    },
-    {
-      headerName: "會勘負責人",
-      field: "quotationManager",
-      minWidth: 150,
-      flex: 1,
-      cellRenderer: (params: any) => (
-        <div className="flex items-center gap-2 h-full">
-          <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-black text-stone-600 border border-stone-200">
-            {(params.value || 'U')[0]}
+      {
+        headerName: "會勘負責人",
+        field: "quotationManager",
+        minWidth: 150,
+        flex: 1,
+        cellRenderer: (params: any) => (
+          <div className="flex items-center gap-2 h-full">
+            <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-black text-stone-600 border border-stone-200">
+              {(params.value || 'U')[0]}
+            </div>
+            <span className="text-xs font-bold text-stone-600">{params.value || '未指定'}</span>
           </div>
-          <span className="text-xs font-bold text-stone-600">{params.value || '未指定'}</span>
-        </div>
-      )
-    },
-    {
-      headerName: "狀態",
-      field: "status",
-      width: 120,
-      cellRenderer: (params: any) => {
-        const val = params.value;
-        const colorClass = val === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-          val === 'Planning' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-            val === 'Completed' ? 'bg-stone-100 text-stone-500 border-stone-200' :
-              'bg-slate-50 text-slate-500 border-slate-200';
-        return (
-          <div className="h-full flex items-center">
-            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${colorClass}`}>{val}</span>
+        )
+      },
+      {
+        headerName: "狀態",
+        field: "status",
+        width: 120,
+        cellRenderer: (params: any) => {
+          const val = params.value;
+          const colorClass = val === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+            val === 'Planning' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+              val === 'Completed' ? 'bg-stone-100 text-stone-500 border-stone-200' :
+                'bg-slate-50 text-slate-500 border-slate-200';
+          return (
+            <div className="h-full flex items-center">
+              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${colorClass}`}>{val}</span>
+            </div>
+          );
+        }
+      },
+      {
+        headerName: "年度",
+        field: "calculatedYear",
+        width: 100,
+        filter: YearFilter,
+        cellClass: "font-mono font-bold text-stone-500 text-xs flex justify-center items-center"
+      },
+      {
+        headerName: "預算",
+        field: "budget",
+        width: 120,
+        type: "numericColumn",
+        valueFormatter: (params: any) => params.value ? `$${params.value.toLocaleString()}` : '-',
+        cellClass: "font-mono font-bold text-stone-600 text-xs"
+      },
+      {
+        headerName: "已支出",
+        field: "computedFinancials.totalCost",
+        width: 120,
+        type: "numericColumn",
+        valueFormatter: (params: any) => `$${params.value?.toLocaleString()}`,
+        cellClass: "font-mono font-bold text-rose-600 text-xs"
+      },
+      {
+        headerName: "預估毛利",
+        field: "computedFinancials.profit",
+        width: 120,
+        type: "numericColumn",
+        valueFormatter: (params: any) => `$${params.value?.toLocaleString()}`,
+        cellClass: "font-mono font-bold text-emerald-600 text-xs"
+      },
+      {
+        headerName: "毛利率",
+        field: "computedFinancials.profitMargin",
+        width: 100,
+        type: "numericColumn",
+        valueFormatter: (params: any) => `${params.value?.toFixed(1)}%`,
+        cellClass: "font-mono font-bold text-emerald-600 text-xs"
+      },
+    ];
+
+    if (!isReadOnly) {
+      cols.push({
+        headerName: "操作",
+        sortable: false,
+        filter: false,
+        width: 120,
+        cellRenderer: (params: any) => (
+          <div className="flex items-center justify-center gap-1 h-full">
+            <button onClick={(e) => { e.stopPropagation(); onEditClick(params.data); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
+            <button onClick={(e) => { e.stopPropagation(); onDeleteClick(params.data.id); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-rose-600 transition-colors"><Trash2 size={14} /></button>
+            <button className="p-2 hover:bg-stone-100 rounded-lg text-stone-300 hover:text-stone-900 transition-colors"><ArrowUpRight size={14} /></button>
           </div>
-        );
-      }
-    },
-    {
-      headerName: "年度",
-      field: "calculatedYear",
-      width: 100,
-      filter: YearFilter,
-      cellClass: "font-mono font-bold text-stone-500 text-xs flex justify-center items-center"
-    },
-    {
-      headerName: "預算",
-      field: "budget",
-      width: 120,
-      type: "numericColumn",
-      valueFormatter: (params: any) => params.value ? `$${params.value.toLocaleString()}` : '-',
-      cellClass: "font-mono font-bold text-stone-600 text-xs"
-    },
-    {
-      headerName: "已支出",
-      field: "computedFinancials.totalCost",
-      width: 120,
-      type: "numericColumn",
-      valueFormatter: (params: any) => `$${params.value?.toLocaleString()}`,
-      cellClass: "font-mono font-bold text-rose-600 text-xs"
-    },
-    {
-      headerName: "預估毛利",
-      field: "computedFinancials.profit",
-      width: 120,
-      type: "numericColumn",
-      valueFormatter: (params: any) => `$${params.value?.toLocaleString()}`,
-      cellClass: "font-mono font-bold text-emerald-600 text-xs"
-    },
-    {
-      headerName: "毛利率",
-      field: "computedFinancials.profitMargin",
-      width: 100,
-      type: "numericColumn",
-      valueFormatter: (params: any) => `${params.value?.toFixed(1)}%`,
-      cellClass: "font-mono font-bold text-emerald-600 text-xs"
-    },
-    {
-      headerName: "操作",
-      sortable: false,
-      filter: false,
-      width: 120,
-      cellRenderer: (params: any) => (
-        <div className="flex items-center justify-center gap-1 h-full">
-          <button onClick={(e) => { e.stopPropagation(); onEditClick(params.data); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-          <button onClick={(e) => { e.stopPropagation(); onDeleteClick(params.data.id); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-rose-600 transition-colors"><Trash2 size={14} /></button>
-          <button className="p-2 hover:bg-stone-100 rounded-lg text-stone-300 hover:text-stone-900 transition-colors"><ArrowUpRight size={14} /></button>
-        </div>
-      )
+        )
+      });
     }
-  ];
+
+    return cols;
+  }, [isReadOnly, onEditClick, onDeleteClick]);
 
   const defaultColDef = useMemo(() => ({
     sortable: true,
@@ -298,6 +305,7 @@ const TableView = ({ projects, onDetailClick, onEditClick, onDeleteClick }: any)
           domLayout='autoHeight'
           rowHeight={68}
           headerHeight={50}
+          getRowId={(params) => params.data.id}
           localeText={{
             // Filter Conditions
             contains: '包含',
@@ -667,7 +675,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
 
         <div className="flex-1 min-h-0 overflow-hidden relative">
           {viewMode === 'card' && <CardView projects={projectsWithFinancials} isReadOnly={isReadOnly} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} onRestoreClick={onRestoreClick} onHardDeleteClick={onHardDeleteClick} setSearchTerm={setSearchTerm} setStatusFilter={setStatusFilter} />}
-          {viewMode === 'table' && <TableView projects={projectsWithFinancials} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} />}
+          {viewMode === 'table' && <TableView projects={projectsWithFinancials} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} isReadOnly={isReadOnly} />}
           {viewMode === 'kanban' && <KanbanView projectsByStatus={projectsByStatus} onDetailClick={onDetailClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} getStatusColor={getStatusColor} />}
         </div>
       </div>

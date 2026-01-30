@@ -1675,6 +1675,7 @@ const App: React.FC = () => {
                 onEditClick={(p) => { setEditingProject(p); setIsModalOpen(true); }}
                 onDeleteClick={(id) => {
                   if (confirm('刪除操作將移動至回收桶，確定嗎？')) {
+                    console.log('[App] Deleting project:', id);
                     const p = projects.find(x => x.id === id);
                     if (p) addActivityLog('刪除了專案', p.name, id, 'project');
                     setProjects(prev => prev.map(p => p.id === id ? { ...p, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : p));
