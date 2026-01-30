@@ -219,10 +219,10 @@ class GoogleDriveService {
       console.log(`[Drive] Syncing: ${method} (Hash: ${contentHash})`);
       const response = await this.fetchWithAuth(url, {
         method,
-        body,
-        headers: {
-          'Content-Type': `multipart/related; boundary=${boundary}`
-        }
+        body
+        // Note: We deliberately do NOT set Content-Type header here.
+        // The Blob has the correct type 'multipart/related; boundary=...'
+        // and fetch will automatically set the Content-Type header to match the Blob's type.
       }, isBackground);
 
       if (!response.ok) {
