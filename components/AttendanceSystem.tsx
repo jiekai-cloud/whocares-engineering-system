@@ -28,11 +28,24 @@ const MOTIVATIONAL_QUOTES = [
 
 const getGreeting = (date: Date) => {
     const hour = date.getHours();
-    if (hour >= 5 && hour < 11) return '早安';
-    if (hour >= 11 && hour < 14) return '午安';
-    if (hour >= 14 && hour < 18) return '下午好';
-    if (hour >= 18 && hour < 24) return '晚安';
-    return '夜深了，辛苦了';
+    const day = date.getDay(); // 0 is Sunday
+    const isWeekend = day === 0 || day === 6;
+
+    if (isWeekend) {
+        if (hour >= 10 && hour < 16) return '週末加班？真是令人感動的奴性';
+        if (hour >= 16) return '還在公司？你家裡是沒有溫暖嗎';
+        return '週末還這麼早起工作，該去看醫生了';
+    }
+
+    if (hour < 5) return '還沒睡是失眠，還是根本沒得睡？';
+    if (hour < 9) return '早安，社畜的一天又開始了';
+    if (hour < 11) return '撐住，距離午餐還有幾個小時';
+    if (hour < 13) return '午安，吃飽了好上路（工作）';
+    if (hour < 15) return '下午的咖啡因是你唯一的救贖';
+    if (hour < 18) return '再撐一下，老闆還在看';
+    if (hour < 20) return '加班費有算清楚嗎？還是做功德？';
+    if (hour < 23) return '這麼晚還在，公司應該頒發「最佳肝臟獎」給你';
+    return '快回家吧，過勞死不屬於職災';
 };
 
 const AttendanceSystem: React.FC<AttendanceSystemProps> = ({ currentUser, records, onRecord }) => {
