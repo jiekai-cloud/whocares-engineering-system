@@ -729,8 +729,8 @@ const App: React.FC = () => {
           name: '陳信寬',
           role: '工務主管',
           systemRole: 'DeptAdmin',
-          departmentId: 'DEPT-4',
-          departmentIds: ['DEPT-4'],
+          departmentId: 'DEPT-9',
+          departmentIds: ['DEPT-9'],
           phone: '',
           email: '',
           status: 'Available',
@@ -1095,7 +1095,7 @@ const App: React.FC = () => {
             setUser(parsedUser);
             const dept = parsedUser.department || 'FirstDept';
             setCurrentDept(dept);
-            setViewingDeptId(parsedUser.role === 'SuperAdmin' || parsedUser.role === 'Guest' ? 'all' : (parsedUser.departmentId || 'DEPT-1'));
+            setViewingDeptId(parsedUser.role === 'SuperAdmin' || parsedUser.role === 'Guest' ? 'all' : (parsedUser.departmentId || 'DEPT-9'));
             loadSystemData(dept);
           } catch (e) {
             console.error('Saved user parse error', e);
@@ -1246,7 +1246,7 @@ const App: React.FC = () => {
 
     const newProject: Project = {
       id: `AI${new Date().toISOString().slice(2, 10).replace(/-/g, '')}${Math.floor(100 + Math.random() * 900)}`,
-      departmentId: viewingDeptId === 'all' ? 'DEPT-1' : viewingDeptId,
+      departmentId: viewingDeptId === 'all' ? 'DEPT-9' : viewingDeptId,
       name: `${lead.customerName} - 智慧抓漏會勘件`,
       category: '室內裝修',
       source: 'AI會勘系統',
@@ -1287,7 +1287,7 @@ const App: React.FC = () => {
 
     const testProject: Project = {
       id: testId,
-      departmentId: viewingDeptId === 'all' ? 'DEPT-1' : viewingDeptId,
+      departmentId: viewingDeptId === 'all' ? 'DEPT-9' : viewingDeptId,
       name: '系統測試案件 - 萬大路室內裝修工程',
       category: '室內裝修',
       source: '系統測試',
@@ -1364,9 +1364,10 @@ const App: React.FC = () => {
       // 1. 基本規則：部門相符
       if (itemDepts.includes(viewingDeptId)) return true;
 
-      // 2. 特殊規則：戰略指揮部 (DEPT-1) 的成員可以在第一/第三/第四工程部出現
-      if (itemDepts.includes('DEPT-1') && (viewingDeptId === 'DEPT-4' || viewingDeptId === 'DEPT-8' || viewingDeptId === 'DEPT-9')) {
-        return true;
+      // 2. 特殊規則：已移除 DEPT-1 相關邏輯
+      if (itemDepts.includes('DEPT-1')) {
+        // Legacy support or just hide
+        return false;
       }
 
       return false;
@@ -1409,7 +1410,7 @@ const App: React.FC = () => {
     setUser(fullUser);
     setCurrentDept(d);
     // 修正部門 ID 對應：第一工程部(DEPT-4), 第三工程部(DEPT-8), 第四工程部(DEPT-9)
-    const deptId = d === 'ThirdDept' ? 'DEPT-8' : d === 'FourthDept' ? 'DEPT-9' : 'DEPT-4';
+    const deptId = d === 'ThirdDept' ? 'DEPT-8' : d === 'FourthDept' ? 'DEPT-9' : 'DEPT-9';
     setViewingDeptId(u.role === 'SuperAdmin' ? 'all' : deptId);
     localStorage.setItem('bt_user', JSON.stringify(fullUser));
     // Data loading happens in background but UI is blocked by isInitializing
