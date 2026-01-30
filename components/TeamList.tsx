@@ -110,24 +110,9 @@ const TeamList: React.FC<TeamListProps> = ({ members, departments, projects, onA
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedDept('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${selectedDept === 'all' ? 'bg-stone-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
-          >
-            全部成員 ({members.length})
-          </button>
-          {departments.map(dept => {
-            const count = members.filter(m => (m.departmentIds || [m.departmentId]).includes(dept.id)).length;
-            return (
-              <button
-                key={dept.id}
-                onClick={() => setSelectedDept(dept.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${selectedDept === dept.id ? 'bg-orange-600 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
-              >
-                {dept.name} ({count})
-              </button>
-            );
-          })}
+          <div className="px-4 py-2 rounded-xl text-xs font-black bg-stone-900 text-white shadow-lg">
+            全公司視野 ({members.length})
+          </div>
         </div>
 
         <div className="bg-white p-1 rounded-xl border border-stone-200 flex gap-1 self-end sm:self-auto">

@@ -1570,10 +1570,7 @@ const App: React.FC = () => {
 
             <div className="hidden sm:flex items-center gap-2 bg-stone-100 px-3 py-1.5 rounded-xl border border-stone-200">
               <Layers size={14} className="text-stone-400" />
-              <select className="bg-transparent text-[11px] font-black text-stone-900 outline-none" value={viewingDeptId} onChange={(e) => setViewingDeptId(e.target.value)}>
-                <option value="all">全公司視野</option>
-                {MOCK_DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+              <span className="text-[11px] font-black text-stone-900">全公司視野</span>
             </div>
 
             <button onClick={handleLogout} className="p-2 text-stone-400 hover:text-rose-600 transition-colors"><LogOut size={20} /></button>
