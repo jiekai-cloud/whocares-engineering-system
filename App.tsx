@@ -569,9 +569,9 @@ const App: React.FC = () => {
   const loadSystemData = useCallback(async (dept: SystemContext) => {
     console.log(`[System] Initializing context for: ${dept}`);
 
-    // 1. Configure Cloud Context
+    // 1. Configure Cloud Context (Consolidated Master File)
     const prefix = dept === 'ThirdDept' ? 'dept3_' : dept === 'FourthDept' ? 'dept4_' : '';
-    const driveFilename = dept === 'ThirdDept' ? 'whocares_system_data_dept3.json' : dept === 'FourthDept' ? 'whocares_system_data_dept4.json' : 'whocares_system_data.json';
+    const driveFilename = 'whocares_system_data.json';
     googleDriveService.setFilename(driveFilename);
 
     // 2. Load Local Data (IndexedDB) with Prefixes (Unified Load)
@@ -607,21 +607,21 @@ const App: React.FC = () => {
         payments: p.payments || []
       })));
 
-      // Load other entities (Unified)
+      // Load other entities (Unified Company-wide Load)
       const defaultTeam = dept === 'FirstDept' ? MOCK_TEAM_MEMBERS : [];
       const [customersData, initialTeamData, vendorsData, leadsData, logsData, inventoryData, locationsData, purchaseOrdersData, attendanceData, payrollData, approvalRequestsData, approvalTemplatesData] = await Promise.all([
         fetchUnified<Customer>('bt_customers', []),
         fetchUnified<TeamMember>('bt_team', defaultTeam),
         fetchUnified<Vendor>('bt_vendors', []),
         fetchUnified<Lead>('bt_leads', []),
-        storageService.getItem<any[]>(`${prefix}bt_logs`, []), // Logs stay prefixed
-        storageService.getItem<InventoryItem[]>(`${prefix}bt_inventory`, []),
-        storageService.getItem<InventoryLocation[]>(`${prefix}bt_locations`, [{ id: 'MAIN', name: '總倉庫', type: 'Main', isDefault: true }]),
-        storageService.getItem<PurchaseOrder[]>(`${prefix}bt_orders`, []),
-        storageService.getItem<AttendanceRecord[]>(`${prefix}bt_attendance`, []),
-        storageService.getItem<PayrollRecord[]>(`${prefix}bt_payroll`, []),
-        storageService.getItem<ApprovalRequest[]>(`${prefix}bt_approval_requests`, []),
-        storageService.getItem<ApprovalTemplate[]>(`${prefix}bt_approval_templates`, [
+        fetchUnified<any>('bt_logs', []),
+        fetchUnified<InventoryItem>('bt_inventory', []),
+        fetchUnified<InventoryLocation>('bt_locations', [{ id: 'MAIN', name: '總倉庫', type: 'Main', isDefault: true }]),
+        fetchUnified<PurchaseOrder>('bt_orders', []),
+        fetchUnified<AttendanceRecord>('bt_attendance', []),
+        fetchUnified<PayrollRecord>('bt_payroll', []),
+        fetchUnified<ApprovalRequest>('bt_approval_requests', []),
+        fetchUnified<ApprovalTemplate>('bt_approval_templates', [
           {
             id: 'TPL-LEAVE',
             name: '請假申請單',
