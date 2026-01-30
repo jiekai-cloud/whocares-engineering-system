@@ -4,7 +4,7 @@
  */
 
 // 已預設內建 Client ID，使用者無需手動輸入
-export const DEFAULT_CLIENT_ID = '378270508156-ugp3r5i8109op63vlas1h5ls6h1nj0q9.apps.googleusercontent.com';
+export const DEFAULT_CLIENT_ID = '1046264694728-lkce3am9s8sbu92hk0qgc4qo8b663kdu.apps.googleusercontent.com';
 export const BACKUP_FILENAME = 'life_quality_system_data.json';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
@@ -212,6 +212,30 @@ class GoogleDriveService {
           console.warn('權限不足(403): 請確認 Google Cloud Console 是否已將此網域加入「授權的 JavaScript 來源」。');
         }
         return false;
+      }
+
+      // 新增：自動設定檔案權限為「其他人可讀」，以便免登入讀取
+      // 只有在是新建立檔案或是明確要求時才需要做，但為了保險起見，每次成功存檔後都確保一次權限
+      if (response.ok) {
+        try {
+          const result = await response.json();
+          const fileId = result.id || existingFile?.id;
+
+          if (fileId) {
+            const permissionUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
+            await this.fetchWithAuth(permissionUrl, {
+              method: 'POST',
+              body: JSON.stringify({
+                role: 'reader',
+                type: 'anyone'
+              }),
+              headers: { 'Content-Type': 'application/json' }
+            }, isBackground);
+            console.log('[Drive] Public read permission set successfully.');
+          }
+        } catch (permError) {
+          console.warn('[Drive] Failed to set public permission (might already exist or scopes issue):', permError);
+        }
       }
 
       console.log('[Drive] Sync Successful');
