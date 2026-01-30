@@ -4,7 +4,7 @@
  */
 
 // 已預設內建 Client ID，使用者無需手動輸入
-export const DEFAULT_CLIENT_ID = '378270508156-ugp3r5i8109op63vlas1h5ls6h1nj0q9.apps.googleusercontent.com';
+export const DEFAULT_CLIENT_ID = '1046264694728-lkce3am9s8sbu92hk0qgc4qo8b663kdu.apps.googleusercontent.com';
 export const BACKUP_FILENAME = 'whocares_system_data.json';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
