@@ -193,45 +193,44 @@ class GoogleDriveService {
 
       console.log(`[Drive] Syncing Data Size: ${fileContent.length} chars`);
 
-      let url: string;
-      let method: string;
-      let body: any;
-      let headers: any = {};
-
       if (existingFile) {
-        // [Strategy A] Update existing file: Use Simple Upload (uploadType=media)
-        // This is more robust as it avoids multipart formatting issues for pure content updates.
-        url = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`;
-        method = 'PATCH';
-        body = fileContent;
-        headers = {
-          'Content-Type': 'application/json'
-        };
-      } else {
-        // [Strategy B] Create new file: Use Multipart Upload (uploadType=multipart)
-        // Required validity to set both Metadata (Filename) and Content in one go.
-        url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-        method = 'POST';
-
-        const boundary = '-------314159265358979323846';
-        const dashDashBoundary = `--${boundary}`;
-        const crlf = "\r\n";
-
-        const parts = [
-          dashDashBoundary + crlf,
-          'Content-Type: application/json; charset=UTF-8' + crlf + crlf,
-          JSON.stringify(metadata) + crlf,
-          dashDashBoundary + crlf,
-          'Content-Type: application/json' + crlf + crlf,
-          fileContent + crlf,
-          dashDashBoundary + '--' + crlf
-        ];
-
-        body = new Blob(parts, { type: `multipart/related; boundary=${boundary}` });
-        headers = {
-          'Content-Type': `multipart/related; boundary=${boundary}`
-        };
+        // [Strategy: Nuclear Option]
+        // To resolve persistent file corruption/size issues (e.g. 4KB files), 
+        // we explicitly DELETE the old file and UPLOAD A FRESH ONE.
+        // This ensures the file on Drive is exactly what we generate, with no legacy issues.
+        console.log(`[Drive] Removing existing file (ID: ${existingFile.id}) to ensure clean state...`);
+        try {
+          await this.fetchWithAuth(`https://www.googleapis.com/drive/v3/files/${existingFile.id}`, {
+            method: 'DELETE'
+          }, isBackground);
+        } catch (delErr) {
+          console.warn('[Drive] Failed to delete existing file, attempting to create new one anyway:', delErr);
+        }
       }
+
+      // [Strategy B] Create new file: Use Multipart Upload (uploadType=multipart)
+      // Always create a fresh file to guarantee integrity.
+      let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+      let method = 'POST';
+
+      const boundary = '-------314159265358979323846';
+      const dashDashBoundary = `--${boundary}`;
+      const crlf = "\r\n";
+
+      const parts = [
+        dashDashBoundary + crlf,
+        'Content-Type: application/json; charset=UTF-8' + crlf + crlf,
+        JSON.stringify(metadata) + crlf,
+        dashDashBoundary + crlf,
+        'Content-Type: application/json' + crlf + crlf,
+        fileContent + crlf,
+        dashDashBoundary + '--' + crlf
+      ];
+
+      const body = new Blob(parts, { type: `multipart/related; boundary=${boundary}` });
+      const headers = {
+        'Content-Type': `multipart/related; boundary=${boundary}`
+      };
 
       console.log(`[Drive] Syncing: ${method} (Hash: ${contentHash})`);
       const response = await this.fetchWithAuth(url, {
@@ -254,27 +253,23 @@ class GoogleDriveService {
       // Success: Update Hash
       this.lastUploadedHash = contentHash;
 
-      // 2. Permission Optimization: Only set if necessary
-      if (response.ok && !this.hasSetPublicPermission) {
+      // 2. Permission Optimization: Ensure new file is public readable
+      if (response.ok) {
         try {
           const result = await response.json();
-          const fileId = result.id || existingFile?.id;
+          const fileId = result.id; // New File ID
 
           if (fileId) {
-            // Check if it's a new file or we just never checked permissions
-            // For updates, we usually assume permissions are fine, but let's be safe for new files
-            if (!existingFile) {
-              const permissionUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
-              await this.fetchWithAuth(permissionUrl, {
-                method: 'POST',
-                body: JSON.stringify({
-                  role: 'reader',
-                  type: 'anyone'
-                }),
-                headers: { 'Content-Type': 'application/json' }
-              }, isBackground);
-              console.log('[Drive] Public read permission set.');
-            }
+            const permissionUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
+            await this.fetchWithAuth(permissionUrl, {
+              method: 'POST',
+              body: JSON.stringify({
+                role: 'reader',
+                type: 'anyone'
+              }),
+              headers: { 'Content-Type': 'application/json' }
+            }, isBackground);
+            console.log('[Drive] Public read permission set for new file.');
             this.hasSetPublicPermission = true;
           }
         } catch (permError) {
