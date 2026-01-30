@@ -171,14 +171,13 @@ class GoogleDriveService {
     if (!this.isInitialized) await this.init();
     this.lastErrorStatus = null;
     try {
-      // 1. Data Sanitization & Hash Calculation for Deduplication
-      // We exclude volatile timestamp fields from the hash calculation to avoid false positives
+      // 1. Data Sanitization & Hash Calculation
       const { lastUpdated, cloudSyncTimestamp, ...stableData } = data;
       const contentHash = this.computeHash(JSON.stringify(stableData));
 
       if (this.lastUploadedHash === contentHash) {
         if (!isBackground) console.log('[Drive] Data unchanged, skipping upload (Optimized)');
-        return true; // Treat as success
+        return true;
       }
 
       const existingFile = await this.findBackupFile();
@@ -192,21 +191,22 @@ class GoogleDriveService {
         cloudSyncTimestamp: new Date().toISOString()
       });
 
+      // Strict Multipart Construction
       const boundary = '-------314159265358979323846';
-      const delimiter = "\r\n--" + boundary + "\r\n";
-      const close_delim = "\r\n--" + boundary + "--";
+      const dashDashBoundary = `--${boundary}`;
+      const crlf = "\r\n";
 
       const parts = [
-        delimiter,
-        'Content-Type: application/json; charset=UTF-8\r\n\r\n',
-        JSON.stringify(metadata),
-        delimiter,
-        'Content-Type: application/json\r\n\r\n',
-        fileContent,
-        close_delim
+        dashDashBoundary + crlf,
+        'Content-Type: application/json; charset=UTF-8' + crlf + crlf,
+        JSON.stringify(metadata) + crlf,
+        dashDashBoundary + crlf,
+        'Content-Type: application/json' + crlf + crlf,
+        fileContent + crlf,
+        dashDashBoundary + '--' + crlf
       ];
 
-      const body = new Blob(parts, { type: 'multipart/related; boundary=' + boundary });
+      const body = new Blob(parts, { type: `multipart/related; boundary=${boundary}` });
 
       let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
       let method = 'POST';
@@ -219,7 +219,10 @@ class GoogleDriveService {
       console.log(`[Drive] Syncing: ${method} (Hash: ${contentHash})`);
       const response = await this.fetchWithAuth(url, {
         method,
-        body
+        body,
+        headers: {
+          'Content-Type': `multipart/related; boundary=${boundary}`
+        }
       }, isBackground);
 
       if (!response.ok) {
