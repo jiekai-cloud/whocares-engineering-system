@@ -14,16 +14,10 @@ class GoogleDriveService {
   private isInitialized: boolean = false;
   private lastErrorStatus: string | null = null;
   private currentFilename: string = BACKUP_FILENAME;
-  private lastUploadedHash: string | null = null; // For deduplication
-  private hasSetPublicPermission: boolean = false; // For API optimization
 
   setFilename(filename: string) {
-    if (this.currentFilename !== filename) {
-      this.currentFilename = filename;
-      this.lastUploadedHash = null; // Reset hash on file switch
-      this.hasSetPublicPermission = false;
-      console.log(`[Drive] Switched context to: ${this.currentFilename}`);
-    }
+    this.currentFilename = filename;
+    console.log(`[Drive] Switched context to: ${this.currentFilename}`);
   }
 
   async init(clientId: string = DEFAULT_CLIENT_ID) {
@@ -36,9 +30,11 @@ class GoogleDriveService {
       }
 
       try {
+        // 嘗試從 localStorage 恢復 token
         const savedToken = localStorage.getItem('bt_google_access_token');
         if (savedToken) {
           this.accessToken = savedToken;
+          console.log('[Drive] Restored access token from localStorage');
         }
 
         this.tokenClient = google.accounts.oauth2.initTokenClient({
@@ -50,8 +46,10 @@ class GoogleDriveService {
               reject(response);
             }
             this.accessToken = response.access_token;
+            // 保存 token 到 localStorage
             if (this.accessToken) {
               localStorage.setItem('bt_google_access_token', this.accessToken);
+              console.log('[Drive] Saved access token to localStorage');
             }
             this.isInitialized = true;
             resolve();
@@ -72,6 +70,7 @@ class GoogleDriveService {
     }
     return new Promise<string>((resolve, reject) => {
       if (!this.tokenClient) {
+        // 如果尚未初始化，先執行預設初始化
         this.init().then(() => this.requestToken(prompt, resolve, reject, isBackground)).catch(reject);
       } else {
         this.requestToken(prompt, resolve, reject, isBackground);
@@ -89,8 +88,10 @@ class GoogleDriveService {
         return reject(response);
       }
       this.accessToken = response.access_token;
+      // 保存 token 到 localStorage
       if (this.accessToken) {
         localStorage.setItem('bt_google_access_token', this.accessToken);
+        console.log('[Drive] Saved access token to localStorage');
       }
       resolve(this.accessToken!);
     };
@@ -112,8 +113,8 @@ class GoogleDriveService {
 
     if (res.status === 401) {
       this.accessToken = null;
-      localStorage.removeItem('bt_google_access_token');
-      console.log('[Drive] Token expired, refreshing...');
+      localStorage.removeItem('bt_google_access_token'); // 清除無效的 token
+      console.log('[Drive] Token expired, cleared from localStorage');
       await this.authenticate(isBackground ? 'none' : 'consent', isBackground);
       res = await fetch(url, {
         ...options,
@@ -126,21 +127,11 @@ class GoogleDriveService {
     return res;
   }
 
-  // Simple string hash function for content comparison
-  private computeHash(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return hash.toString();
-  }
-
   async getFileMetadata(isBackground: boolean = false) {
     try {
       const existingFile = await this.findBackupFile(isBackground);
       if (!existingFile) return null;
+      // Add timestamp to prevent caching
       const url = `https://www.googleapis.com/drive/v3/files/${existingFile.id}?fields=id,name,modifiedTime,size&_=${Date.now()}`;
       const response = await this.fetchWithAuth(url, {}, isBackground);
       if (!response.ok) return null;
@@ -153,14 +144,10 @@ class GoogleDriveService {
 
   async findBackupFile(isBackground: boolean = false) {
     try {
-      const query = `name='${this.currentFilename}' and trashed=false`;
-      console.log(`[Drive] Searching for file: ${query}`);
-      const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
+      const url = `https://www.googleapis.com/drive/v3/files?q=name='${this.currentFilename}' and trashed=false&fields=files(id,name)`;
       const response = await this.fetchWithAuth(url, {}, isBackground);
       const data = await response.json();
-      const found = data.files && data.files.length > 0 ? data.files[0] : null;
-      console.log(`[Drive] File search result for ${this.currentFilename}:`, found ? found.id : 'Not Found');
-      return found;
+      return data.files && data.files.length > 0 ? data.files[0] : null;
     } catch (e) {
       console.error('Find File Error:', e);
       return null;
@@ -171,101 +158,102 @@ class GoogleDriveService {
     if (!this.isInitialized) await this.init();
     this.lastErrorStatus = null;
     try {
-      // 1. Data Sanitization & Hash Calculation
-      const { lastUpdated, cloudSyncTimestamp, ...stableData } = data;
-      const contentHash = this.computeHash(JSON.stringify(stableData));
-
-      if (this.lastUploadedHash === contentHash) {
-        if (!isBackground) console.log('[Drive] Data unchanged, skipping upload (Optimized)');
-        return true;
-      }
-
       const existingFile = await this.findBackupFile();
-
+      const metadata = {
+        name: this.currentFilename,
+        mimeType: 'application/json'
+      };
       const fileContent = JSON.stringify({
         ...data,
         cloudSyncTimestamp: new Date().toISOString()
       });
 
-      console.log(`[Drive] Syncing Data Size: ${fileContent.length} chars`);
+      const boundary = '-------314159265358979323846';
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const close_delim = "\r\n--" + boundary + "--";
+
+      // 使用 Blob 構建 multipart body 以確保瀏覽器正確處理換行與編碼
+      const parts = [
+        delimiter,
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n',
+        JSON.stringify(metadata),
+        delimiter,
+        'Content-Type: application/json\r\n\r\n',
+        fileContent,
+        close_delim
+      ];
+
+      const body = new Blob(parts, { type: 'multipart/related; boundary=' + boundary });
+
+      let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+      let method = 'POST';
 
       if (existingFile) {
-        // [Strategy: Nuclear Option]
-        console.log(`[Drive] Removing existing file (ID: ${existingFile.id}) to ensure clean state...`);
+        url = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`;
+        method = 'PATCH';
+      }
+
+      console.log(`[Drive] Syncing: ${method} to ${this.currentFilename} (BG: ${isBackground})`);
+      const response = await this.fetchWithAuth(url, {
+        method,
+        body,
+        headers: {
+          // 注意：fetch 會自動處理 Blob 的 Content-Length，但我們需要手動設定 Content-Type 的 boundary
+        }
+      }, isBackground);
+
+      if (!response.ok) {
+        this.lastErrorStatus = `${response.status}`;
+        const errorText = await response.text();
+        console.error('Drive API Error:', response.status, errorText);
+
+        // 如果是 403，通常是授權或網域限制
+        if (response.status === 403) {
+          console.warn('權限不足(403): 請確認 Google Cloud Console 是否已將此網域加入「授權的 JavaScript 來源」。');
+        }
+        return false;
+      }
+
+      // 新增：自動設定檔案權限為「其他人可讀」，以便免登入讀取
+      // 只有在是新建立檔案或是明確要求時才需要做，但為了保險起見，每次成功存檔後都確保一次權限
+      if (response.ok) {
         try {
-          await this.fetchWithAuth(`https://www.googleapis.com/drive/v3/files/${existingFile.id}`, {
-            method: 'DELETE'
-          }, isBackground);
-        } catch (delErr) {
-          console.warn('[Drive] Failed to delete existing file, attempting to create new one anyway:', delErr);
+          const result = await response.json();
+          const fileId = result.id || existingFile?.id;
+
+          if (fileId) {
+            const permissionUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
+            await this.fetchWithAuth(permissionUrl, {
+              method: 'POST',
+              body: JSON.stringify({
+                role: 'reader',
+                type: 'anyone'
+              }),
+              headers: { 'Content-Type': 'application/json' }
+            }, isBackground);
+            console.log('[Drive] Public read permission set successfully.');
+          }
+        } catch (permError) {
+          console.warn('[Drive] Failed to set public permission (might already exist or scopes issue):', permError);
         }
-      }
-
-      // [Strategy C] Two-Step Upload (Bulletproof)
-      // Step 1: Upload Content (uploadType=media)
-      // This sends RAW JSON content. No multipart boundaries to mess up.
-      console.log(`[Drive] Step 1: Uploading content (${fileContent.length} chars)...`);
-      const createUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=media';
-      const createResponse = await this.fetchWithAuth(createUrl, {
-        method: 'POST',
-        body: fileContent,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }, isBackground);
-
-      if (!createResponse.ok) {
-        const errText = await createResponse.text();
-        console.error('Upload Failed:', createResponse.status, errText);
-        throw new Error(`Upload Failed: ${createResponse.status}`);
-      }
-
-      const newItem = await createResponse.json();
-      console.log(`[Drive] Step 2: Renaming file (${newItem.id}) to ${this.currentFilename}...`);
-
-      // Step 2: Update Metadata (Set Filename)
-      const updateUrl = `https://www.googleapis.com/drive/v3/files/${newItem.id}`;
-      await this.fetchWithAuth(updateUrl, {
-        method: 'PATCH',
-        body: JSON.stringify({ name: this.currentFilename }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }, isBackground);
-
-      // Success: Update Hash
-      this.lastUploadedHash = contentHash;
-
-      // 3. Set Permissions (Make it readable)
-      try {
-        const permissionUrl = `https://www.googleapis.com/drive/v3/files/${newItem.id}/permissions`;
-        await this.fetchWithAuth(permissionUrl, {
-          method: 'POST',
-          body: JSON.stringify({ role: 'reader', type: 'anyone' }),
-          headers: { 'Content-Type': 'application/json' }
-        }, isBackground);
-        console.log('[Drive] Public read permission set.');
-        this.hasSetPublicPermission = true;
-      } catch (permError) {
-        console.warn('[Drive] Permission set skipped:', permError);
       }
 
       console.log('[Drive] Sync Successful');
       return true;
     } catch (err) {
-      console.error('Drive Sync Exception:', err);
+      console.error('Google Drive Sync Exception:', err);
       this.lastErrorStatus = 'EXC';
       return false;
     }
   }
 
-  // Exports data as a downloadable file
+  // 匯出資料為 JSON 檔案供手動下載
   exportAsFile(data: any) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `whocares_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -284,7 +272,7 @@ class GoogleDriveService {
       if (!response.ok) return null;
       return await response.json();
     } catch (err) {
-      console.error('Load failed:', err);
+      console.error('Load from Drive failed:', err);
       return null;
     }
   }
