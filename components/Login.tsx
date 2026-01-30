@@ -129,7 +129,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <img src="./pwa-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
             </div>
             <h1 className="text-4xl font-black text-white leading-tight tracking-tighter mb-6">
-              生活品質<br />
+              琥凱爾工程<br />
               <span className={`transition-colors duration-500 ${selectedDept === 'FirstDept' ? 'text-orange-500' : selectedDept === 'ThirdDept' ? 'text-blue-500' : 'text-purple-500'}`}>工程管理系統</span>
             </h1>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full mb-8">
