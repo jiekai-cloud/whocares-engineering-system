@@ -153,10 +153,14 @@ class GoogleDriveService {
 
   async findBackupFile(isBackground: boolean = false) {
     try {
-      const url = `https://www.googleapis.com/drive/v3/files?q=name='${this.currentFilename}' and trashed=false&fields=files(id,name)`;
+      const query = `name='${this.currentFilename}' and trashed=false`;
+      console.log(`[Drive] Searching for file: ${query}`);
+      const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
       const response = await this.fetchWithAuth(url, {}, isBackground);
       const data = await response.json();
-      return data.files && data.files.length > 0 ? data.files[0] : null;
+      const found = data.files && data.files.length > 0 ? data.files[0] : null;
+      console.log(`[Drive] File search result for ${this.currentFilename}:`, found ? found.id : 'Not Found');
+      return found;
     } catch (e) {
       console.error('Find File Error:', e);
       return null;
