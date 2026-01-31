@@ -1340,6 +1340,15 @@ const App: React.FC = () => {
       if (item.isPurged) return false;
       if (item.deletedAt && !showDeleted) return false;
 
+      // ALWAYS show the current user in the list (if we can match their identity)
+      const isCurrentUser = user && (
+        (item.employeeId && item.employeeId === user.employeeId) ||
+        (item.id && item.id === user.id) ||
+        (item.name && item.name === user.name && item.name !== '體驗帳戶')
+      );
+
+      if (isCurrentUser) return true;
+
       if (viewingDeptId === 'all') return true;
 
       const itemDepts = item.departmentIds && Array.isArray(item.departmentIds) && item.departmentIds.length > 0
@@ -1364,7 +1373,7 @@ const App: React.FC = () => {
       teamMembers: teamMembers.filter(filterTeamMembers), // 使用特殊過濾邏輯
       vendors: vendors.filter(filterByDept)
     };
-  }, [projects, customers, teamMembers, vendors, viewingDeptId]);
+  }, [projects, customers, teamMembers, vendors, viewingDeptId, user, showDeleted]);
 
   if (isInitializing) {
     return (
